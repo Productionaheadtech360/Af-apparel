@@ -10,7 +10,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const primaryImage = product.images?.find((i) => i.is_primary) ?? product.images?.[0];
+  const primaryImage = product.primary_image;
   const primaryVariant = product.variants?.[0];
   const price = primaryVariant?.effective_price ?? primaryVariant?.retail_price;
 
@@ -37,7 +37,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
       <div className="p-3">
         <p className="text-xs text-gray-500 mb-1 truncate">
-          {product.categories?.join(", ")}
+          {product.categories?.map((c) => c.name).join(", ")}
         </p>
         <h3 className="text-sm font-medium text-gray-900 truncate group-hover:text-brand-600">
           {product.name}

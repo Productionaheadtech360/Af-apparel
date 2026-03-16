@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { adminService } from "@/services/admin.service";
-import type { ProductImageOut } from "@/types/product.types";
+import type { ProductImage as ProductImageOut } from "@/types/product.types";
 
 interface ImageManagerProps {
   productId: string;
@@ -42,7 +42,8 @@ export function ImageManager({ productId, initialImages, onUpdate }: ImageManage
   async function handleDrop(targetIndex: number) {
     if (dragIndex === null || dragIndex === targetIndex) return;
     const reordered = [...images];
-    const [moved] = reordered.splice(dragIndex, 1);
+    const moved = reordered.splice(dragIndex, 1)[0];
+    if (!moved) return;
     reordered.splice(targetIndex, 0, moved);
     setImages(reordered);
     setDragIndex(null);

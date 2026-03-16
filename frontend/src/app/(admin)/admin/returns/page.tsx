@@ -30,9 +30,9 @@ export default function AdminReturnsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    adminService.listRMA(statusFilter || undefined).then((d) => {
-      const data = d as { items: RMA[] };
-      setRmas(data.items ?? []);
+    adminService.listRmas(statusFilter || undefined).then((d) => {
+      const data = d as RMA[];
+      setRmas(Array.isArray(data) ? data : []);
     });
   }, [statusFilter]);
 
@@ -41,7 +41,7 @@ export default function AdminReturnsPage() {
     if (!actionTarget) return;
     setIsUpdating(true);
     try {
-      await adminService.updateRMA(actionTarget.id, { status: actionStatus, admin_notes: adminNotes || undefined });
+      await adminService.updateRma(actionTarget.id, { status: actionStatus, notes: adminNotes || undefined });
       setRmas((prev) => prev.map((r) => (r.id === actionTarget.id ? { ...r, status: actionStatus, admin_notes: adminNotes } : r)));
       setActionTarget(null); setAdminNotes("");
     } finally { setIsUpdating(false); }

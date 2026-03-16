@@ -5,7 +5,18 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth.store";
 import { authService } from "@/services/auth.service";
-import { ApiClientError } from "@/lib/api-client";
+import { ApiClientError, setAccessToken } from "@/lib/api-client";
+
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return {};
+    const base64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(base64));
+  } catch {
+    return {};
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,10 +34,19 @@ export default function LoginPage() {
 
     try {
       const tokens = await authService.login({ email, password });
-      const profile = await authService.getProfile();
-      setAuth(tokens.access_token, profile);
 
-      if (profile.is_admin) {
+      // Set token in memory BEFORE calling getProfile so the request is authenticated
+      setAccessToken(tokens.access_token);
+
+      const profile = await authService.getProfile();
+
+      // JWT payload contains is_admin since backend embeds it as a claim
+      const payload = decodeJwtPayload(tokens.access_token);
+      const fullProfile = { ...profile, is_admin: !!payload.is_admin };
+
+      setAuth(tokens.access_token, fullProfile);
+
+      if (fullProfile.is_admin) {
         router.push("/admin/dashboard");
       } else {
         router.push("/account");
@@ -50,7 +70,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">AF Apparels</h1>
+          <Link href="/" className="inline-block">
+            <h1 className="text-3xl font-bold text-blue-600">AF Apparels</h1>
+          </Link>
           <p className="mt-2 text-gray-600">Sign in to your wholesale account</p>
         </div>
 
@@ -63,7 +85,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="label">
                 Email address
               </label>
               <input
@@ -73,7 +95,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="input"
               />
             </div>
 
@@ -84,7 +106,7 @@ export default function LoginPage() {
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-brand-600 hover:text-brand-700"
+                  className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   Forgot password?
                 </Link>
@@ -96,14 +118,14 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="input"
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded-md bg-brand-600 text-white py-2 px-4 text-sm font-medium hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full btn-primary py-2.5"
             >
               {isSubmitting ? "Signing in…" : "Sign in"}
             </button>
@@ -111,7 +133,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center text-sm text-gray-600">
             {"Don't have an account? "}
-            <Link href="/wholesale/register" className="text-brand-600 hover:text-brand-700 font-medium">
+            <Link href="/wholesale/register" className="text-blue-600 hover:text-blue-700 font-medium">
               Apply for wholesale access
             </Link>
           </div>

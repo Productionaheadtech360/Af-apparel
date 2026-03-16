@@ -1,11 +1,12 @@
-/** Authenticated user profile. */
+/** Authenticated user profile (backend ProfileOut + is_admin added from JWT). */
 export interface UserProfile {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
   phone: string | null;
-  is_admin: boolean;
+  is_active: boolean;
+  is_admin: boolean;  // Not in backend ProfileOut; added from JWT payload
   email_verified: boolean;
   created_at: string;
 }

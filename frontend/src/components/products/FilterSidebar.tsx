@@ -95,9 +95,9 @@ export function FilterSidebar({
               >
                 {cat.name}
               </button>
-              {cat.children?.length > 0 && (
+              {(cat.children?.length ?? 0) > 0 && (
                 <ul className="ml-3 mt-1 space-y-1">
-                  {cat.children.map((child) => (
+                  {cat.children!.map((child) => (
                     <li key={child.id}>
                       <button
                         onClick={() => handleCategoryClick(child.slug)}

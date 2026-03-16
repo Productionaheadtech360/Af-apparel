@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.exceptions import NotFoundError
-from app.models.product import Product, ProductImage, ProductVariant
+from app.models.product import Category, Product, ProductCategory, ProductImage, ProductVariant
 from app.schemas.product import (
     BulkActionRequest,
     BulkGenerateRequest,
@@ -37,20 +37,15 @@ async def list_admin_products(
     page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.schemas.product import FilterParams
-
-    params = FilterParams(q=q, category=category, page=page, page_size=page_size)
-    # Admin sees all statuses
-    if status:
-        params = FilterParams(q=q, category=category, page=page, page_size=page_size)
-
-    svc = ProductService(db)
-    # For admin, temporarily bypass active-only filter by using raw query
+    svc = ProductService(db)  # noqa: F841
     from sqlalchemy.orm import selectinload
 
     query = select(Product).options(
         selectinload(Product.variants),
         selectinload(Product.images),
+        selectinload(Product.category_links)
+        .selectinload(ProductCategory.category)
+        .selectinload(Category.children),
     )
     if q:
         query = query.where(Product.name.ilike(f"%{q}%"))

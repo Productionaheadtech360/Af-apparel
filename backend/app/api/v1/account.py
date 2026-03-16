@@ -482,7 +482,10 @@ async def get_inventory_report(
         raise ForbiddenError("Company account required")
     from app.services.inventory_service import InventoryService
     svc = InventoryService(db)
-    return await svc.get_low_stock_variants(low_stock_only=(stock_level == "low"))
+    if stock_level == "low":
+        return await svc.get_low_stock_variants()
+    else:
+        return await svc.get_low_stock_variants(threshold_override=999999)
 
 
 # ---------------------------------------------------------------------------

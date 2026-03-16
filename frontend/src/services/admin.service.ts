@@ -9,44 +9,44 @@ export const adminService = {
     if (params?.status) query.set("status", params.status);
     if (params?.page) query.set("page", String(params.page));
     const qs = query.toString();
-    return apiClient.get<ProductDetail[]>(`/admin/products${qs ? `?${qs}` : ""}`);
+    return apiClient.get<ProductDetail[]>(`/api/v1/admin/products${qs ? `?${qs}` : ""}`);
   },
 
   async createProduct(data: object) {
-    return apiClient.post<ProductDetail>("/admin/products", data);
+    return apiClient.post<ProductDetail>("/api/v1/admin/products", data);
   },
 
   async updateProduct(id: string, data: object) {
-    return apiClient.patch<ProductDetail>(`/admin/products/${id}`, data);
+    return apiClient.patch<ProductDetail>(`/api/v1/admin/products/${id}`, data);
   },
 
   async uploadImage(productId: string, file: File, altText?: string) {
     const form = new FormData();
     form.append("file", file);
     if (altText) form.append("alt_text", altText);
-    return apiClient.postForm(`/admin/products/${productId}/images`, form);
+    return apiClient.postForm(`/api/v1/admin/products/${productId}/images`, form);
   },
 
   async reorderImages(productId: string, imageIds: string[]) {
-    return apiClient.patch(`/admin/products/${productId}/images/reorder`, imageIds);
+    return apiClient.patch(`/api/v1/admin/products/${productId}/images/reorder`, imageIds);
   },
 
   async bulkGenerateVariants(productId: string, data: object) {
-    return apiClient.post(`/admin/products/${productId}/variants/bulk-generate`, data);
+    return apiClient.post(`/api/v1/admin/products/${productId}/variants/bulk-generate`, data);
   },
 
   async updateVariant(productId: string, variantId: string, data: object) {
-    return apiClient.patch(`/admin/products/${productId}/variants/${variantId}`, data);
+    return apiClient.patch(`/api/v1/admin/products/${productId}/variants/${variantId}`, data);
   },
 
   async bulkAction(ids: string[], action: string) {
-    return apiClient.post("/admin/products/bulk-action", { ids, action });
+    return apiClient.post("/api/v1/admin/products/bulk-action", { ids, action });
   },
 
   async importProductsCsv(file: File) {
     const form = new FormData();
     form.append("file", file);
-    return apiClient.postForm("/admin/products/import-csv", form);
+    return apiClient.postForm("/api/v1/admin/products/import-csv", form);
   },
 
   exportProductsCsvUrl() {
@@ -59,7 +59,7 @@ export const adminService = {
     if (params?.low_stock_only) query.set("low_stock_only", "true");
     if (params?.variant_id) query.set("variant_id", params.variant_id);
     const qs = query.toString();
-    return apiClient.get(`/admin/inventory${qs ? `?${qs}` : ""}`);
+    return apiClient.get(`/api/v1/admin/inventory${qs ? `?${qs}` : ""}`);
   },
 
   async adjustStock(data: {
@@ -69,24 +69,24 @@ export const adminService = {
     reason: string;
     notes?: string;
   }) {
-    return apiClient.post("/admin/inventory/adjust", data);
+    return apiClient.post("/api/v1/admin/inventory/adjust", data);
   },
 
   async listWarehouses() {
-    return apiClient.get("/admin/warehouses");
+    return apiClient.get("/api/v1/admin/warehouses");
   },
 
   async createWarehouse(data: { name: string; code: string; address?: string }) {
-    return apiClient.post("/admin/warehouses", data);
+    return apiClient.post("/api/v1/admin/warehouses", data);
   },
 
   // Pricing / Shipping tiers (read-only for selects)
   async listPricingTiers() {
-    return apiClient.get("/admin/pricing-tiers");
+    return apiClient.get("/api/v1/admin/pricing-tiers");
   },
 
   async listShippingTiers() {
-    return apiClient.get("/admin/shipping-tiers");
+    return apiClient.get("/api/v1/admin/shipping-tiers");
   },
 
   // Companies
@@ -97,40 +97,40 @@ export const adminService = {
     if (params?.page) query.set("page", String(params.page));
     if (params?.page_size) query.set("page_size", String(params.page_size));
     const qs = query.toString();
-    return apiClient.get(`/admin/companies${qs ? `?${qs}` : ""}`);
+    return apiClient.get(`/api/v1/admin/companies${qs ? `?${qs}` : ""}`);
   },
 
   async getCompany(id: string) {
-    return apiClient.get(`/admin/companies/${id}`);
+    return apiClient.get(`/api/v1/admin/companies/${id}`);
   },
 
   async updateCompany(id: string, data: object) {
-    return apiClient.patch(`/admin/companies/${id}`, data);
+    return apiClient.patch(`/api/v1/admin/companies/${id}`, data);
   },
 
   async suspendCompany(id: string, reason: string) {
-    return apiClient.post(`/admin/companies/${id}/suspend`, { reason });
+    return apiClient.post(`/api/v1/admin/companies/${id}/suspend`, { reason });
   },
 
   async reactivateCompany(id: string) {
-    return apiClient.post(`/admin/companies/${id}/reactivate`, {});
+    return apiClient.post(`/api/v1/admin/companies/${id}/reactivate`, {});
   },
 
   // Wholesale applications
   async listApplications(status?: string) {
     const qs = status ? `?status=${status}` : "";
-    return apiClient.get(`/admin/wholesale-applications${qs}`);
+    return apiClient.get(`/api/v1/admin/wholesale-applications${qs}`);
   },
 
   async approveApplication(
     id: string,
     data: { pricing_tier_id: string; shipping_tier_id: string; notes?: string }
   ) {
-    return apiClient.post(`/admin/wholesale-applications/${id}/approve`, data);
+    return apiClient.post(`/api/v1/admin/wholesale-applications/${id}/approve`, data);
   },
 
   async rejectApplication(id: string, reason: string) {
-    return apiClient.post(`/admin/wholesale-applications/${id}/reject`, { reason });
+    return apiClient.post(`/api/v1/admin/wholesale-applications/${id}/reject`, { reason });
   },
 
   // Orders
@@ -140,73 +140,73 @@ export const adminService = {
     if (params?.status) query.set("status", params.status);
     if (params?.page) query.set("page", String(params.page));
     const qs = query.toString();
-    return apiClient.get(`/admin/orders${qs ? `?${qs}` : ""}`);
+    return apiClient.get(`/api/v1/admin/orders${qs ? `?${qs}` : ""}`);
   },
 
   async getOrder(id: string) {
-    return apiClient.get(`/admin/orders/${id}`);
+    return apiClient.get(`/api/v1/admin/orders/${id}`);
   },
 
   async updateOrder(id: string, data: object) {
-    return apiClient.patch(`/admin/orders/${id}`, data);
+    return apiClient.patch(`/api/v1/admin/orders/${id}`, data);
   },
 
   async cancelOrder(id: string, reason: string) {
-    return apiClient.post(`/admin/orders/${id}/cancel`, { reason });
+    return apiClient.post(`/api/v1/admin/orders/${id}/cancel`, { reason });
   },
 
   async syncOrderToQb(id: string) {
-    return apiClient.post(`/admin/orders/${id}/sync-quickbooks`, {});
+    return apiClient.post(`/api/v1/admin/orders/${id}/sync-quickbooks`, {});
   },
 
   // Email templates
   async listEmailTemplates() {
-    return apiClient.get("/admin/email-templates");
+    return apiClient.get("/api/v1/admin/email-templates");
   },
 
   async getEmailTemplate(id: string) {
-    return apiClient.get(`/admin/email-templates/${id}`);
+    return apiClient.get(`/api/v1/admin/email-templates/${id}`);
   },
 
   async updateEmailTemplate(id: string, data: object) {
-    return apiClient.patch(`/admin/email-templates/${id}`, data);
+    return apiClient.patch(`/api/v1/admin/email-templates/${id}`, data);
   },
 
   async previewEmailTemplate(id: string, variables: object) {
-    return apiClient.post(`/admin/email-templates/${id}/preview`, { variables });
+    return apiClient.post(`/api/v1/admin/email-templates/${id}/preview`, { variables });
   },
 
   // Settings
   async getSettings() {
-    return apiClient.get("/admin/settings");
+    return apiClient.get("/api/v1/admin/settings");
   },
 
   async updateSettings(data: object) {
-    return apiClient.patch("/admin/settings", data);
+    return apiClient.patch("/api/v1/admin/settings", data);
   },
 
   // Reports
   async getSalesReport(params?: { from?: string; to?: string; group_by?: string }) {
     const query = new URLSearchParams(params as Record<string, string>);
-    return apiClient.get(`/admin/reports/sales?${query.toString()}`);
+    return apiClient.get(`/api/v1/admin/reports/sales?${query.toString()}`);
   },
 
   async getInventoryReport() {
-    return apiClient.get("/admin/reports/inventory");
+    return apiClient.get("/api/v1/admin/reports/inventory");
   },
 
   async getCustomerReport(params?: { from?: string; to?: string }) {
     const query = new URLSearchParams(params as Record<string, string>);
-    return apiClient.get(`/admin/reports/customers?${query.toString()}`);
+    return apiClient.get(`/api/v1/admin/reports/customers?${query.toString()}`);
   },
 
   // QB
   async getQbStatus() {
-    return apiClient.get("/admin/quickbooks/status");
+    return apiClient.get("/api/v1/admin/quickbooks/status");
   },
 
   async retryQbSync(logId: string) {
-    return apiClient.post(`/admin/quickbooks/retry/${logId}`, {});
+    return apiClient.post(`/api/v1/admin/quickbooks/retry/${logId}`, {});
   },
 
   // Audit log
@@ -218,16 +218,16 @@ export const adminService = {
     page?: number;
   }) {
     const query = new URLSearchParams(params as Record<string, string>);
-    return apiClient.get(`/admin/audit-log?${query.toString()}`);
+    return apiClient.get(`/api/v1/admin/audit-log?${query.toString()}`);
   },
 
   // RMA
   async listRmas(status?: string) {
     const qs = status ? `?status=${status}` : "";
-    return apiClient.get(`/admin/rma${qs}`);
+    return apiClient.get(`/api/v1/admin/rma${qs}`);
   },
 
   async updateRma(id: string, data: { status: string; notes?: string }) {
-    return apiClient.patch(`/admin/rma/${id}`, data);
+    return apiClient.patch(`/api/v1/admin/rma/${id}`, data);
   },
 };

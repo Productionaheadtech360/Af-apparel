@@ -28,7 +28,7 @@ export default function CheckoutAddressPage() {
   });
 
   useEffect(() => {
-    apiClient.get<Address[]>("/account/addresses").then((addrs) => {
+    apiClient.get<Address[]>("/api/v1/account/addresses").then((addrs) => {
       setAddresses(addrs);
       const def = addrs.find((a) => a.is_default);
       if (def) setSelectedId(def.id);

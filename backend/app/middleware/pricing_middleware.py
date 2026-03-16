@@ -3,12 +3,16 @@
 This middleware runs AFTER auth_middleware so request.state.pricing_tier_id is
 already populated.  For unauthenticated requests the tier_discount_percent is
 set to Decimal("0") (retail / no discount).
+
+IMPORTANT: Implemented as a pure ASGI middleware (not BaseHTTPMiddleware) to
+avoid the known Starlette/asyncpg incompatibility where BaseHTTPMiddleware's
+call_next() breaks the asyncpg greenlet context and causes MissingGreenlet
+errors in route handlers that use async SQLAlchemy.
 """
 from decimal import Decimal
 
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.redis import redis_get, redis_set
 from app.core.database import AsyncSessionLocal as async_session_factory
@@ -17,8 +21,16 @@ _CACHE_PREFIX = "pricing_tier:"
 _CACHE_TTL = 3600
 
 
-class PricingMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next) -> Response:
+class PricingMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
         tier_id = getattr(request.state, "pricing_tier_id", None)
         discount_percent = Decimal("0")
 
@@ -28,7 +40,7 @@ class PricingMiddleware(BaseHTTPMiddleware):
             if cached is not None:
                 discount_percent = Decimal(cached)
             else:
-                # Lazy DB lookup — only for authenticated requests on product/cart paths
+                # Lazy DB lookup — only for authenticated requests with a tier
                 try:
                     from app.models.pricing import PricingTier
                     from sqlalchemy import select
@@ -49,4 +61,4 @@ class PricingMiddleware(BaseHTTPMiddleware):
                     pass  # Graceful fallback to 0%
 
         request.state.tier_discount_percent = discount_percent
-        return await call_next(request)
+        await self.app(scope, receive, send)

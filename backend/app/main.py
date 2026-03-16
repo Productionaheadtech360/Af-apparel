@@ -27,11 +27,9 @@ if settings.SENTRY_DSN:
 # ── App factory ───────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # Startup: verify connections
     assert await check_db_connection(), "Database connection failed on startup"
     assert await check_redis_connection(), "Redis connection failed on startup"
     yield
-    # Shutdown: nothing to clean up (connection pools handle their own teardown)
 
 
 app = FastAPI(
@@ -43,21 +41,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ── Custom middleware (order matters: outermost runs first) ───────────────────
+# ── Custom middleware ─────────────────────────────────────────────────────────
+# NOTE: add_middleware inserts at index 0; Starlette builds the stack by
+# iterating the list in REVERSE, so the LAST add_middleware call becomes the
+# OUTERMOST layer (runs first on request, last on response).
+# Order here (innermost → outermost after reversal):
+#   AuditMiddleware → AuthMiddleware → PricingMiddleware → CORSMiddleware
 app.add_middleware(AuditMiddleware)
 app.add_middleware(AuthMiddleware)
 
 
-# ── Global exception handler ──────────────────────────────────────────────────
+# ── Global exception handlers ─────────────────────────────────────────────────
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     return JSONResponse(
@@ -95,14 +89,38 @@ async def health_check() -> dict:
 
 
 # ── Routers ───────────────────────────────────────────────────────────────────
-from app.api.v1 import auth, products, cart, checkout, orders, account, webhooks
-from app.api.v1.admin import customers, pricing as admin_pricing, shipping as admin_shipping, settings as admin_settings, orders as admin_orders, reports as admin_reports, quickbooks as admin_quickbooks
-from app.middleware.pricing_middleware import PricingMiddleware
+# Imported here (after app creation) to avoid circular imports at module load time.
+from app.api.v1 import auth, products, cart, checkout, orders, account, webhooks  # noqa: E402
+from app.api.v1.admin import (  # noqa: E402
+    customers,
+    pricing as admin_pricing,
+    shipping as admin_shipping,
+    settings as admin_settings,
+    orders as admin_orders,
+    reports as admin_reports,
+    quickbooks as admin_quickbooks,
+    products as admin_products,
+    inventory as admin_inventory,
+)
+from app.middleware.pricing_middleware import PricingMiddleware  # noqa: E402
 
-# Register PricingMiddleware (runs after AuthMiddleware injects pricing_tier_id)
+# PricingMiddleware runs after Auth has injected pricing_tier_id into request.state
 app.add_middleware(PricingMiddleware)
 
+# CORS must be added LAST so it becomes the OUTERMOST middleware (runs first on
+# request). This ensures preflight OPTIONS responses include CORS headers before
+# any other middleware can short-circuit the request.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 _V1 = "/api/v1"
+
+# Public API routers
 app.include_router(auth.router, prefix=_V1)
 app.include_router(products.router, prefix=_V1)
 app.include_router(cart.router, prefix=_V1)
@@ -110,10 +128,14 @@ app.include_router(checkout.router, prefix=_V1)
 app.include_router(orders.router, prefix=_V1)
 app.include_router(account.router, prefix=_V1)
 app.include_router(webhooks.router, prefix=_V1)
-app.include_router(customers.router, prefix=_V1)
+
+# Admin routers — customers has no own prefix, mount it under /admin
+app.include_router(customers.router, prefix=f"{_V1}/admin")
 app.include_router(admin_pricing.router, prefix=_V1)
 app.include_router(admin_shipping.router, prefix=_V1)
 app.include_router(admin_settings.router, prefix=_V1)
 app.include_router(admin_orders.router, prefix=_V1)
 app.include_router(admin_reports.router, prefix=_V1)
 app.include_router(admin_quickbooks.router, prefix=_V1)
+app.include_router(admin_products.router, prefix=_V1)
+app.include_router(admin_inventory.router, prefix=_V1)

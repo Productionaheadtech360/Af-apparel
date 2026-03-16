@@ -1,7 +1,9 @@
+# backend/app/api/v1/auth.py
 """Auth API router."""
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.config import settings
 
 from app.core.database import get_db
 from app.core.security import get_token_jti
@@ -45,14 +47,14 @@ async def login(
     login_response, refresh_token = await service.login(data.email, data.password)
 
     response.set_cookie(
-        key=REFRESH_COOKIE_NAME,
-        value=refresh_token,
-        max_age=REFRESH_COOKIE_MAX_AGE,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        path="/api/v1/auth/refresh",
-    )
+    key=REFRESH_COOKIE_NAME,
+    value=refresh_token,
+    max_age=REFRESH_COOKIE_MAX_AGE,
+    httponly=True,
+    secure=settings.APP_ENV == "production",  # ✅ dev mein False
+    samesite="lax",
+    path="/api/v1/refresh",   # ✅ actual endpoint path
+)
     return login_response
 
 
@@ -72,8 +74,11 @@ async def logout(
             service = AuthService(db)
             await service.logout(user_id, jti)
 
-    response.delete_cookie(REFRESH_COOKIE_NAME, path="/api/v1/auth/refresh")
-
+    response.delete_cookie(
+    REFRESH_COOKIE_NAME,
+    path="/api/v1/refresh",
+    secure=settings.APP_ENV == "production",
+)
 
 @router.post("/refresh", response_model=TokenRefreshResponse)
 async def refresh(
@@ -96,9 +101,9 @@ async def refresh(
         value=new_refresh_token,
         max_age=REFRESH_COOKIE_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.APP_ENV == "production",
         samesite="lax",
-        path="/api/v1/auth/refresh",
+        path="/api/v1/refresh",
     )
     return token_response
 

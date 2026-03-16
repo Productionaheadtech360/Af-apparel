@@ -107,24 +107,46 @@ class OrderItem(BaseModel):
     variant: Mapped["ProductVariant"] = relationship("ProductVariant")
 
 
+# class CartItem(BaseModel):
+#     """Live cart item stored in DB (user_id + variant_id)."""
+
+#     __tablename__ = "cart_items"
+
+#     user_id: Mapped[uuid.UUID] = mapped_column(
+#         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
+#         nullable=False, index=True
+#     )
+#     variant_id: Mapped[uuid.UUID] = mapped_column(
+#         UUID(as_uuid=True), ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=False
+#     )
+#     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+#     price_at_add: Mapped[float | None] = mapped_column(
+#         Numeric(10, 2), comment="Tier price at time item was added"
+#     )
+
+#     user: Mapped["User"] = relationship("User")
+#     variant: Mapped["ProductVariant"] = relationship("ProductVariant")
+
 class CartItem(BaseModel):
-    """Live cart item stored in DB (user_id + variant_id)."""
+    """Live cart item stored in DB (company_id + variant_id)."""
 
     __tablename__ = "cart_items"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
+    # CHANGE: user_id → company_id (B2B cart belongs to company)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     variant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=False
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    price_at_add: Mapped[float | None] = mapped_column(
+    unit_price: Mapped[float | None] = mapped_column(  # price_at_add rename
         Numeric(10, 2), comment="Tier price at time item was added"
     )
 
-    user: Mapped["User"] = relationship("User")
+    # Relationships
+    company: Mapped["Company"] = relationship("Company")
     variant: Mapped["ProductVariant"] = relationship("ProductVariant")
 
 

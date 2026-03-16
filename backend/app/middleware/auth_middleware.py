@@ -46,6 +46,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
     """Decode JWT, inject user state, enforce rate limiting on public endpoints."""
 
     async def dispatch(self, request: Request, call_next: any) -> Response:
+        # OPTIONS preflight requests must pass through without auth checks so
+        # that CORS headers (added by the outermost CORSMiddleware) are returned.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         path = request.url.path
 
         # ── T209: Rate limiting for unauthenticated endpoints (100 req/min per IP) ──

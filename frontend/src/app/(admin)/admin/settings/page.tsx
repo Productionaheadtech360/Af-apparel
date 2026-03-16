@@ -28,7 +28,7 @@ export default function AdminSettingsPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    apiClient.get("/admin/settings").then((r: any) => {
+    apiClient.get("/api/v1/admin/settings").then((r: any) => {
       setValues(r.data ?? {});
     }).finally(() => setLoading(false));
   }, []);
@@ -42,7 +42,7 @@ export default function AdminSettingsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      await apiClient.patch("/admin/settings", values);
+      await apiClient.patch("/api/v1/admin/settings", values);
       setMessage({ type: "success", text: "Settings saved successfully." });
     } catch {
       setMessage({ type: "error", text: "Failed to save settings." });

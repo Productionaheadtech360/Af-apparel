@@ -1,37 +1,39 @@
-import type { Address, UserProfile } from "./user.types";
-import type { ProductVariant } from "./product.types";
+import type { Address } from "./user.types";
 
-/** Cart item. */
+/** Cart item — matches backend CartItemOut schema. */
 export interface CartItem {
   id: string;
   variant_id: string;
-  quantity: number;
-  price_at_add: number | null;
-  variant: Pick<ProductVariant, "id" | "sku" | "color" | "size" | "effective_price" | "stock_quantity">;
+  product_id: string;
   product_name: string;
-  product_slug: string;
-  primary_image_url: string | null;
-  line_total: number;
+  sku: string;
+  color: string | null;
+  size: string | null;
+  quantity: number;
+  unit_price: string;
+  line_total: string;
   moq: number;
   moq_satisfied: boolean;
+  stock_quantity: number;
 }
 
-/** Cart with validation summary. */
-export interface Cart {
-  items: CartItem[];
-  subtotal: number;
-  estimated_shipping: number | null;
-  estimated_tax: number | null;
-  estimated_total: number | null;
-  validation: CartValidation;
-}
-
-/** Cart validation result. */
+/** Cart validation result — matches backend CartValidation schema. */
 export interface CartValidation {
   is_valid: boolean;
-  moq_violations: { variant_id: string; product_name: string; required: number; actual: number }[];
-  mov_violation: { required: number; actual: number } | null;
-  out_of_stock: string[];
+  moq_violations: { variant_id: string; sku: string; required: number; current: number }[];
+  mov_violation: boolean;
+  mov_required: string;
+  mov_current: string;
+  estimated_shipping: string;
+}
+
+/** Cart response — matches backend CartResponse schema. */
+export interface Cart {
+  items: CartItem[];
+  subtotal: string;
+  item_count: number;
+  total_units: number;
+  validation: CartValidation;
 }
 
 /** Matrix add request (variant_id → quantity). */
@@ -59,7 +61,7 @@ export interface OrderListItem {
   po_number: string | null;
   status: OrderStatus;
   payment_status: PaymentStatus;
-  total: number;
+  total: string;
   item_count: number;
   created_at: string;
   company_name: string;
@@ -67,9 +69,9 @@ export interface OrderListItem {
 
 /** Full order detail. */
 export interface OrderDetail extends OrderListItem {
-  subtotal: number;
-  shipping_cost: number;
-  tax_amount: number;
+  subtotal: string;
+  shipping_cost: string;
+  tax_amount: string;
   shipping_address: Address | null;
   shipping_address_snapshot: Record<string, unknown> | null;
   tracking_number: string | null;
@@ -88,8 +90,8 @@ export interface OrderItemDetail {
   color: string | null;
   size: string | null;
   quantity: number;
-  unit_price: number;
-  line_total: number;
+  unit_price: string;
+  line_total: string;
 }
 
 /** Order template. */

@@ -55,7 +55,7 @@ export function ProductListClient({
     setBulkDownloading(true);
     setBulkMessage(null);
     try {
-      const res: any = await apiClient.post("/products/bulk-download", {
+      const res: any = await apiClient.post("/api/v1/products/bulk-download", {
         product_ids: Array.from(selected),
       });
       const taskId = res.data?.task_id;

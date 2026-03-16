@@ -30,8 +30,8 @@ export function ApprovalModal({ applicationId, companyName, onClose, onSuccess }
       ]);
       setPricingTiers(pt);
       setShippingTiers(st);
-      if (pt.length > 0) setPricingTierId(pt[0].id);
-      if (st.length > 0) setShippingTierId(st[0].id);
+      if (pt.length > 0) setPricingTierId(pt[0]?.id ?? "");
+      if (st.length > 0) setShippingTierId(st[0]?.id ?? "");
     }
     load();
   }, []);

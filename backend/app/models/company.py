@@ -50,6 +50,9 @@ class Company(BaseModel):
     # QuickBooks
     qb_customer_id: Mapped[str | None] = mapped_column(String(255))
 
+    # Stripe
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     # Notes
     admin_notes: Mapped[str | None] = mapped_column(Text)
 

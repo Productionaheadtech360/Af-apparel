@@ -3,24 +3,22 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
-  description: string | null;
   parent_id: string | null;
-  sort_order: number;
   children?: Category[];
 }
 
 /** Product image with multiple sizes. */
 export interface ProductImage {
   id: string;
-  url_thumbnail: string;  // 150px
-  url_medium: string;     // 400px
-  url_large: string;      // 800px
-  url_webp_thumbnail: string | null;
-  url_webp_medium: string | null;
-  url_webp_large: string | null;
+  url_thumbnail: string;     // 150px
+  url_medium: string;        // 400px
+  url_large: string;         // 800px
+  url_thumbnail_webp: string | null;
+  url_medium_webp: string | null;
+  url_large_webp: string | null;
   alt_text: string | null;
   is_primary: boolean;
-  sort_order: number;
+  position: number;
 }
 
 /** Product variant (SKU, color, size). */
@@ -29,36 +27,40 @@ export interface ProductVariant {
   sku: string;
   color: string | null;
   size: string | null;
-  retail_price: number;
-  effective_price: number;  // Tier-adjusted price
+  retail_price: string;
+  effective_price: string | null;
   status: "active" | "discontinued" | "out_of_stock";
-  stock_quantity: number;   // Summed across all warehouses
-  sort_order: number;
+  stock_quantity: number;
 }
 
-/** Product list item (card view). */
+/** Product list item (card view) — matches backend ProductListItem schema. */
 export interface ProductListItem {
   id: string;
   name: string;
   slug: string;
-  short_description: string | null;
+  status: "draft" | "active" | "archived";
   moq: number;
   primary_image: ProductImage | null;
-  min_retail_price: number;
-  min_effective_price: number;
-  status: "draft" | "active" | "archived";
+  variants: ProductVariant[];
   categories: Pick<Category, "id" | "name" | "slug">[];
-  variant_count: number;
 }
 
-/** Full product detail. */
-export interface ProductDetail extends ProductListItem {
+/** Full product detail — matches backend ProductDetail schema. */
+export interface ProductDetail {
+  id: string;
+  name: string;
+  slug: string;
   description: string | null;
-  meta_title: string | null;
-  meta_description: string | null;
+  status: "draft" | "active" | "archived";
+  moq: number;
   images: ProductImage[];
   variants: ProductVariant[];
-  assets: ProductAsset[];
+  categories: Pick<Category, "id" | "name" | "slug">[];
+  assets?: ProductAsset[];
+  meta_title: string | null;
+  meta_description: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 /** Product asset (flyer, spec sheet). */
@@ -73,10 +75,10 @@ export interface ProductAsset {
 export interface ProductFilters {
   q?: string;
   category?: string;
-  size?: string[];
-  color?: string[];
-  min_price?: number;
-  max_price?: number;
+  size?: string;
+  color?: string;
+  price_min?: number;
+  price_max?: number;
   page?: number;
-  per_page?: number;
+  page_size?: number;
 }

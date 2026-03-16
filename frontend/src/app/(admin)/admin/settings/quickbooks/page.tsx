@@ -27,7 +27,7 @@ export default function QuickBooksPage() {
   async function load() {
     setLoading(true);
     try {
-      const r: any = await apiClient.get("/admin/quickbooks/status");
+      const r: any = await apiClient.get("/api/v1/admin/quickbooks/status");
       setData(r.data);
     } finally {
       setLoading(false);
@@ -42,7 +42,7 @@ export default function QuickBooksPage() {
     setRetrying(logId);
     setMessage(null);
     try {
-      await apiClient.post(`/admin/quickbooks/retry/${logId}`, {});
+      await apiClient.post(`/api/v1/admin/quickbooks/retry/${logId}`, {});
       setMessage("Sync retry queued successfully.");
       await load();
     } catch {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuthStore } from "@/stores/auth.store";
 import { accountService } from "@/services/account.service";
 
 interface OrderSummary {
@@ -19,10 +20,15 @@ interface Profile {
 }
 
 export default function AccountOverviewPage() {
+  const user = useAuthStore((state) => state.user);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [recentOrders, setRecentOrders] = useState<OrderSummary[]>([]);
 
   useEffect(() => {
+    // Don't fetch until auth is settled and user is a non-admin customer
+    if (isLoading || !user || user.is_admin) return;
+
     async function load() {
       const [p, o] = await Promise.all([
         accountService.getProfile() as Promise<Profile>,
@@ -32,7 +38,22 @@ export default function AccountOverviewPage() {
       setRecentOrders((o.items ?? []).slice(0, 5));
     }
     load();
-  }, []);
+  }, [isLoading, user]);
+
+  // Admin accounts don't have a customer dashboard
+  if (!isLoading && user?.is_admin) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+        <h2 className="text-sm font-semibold text-amber-800 mb-1">Admin Account</h2>
+        <p className="text-sm text-amber-700">
+          Admin accounts don&apos;t have a customer dashboard.{" "}
+          <Link href="/admin/dashboard" className="underline font-medium">
+            Use the Admin Panel →
+          </Link>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>

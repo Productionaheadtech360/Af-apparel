@@ -31,15 +31,15 @@ export const productsService = {
 
     const query = params.toString();
     return apiClient.get<PaginatedResponse<ProductListItem>>(
-      `/products${query ? `?${query}` : ""}`
+      `/api/v1/products${query ? `?${query}` : ""}`
     );
   },
 
   async getProductBySlug(slug: string): Promise<ProductDetail> {
-    return apiClient.get<ProductDetail>(`/products/${slug}`);
+    return apiClient.get<ProductDetail>(`/api/v1/products/${slug}`);
   },
 
   async getCategories(): Promise<Category[]> {
-    return apiClient.get<Category[]>("/products/categories");
+    return apiClient.get<Category[]>("/api/v1/products/categories");
   },
 };

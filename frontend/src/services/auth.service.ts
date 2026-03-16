@@ -32,18 +32,18 @@ export interface WholesaleApplicationResponse {
 export const authService = {
   /** Log in and receive an access token. Refresh token is set as httpOnly cookie. */
   async login(payload: LoginPayload): Promise<AuthTokens> {
-    return apiClient.post<AuthTokens>("/api/v1/auth/login", payload, { skipAuth: true });
+    return apiClient.post<AuthTokens>("/api/v1/login", payload, { skipAuth: true });
   },
 
   /** Log out — blacklist access token and clear refresh cookie. */
   async logout(): Promise<void> {
-    return apiClient.post<void>("/api/v1/auth/logout");
+    return apiClient.post<void>("/api/v1/logout");
   },
 
   /** Submit a wholesale registration application. */
   async registerWholesale(payload: RegisterWholesalePayload): Promise<WholesaleApplicationResponse> {
     return apiClient.post<WholesaleApplicationResponse>(
-      "/api/v1/auth/register-wholesale",
+      "/api/v1/register-wholesale",
       payload,
       { skipAuth: true }
     );
@@ -51,18 +51,18 @@ export const authService = {
 
   /** Refresh the access token using the httpOnly refresh cookie. */
   async refreshToken(): Promise<AuthTokens> {
-    return apiClient.post<AuthTokens>("/api/v1/auth/refresh", undefined, { skipAuth: true });
+    return apiClient.post<AuthTokens>("/api/v1/refresh", undefined, { skipAuth: true });
   },
 
   /** Send a password reset email. Always resolves (no enumeration). */
   async forgotPassword(email: string): Promise<void> {
-    return apiClient.post<void>("/api/v1/auth/forgot-password", { email }, { skipAuth: true });
+    return apiClient.post<void>("/api/v1/forgot-password", { email }, { skipAuth: true });
   },
 
   /** Reset password using token from email. */
   async resetPassword(token: string, newPassword: string): Promise<void> {
     return apiClient.post<void>(
-      "/api/v1/auth/reset-password",
+      "/api/v1/reset-password",
       { token, new_password: newPassword },
       { skipAuth: true }
     );

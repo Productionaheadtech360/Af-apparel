@@ -77,7 +77,7 @@ class ProductService:
                 selectinload(Product.images),
                 selectinload(Product.category_links).selectinload(
                     ProductCategory.category
-                ),
+                ).selectinload(Category.children),
             )
             .where(Product.status == "active")
         )
@@ -150,7 +150,7 @@ class ProductService:
                 selectinload(Product.images),
                 selectinload(Product.category_links).selectinload(
                     ProductCategory.category
-                ),
+                ).selectinload(Category.children),
             )
             .where(Product.slug == slug, Product.status == "active")
         )
@@ -400,7 +400,7 @@ def _product_to_dict(product: Product) -> dict:
         "meta_description": getattr(product, "meta_description", None),
         "images": [_image_to_dict(i) for i in getattr(product, "images", [])],
         "variants": [_variant_to_dict(v) for v in getattr(product, "variants", [])],
-        "categories": [],
+        "categories": [_cat_to_dict(link.category) for link in getattr(product, "category_links", []) if getattr(link, "category", None)],
         "created_at": str(product.created_at),
         "updated_at": str(product.updated_at),
     }

@@ -80,7 +80,6 @@ class CartService:
                 cart_item = CartItem(
                     company_id=company_id,
                     variant_id=add_item.variant_id,
-                    product_id=payload.product_id,
                     quantity=add_item.quantity,
                     unit_price=effective_price,
                 )
@@ -170,7 +169,7 @@ class CartService:
 
         template = OrderTemplate(
             company_id=company_id,
-            created_by=user_id,
+            created_by_id=user_id,
             name=name,
             items=json.dumps(template_items),
         )

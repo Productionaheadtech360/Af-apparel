@@ -29,28 +29,30 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     Promise.allSettled([
-      apiClient.get("/admin/reports/sales?period=week"),
-      apiClient.get("/admin/customers?status=pending&page_size=1"),
-      apiClient.get("/admin/reports/inventory?low_stock_only=true"),
-      apiClient.get("/admin/quickbooks/status"),
-      apiClient.get("/admin/orders?page_size=5"),
+      apiClient.get("/api/v1/admin/reports/sales?period=week"),
+      apiClient.get("/api/v1/admin/wholesale-applications?status=pending"),
+      apiClient.get("/api/v1/admin/reports/inventory?low_stock_only=true"),
+      apiClient.get("/api/v1/admin/quickbooks/status"),
+      apiClient.get("/api/v1/admin/orders?page_size=5"),
     ]).then(([salesRes, appsRes, stockRes, qbRes, ordersRes]) => {
       const d: Partial<DashboardData> = {};
 
       if (salesRes.status === "fulfilled") {
-        d.sales_summary = (salesRes.value as any).data?.summary;
+        d.sales_summary = (salesRes.value as any)?.summary;
       }
       if (appsRes.status === "fulfilled") {
-        d.pending_applications = (appsRes.value as any).data?.total ?? 0;
+        const appList = appsRes.value;
+        d.pending_applications = Array.isArray(appList) ? appList.length : 0;
       }
       if (stockRes.status === "fulfilled") {
-        d.low_stock_count = (stockRes.value as any).data?.low_stock_count ?? 0;
+        const stockList = stockRes.value;
+        d.low_stock_count = Array.isArray(stockList) ? stockList.length : 0;
       }
       if (qbRes.status === "fulfilled") {
-        d.qb_failed_syncs = (qbRes.value as any).data?.failed_syncs?.length ?? 0;
+        d.qb_failed_syncs = (qbRes.value as any)?.failed_syncs?.length ?? 0;
       }
       if (ordersRes.status === "fulfilled") {
-        const orders = (ordersRes.value as any).data?.items ?? [];
+        const orders = (ordersRes.value as any)?.items ?? [];
         d.recent_orders = orders.map((o: any) => ({
           id: o.id,
           order_number: o.order_number,
@@ -96,7 +98,7 @@ export default function AdminDashboard() {
         </div>
 
         <Link
-          href="/customers/applications"
+          href="/admin/customers/applications"
           className={`border rounded-lg p-5 transition-shadow hover:shadow-md ${
             (data.pending_applications ?? 0) > 0 ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"
           }`}
@@ -109,7 +111,7 @@ export default function AdminDashboard() {
         </Link>
 
         <Link
-          href="/reports/inventory"
+          href="/admin/reports/inventory"
           className={`border rounded-lg p-5 transition-shadow hover:shadow-md ${
             (data.low_stock_count ?? 0) > 0 ? "bg-red-50 border-red-200" : "bg-white border-gray-200"
           }`}
@@ -122,7 +124,7 @@ export default function AdminDashboard() {
         </Link>
 
         <Link
-          href="/settings/quickbooks"
+          href="/admin/settings/quickbooks"
           className={`border rounded-lg p-5 transition-shadow hover:shadow-md ${
             (data.qb_failed_syncs ?? 0) > 0 ? "bg-red-50 border-red-200" : "bg-white border-gray-200"
           }`}
@@ -139,7 +141,7 @@ export default function AdminDashboard() {
       <div className="bg-white border border-gray-200 rounded-lg">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">Recent Orders</h2>
-          <Link href="/orders" className="text-sm text-blue-600 hover:underline">
+          <Link href="/admin/orders" className="text-sm text-blue-600 hover:underline">
             View all →
           </Link>
         </div>
@@ -161,7 +163,7 @@ export default function AdminDashboard() {
                 {data.recent_orders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-6 py-3">
-                      <Link href={`/orders/${order.id}`} className="text-blue-600 hover:underline font-mono text-xs">
+                      <Link href={`/admin/orders/${order.id}`} className="text-blue-600 hover:underline font-mono text-xs">
                         {order.order_number}
                       </Link>
                     </td>

@@ -36,7 +36,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   async function handleEmailFlyer() {
     setEmailingFlyer(true);
     try {
-      await apiClient.post(`/products/${product.id}/email-flyer`, {});
+      await apiClient.post(`/api/v1/products/${product.id}/email-flyer`, {});
       setAssetMsg("Flyer sent to your account email.");
     } catch {
       setAssetMsg("Failed to send flyer.");

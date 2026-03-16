@@ -4,17 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/orders", label: "Orders" },
-  { href: "/returns", label: "Returns (RMA)" },
-  { href: "/customers", label: "Customers" },
-  { href: "/customers/applications", label: "Applications" },
-  { href: "/products", label: "Products" },
-  { href: "/inventory", label: "Inventory" },
-  { href: "/reports", label: "Reports" },
-  { href: "/settings", label: "Settings" },
-  { href: "/settings/quickbooks", label: "QuickBooks" },
-  { href: "/settings/audit-log", label: "Audit Log" },
+  { href: "/admin/dashboard", label: "Dashboard" },
+  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/returns", label: "Returns (RMA)" },
+  { href: "/admin/customers", label: "Customers" },
+  { href: "/admin/customers/applications", label: "Applications" },
+  { href: "/admin/products", label: "Products" },
+  { href: "/admin/inventory", label: "Inventory" },
+  { href: "/admin/reports", label: "Reports" },
+  { href: "/admin/settings", label: "Settings" },
+  { href: "/admin/settings/quickbooks", label: "QuickBooks" },
+  { href: "/admin/settings/audit-log", label: "Audit Log" },
 ];
 
 export function AdminSidebar() {

@@ -1,4 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/auth.store";
 
 const NAV_ITEMS = [
   { href: "/account", label: "Overview" },
@@ -15,22 +20,52 @@ const NAV_ITEMS = [
 ];
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isLoading, isAdmin, user } = useAuthStore();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (user?.is_admin) {
+      router.replace("/admin/dashboard");
+    } else if (!isAuthenticated()) {
+      router.replace("/login");
+    }
+  }, [isLoading, user, isAuthenticated, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500 text-sm">Loading…</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated()) return null;
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 flex gap-6">
       {/* Sidebar */}
       <nav className="w-52 flex-shrink-0">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">My Account</h2>
         <ul className="space-y-1">
-          {NAV_ITEMS.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className="block px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const active = pathname === item.href || (item.href !== "/account" && pathname.startsWith(item.href));
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`block px-3 py-2 rounded-md text-sm transition-colors ${
+                    active
+                      ? "bg-blue-50 text-blue-700 font-medium"
+                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

@@ -25,26 +25,26 @@ export interface ConfirmOrderPayload {
 
 export const ordersService = {
   async createPaymentIntent(): Promise<CreatePaymentIntentResponse> {
-    return apiClient.post<CreatePaymentIntentResponse>("/checkout/intent", {
+    return apiClient.post<CreatePaymentIntentResponse>("/api/v1/checkout/intent", {
       cart_validated: true,
     });
   },
 
   async confirmOrder(payload: ConfirmOrderPayload): Promise<OrderDetail> {
-    return apiClient.post<OrderDetail>("/checkout/confirm", payload);
+    return apiClient.post<OrderDetail>("/api/v1/checkout/confirm", payload);
   },
 
   async getOrders(page = 1): Promise<PaginatedResponse<OrderListItem>> {
     return apiClient.get<PaginatedResponse<OrderListItem>>(
-      `/orders?page=${page}`
+      `/api/v1/orders?page=${page}`
     );
   },
 
   async getOrder(id: string): Promise<OrderDetail> {
-    return apiClient.get<OrderDetail>(`/orders/${id}`);
+    return apiClient.get<OrderDetail>(`/api/v1/orders/${id}`);
   },
 
   async reorder(orderId: string): Promise<{ added: unknown[]; skipped: unknown[] }> {
-    return apiClient.post(`/orders/${orderId}/reorder`, {});
+    return apiClient.post(`/api/v1/orders/${orderId}/reorder`, {});
   },
 };
