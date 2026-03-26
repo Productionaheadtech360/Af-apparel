@@ -35,18 +35,12 @@ class ProductService:
             return json.loads(cached)  # returned as plain dicts for response
 
         result = await self.db.execute(
-            select(Category).order_by(Category.name)
+            select(Category).options(selectinload(Category.children)).order_by(Category.name)
         )
         all_cats = result.scalars().all()
 
-        # Build tree in Python
+        # Only top-level categories; children are already eagerly loaded via selectinload
         root = [c for c in all_cats if c.parent_id is None]
-        cat_map = {c.id: c for c in all_cats}
-        for c in all_cats:
-            c.children = []  # reset
-        for c in all_cats:
-            if c.parent_id and c.parent_id in cat_map:
-                cat_map[c.parent_id].children.append(c)
 
         await redis_set("categories:tree", json.dumps([_cat_to_dict(c) for c in root]), expire=_CATEGORY_TTL)
         return root
@@ -280,7 +274,7 @@ class ProductService:
         variant = result.scalar_one_or_none()
         if not variant:
             raise NotFoundError(f"Variant {variant_id} not found")
-        variant.status = "archived"
+        variant.status = "discontinued"
         await self.db.flush()
 
     async def apply_bulk_action(self, ids: list[UUID], action: str) -> int:

@@ -25,7 +25,15 @@ async def list_warehouses(db: AsyncSession = Depends(get_db)):
 @router.post("/warehouses", response_model=WarehouseOut, status_code=status.HTTP_201_CREATED)
 async def create_warehouse(payload: WarehouseCreate, db: AsyncSession = Depends(get_db)):
     svc = InventoryService(db)
-    wh = await svc.create_warehouse(payload.name, payload.code, payload.address)
+    wh = await svc.create_warehouse(
+        payload.name,
+        payload.code,
+        address_line1=payload.address_line1,
+        city=payload.city,
+        state=payload.state,
+        postal_code=payload.postal_code,
+        country=payload.country,
+    )
     await db.commit()
     return wh
 

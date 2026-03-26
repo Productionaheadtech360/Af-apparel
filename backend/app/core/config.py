@@ -53,10 +53,12 @@ class Settings(BaseSettings):
     QB_ACCESS_TOKEN: str = ""
     QB_REFRESH_TOKEN: str = ""
 
-    # ── SendGrid ─────────────────────────────────────────────────────────────
-    SENDGRID_API_KEY: str = ""
-    EMAIL_FROM_ADDRESS: str = "noreply@afapparels.com"
+    # ── Email (Resend) ────────────────────────────────────────────────────────
+    RESEND_API_KEY: str = ""
+    SENDGRID_API_KEY: str = ""  # kept for backward compat, unused
+    EMAIL_FROM_ADDRESS: str = "noreply@karauxbaia.resend.app"
     EMAIL_FROM_NAME: str = "AF Apparels"
+    ADMIN_NOTIFICATION_EMAIL: str = ""
     FRONTEND_URL: str = "http://localhost:3000"
 
     # ── AWS S3 ────────────────────────────────────────────────────────────────
@@ -69,6 +71,9 @@ class Settings(BaseSettings):
     # ── Shopify (migration only) ──────────────────────────────────────────────
     SHOPIFY_STORE_DOMAIN: str = ""
     SHOPIFY_ADMIN_API_TOKEN: str = ""
+
+    # ── reCAPTCHA ─────────────────────────────────────────────────────────────
+    RECAPTCHA_SECRET_KEY: str = ""
 
     # ── Sentry ────────────────────────────────────────────────────────────────
     SENTRY_DSN: str = ""

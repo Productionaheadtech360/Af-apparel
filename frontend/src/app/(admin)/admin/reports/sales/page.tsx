@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
+import { adminService } from "@/services/admin.service";
 
 const PERIODS = [
   { value: "week", label: "Last 7 Days" },
@@ -32,16 +33,13 @@ export default function SalesReportPage() {
   useEffect(() => {
     setLoading(true);
     apiClient
-      .get(`/admin/reports/sales?period=${period}&group_by=${groupBy}`)
-      .then((r: any) => setData(r.data))
+      .get(`/api/v1/admin/reports/sales?period=${period}&group_by=${groupBy}`)
+      .then((r: any) => setData(r))
       .finally(() => setLoading(false));
   }, [period, groupBy]);
 
   function handleExport() {
-    window.open(
-      `/api/v1/admin/reports/sales/export-csv?period=${period}`,
-      "_blank"
-    );
+    adminService.exportSalesCsv(period).catch(() => {});
   }
 
   return (

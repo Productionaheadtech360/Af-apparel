@@ -33,7 +33,7 @@ class PaymentService:
         params: dict = {
             "amount": amount_cents,
             "currency": currency,
-            "automatic_payment_methods": {"enabled": True},
+            "payment_method_types": ["card"],
             "metadata": metadata or {},
         }
         if customer_stripe_id:

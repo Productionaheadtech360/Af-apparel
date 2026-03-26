@@ -35,6 +35,8 @@ class OrderService:
         user_id: UUID,
         confirm: CheckoutConfirmRequest,
         discount_percent: Decimal = Decimal("0"),
+        qb_charge_id: str | None = None,
+        qb_payment_status: str | None = None,
     ) -> Order:
         settings = get_settings()
 
@@ -119,8 +121,11 @@ class OrderService:
         # 5. Calculate shipping
         shipping_cost = Decimal("0")
         if company.shipping_tier_id:
+            from sqlalchemy.orm import selectinload
             shipping_tier_result = await self.db.execute(
-                select(ShippingTier).where(ShippingTier.id == company.shipping_tier_id)
+                select(ShippingTier)
+                .options(selectinload(ShippingTier.brackets))
+                .where(ShippingTier.id == company.shipping_tier_id)
             )
             shipping_tier = shipping_tier_result.scalar_one_or_none()
             if shipping_tier:
@@ -139,24 +144,29 @@ class OrderService:
         order_number = await self._generate_order_number()
 
         # 8. Create Order record
+        import json as _json
+        # Determine payment_status: map QB status strings to our enum values
+        # QB returns "CAPTURED" but our enum only accepts: unpaid|pending|paid|refunded|failed
+        _qb_status = qb_payment_status or ""
+        _payment_status = "paid" if _qb_status == "CAPTURED" else "pending"
+
         order = Order(
             company_id=company_id,
-            created_by=user_id,
+            placed_by_id=user_id,
             order_number=order_number,
             status="pending",
-            payment_status="pending",
+            payment_status=_payment_status,
             po_number=confirm.po_number,
-            order_notes=confirm.order_notes,
+            notes=confirm.order_notes,
             stripe_payment_intent_id=confirm.payment_intent_id,
+            qb_payment_charge_id=qb_charge_id,
+            qb_payment_status=qb_payment_status,
             subtotal=subtotal,
             shipping_cost=shipping_cost,
+            tax_amount=Decimal("0"),
             total=total,
-            shipping_address_line1=shipping_address.get("line1"),
-            shipping_address_line2=shipping_address.get("line2"),
-            shipping_address_city=shipping_address.get("city"),
-            shipping_address_state=shipping_address.get("state"),
-            shipping_address_postal_code=shipping_address.get("postal_code"),
-            shipping_address_country=shipping_address.get("country", "US"),
+            shipping_address_id=confirm.address_id if confirm.address_id else None,
+            shipping_address_snapshot=_json.dumps(shipping_address) if shipping_address else None,
         )
         self.db.add(order)
         await self.db.flush()
@@ -176,7 +186,13 @@ class OrderService:
         )
 
         await self.db.flush()
-        await self.db.refresh(order)
+
+        # Reload order with items eager-loaded (async ORM cannot lazy-load during response serialization)
+        from sqlalchemy.orm import selectinload
+        result = await self.db.execute(
+            select(Order).options(selectinload(Order.items)).where(Order.id == order.id)
+        )
+        order = result.scalar_one()
 
         # 11. Queue confirmation email
         from app.tasks.email_tasks import send_order_confirmation_email
@@ -264,7 +280,6 @@ class OrderService:
             cart_item = CartItem(
                 company_id=company_id,
                 variant_id=order_item.variant_id,
-                product_id=variant.product_id,
                 quantity=order_item.quantity,
                 unit_price=effective_price,
             )
@@ -289,8 +304,8 @@ class OrderService:
             addr = result.scalar_one_or_none()
             if addr:
                 return {
-                    "line1": addr.line1,
-                    "line2": addr.line2,
+                    "line1": addr.address_line1,
+                    "line2": addr.address_line2,
                     "city": addr.city,
                     "state": addr.state,
                     "postal_code": addr.postal_code,

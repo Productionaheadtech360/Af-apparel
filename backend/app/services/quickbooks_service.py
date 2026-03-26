@@ -54,7 +54,7 @@ QB_BASE_URL = {
     "production": "https://quickbooks.api.intuit.com",
 }
 
-TOKEN_URL = "https://oauth.intuit.com/oauth2/v1/tokens/bearer"
+TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
 
 
 class QuickBooksService:
@@ -70,19 +70,27 @@ class QuickBooksService:
     # ── Token management ──────────────────────────────────────────────────────
 
     def refresh_token_if_expired(self) -> bool:
-        """Refresh access token using the stored refresh token. Returns True on success."""
+        """Refresh access token using the stored refresh token.
+
+        Returns True on success. On network failure, logs a warning and
+        continues using the existing token rather than crashing the request.
+        """
+        import logging
+        _log = logging.getLogger(__name__)
+
         if not settings.QB_CLIENT_ID or not settings.QB_REFRESH_TOKEN:
             return False
         try:
-            resp = httpx.post(
-                TOKEN_URL,
-                auth=(settings.QB_CLIENT_ID, settings.QB_CLIENT_SECRET),
-                data={
-                    "grant_type": "refresh_token",
-                    "refresh_token": self._refresh_token or settings.QB_REFRESH_TOKEN,
-                },
-                timeout=10,
-            )
+            with httpx.Client(transport=httpx.HTTPTransport(retries=3)) as client:
+                resp = client.post(
+                    TOKEN_URL,
+                    auth=(settings.QB_CLIENT_ID, settings.QB_CLIENT_SECRET),
+                    data={
+                        "grant_type": "refresh_token",
+                        "refresh_token": self._refresh_token or settings.QB_REFRESH_TOKEN,
+                    },
+                    timeout=10,
+                )
             resp.raise_for_status()
             data = resp.json()
             self._access_token = data["access_token"]
@@ -90,12 +98,26 @@ class QuickBooksService:
             expires_in = data.get("expires_in", 3600)
             self._token_expiry = datetime.utcnow() + timedelta(seconds=expires_in - 60)
             return True
+        except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
+            # Network unreachable — fall back to the current token and try anyway.
+            # If the token is truly expired the downstream 401 handler will surface it.
+            _log.warning("QB token refresh skipped (network): %s — using existing token", exc)
+            return False
         except Exception as exc:
-            raise RuntimeError(f"QB token refresh failed: {exc}") from exc
+            _log.warning("QB token refresh failed: %s — using existing token", exc)
+            return False
+
+    def get_access_token(self) -> str:
+        """Return a valid access token, refreshing if needed."""
+        if self._needs_refresh():
+            self.refresh_token_if_expired()
+        return self._access_token
 
     def _needs_refresh(self) -> bool:
+        # If expiry is unknown but a token is already loaded, trust it.
+        # A 401 response will trigger an explicit refresh via the caller.
         if self._token_expiry is None:
-            return True
+            return not bool(self._access_token)
         return datetime.utcnow() >= self._token_expiry
 
     def _headers(self) -> dict[str, str]:
@@ -113,11 +135,12 @@ class QuickBooksService:
     def _request(self, method: str, path: str, **kwargs) -> dict[str, Any]:
         _rate_limiter.wait()
         url = self._url(path)
-        resp = httpx.request(method, url, headers=self._headers(), timeout=15, **kwargs)
-        if resp.status_code == 401:
-            # Token may have been revoked externally — try one refresh
-            self.refresh_token_if_expired()
-            resp = httpx.request(method, url, headers=self._headers(), timeout=15, **kwargs)
+        with httpx.Client(transport=httpx.HTTPTransport(retries=3)) as client:
+            resp = client.request(method, url, headers=self._headers(), timeout=15, **kwargs)
+            if resp.status_code == 401:
+                # Token may have been revoked externally — try one refresh
+                self.refresh_token_if_expired()
+                resp = client.request(method, url, headers=self._headers(), timeout=15, **kwargs)
         resp.raise_for_status()
         return resp.json()
 

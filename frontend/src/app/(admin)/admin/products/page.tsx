@@ -45,7 +45,7 @@ export default function AdminProductsPage() {
         <h1 className="text-xl font-bold text-gray-900">Products</h1>
         <div className="flex gap-2">
           <a
-            href={adminService.exportProductsCsvUrl()}
+            href={`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/products/export-csv`}
             className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
           >
             Export CSV

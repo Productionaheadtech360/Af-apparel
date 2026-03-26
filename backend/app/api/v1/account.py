@@ -10,6 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
 
@@ -69,7 +70,7 @@ async def get_price_list_status(
 
 from app.schemas.order import AddressIn, AddressOut  # noqa: E402
 from app.models.company import UserAddress  # noqa: E402
-from sqlalchemy import select, delete  # noqa: E402
+from sqlalchemy import func, select, delete, update  # noqa: E402
 
 
 @router.get("/addresses", response_model=list[AddressOut])
@@ -92,7 +93,32 @@ async def create_address(
     company_id = getattr(request.state, "company_id", None)
     if not company_id:
         raise ForbiddenError("Company account required")
-    addr = UserAddress(company_id=company_id, **payload.model_dump())
+
+    count = (await db.execute(
+        select(func.count(UserAddress.id)).where(UserAddress.company_id == company_id)
+    )).scalar_one()
+
+    make_default = payload.is_default or count == 0
+    if make_default:
+        await db.execute(
+            update(UserAddress)
+            .where(UserAddress.company_id == company_id)
+            .values(is_default=False)
+        )
+
+    addr = UserAddress(
+        company_id=company_id,
+        label=payload.label,
+        full_name=payload.full_name,
+        address_line1=payload.line1,
+        address_line2=payload.line2,
+        city=payload.city,
+        state=payload.state,
+        postal_code=payload.postal_code,
+        country=payload.country,
+        phone=payload.phone,
+        is_default=make_default,
+    )
     db.add(addr)
     await db.commit()
     await db.refresh(addr)
@@ -110,16 +136,59 @@ async def update_address(
     if not company_id:
         raise ForbiddenError("Company account required")
     from app.core.exceptions import NotFoundError
-    result = await db.execute(
+    addr = (await db.execute(
         select(UserAddress).where(
             UserAddress.id == address_id, UserAddress.company_id == company_id
         )
-    )
-    addr = result.scalar_one_or_none()
+    )).scalar_one_or_none()
     if not addr:
         raise NotFoundError("Address not found")
-    for field, value in payload.model_dump().items():
-        setattr(addr, field, value)
+
+    if payload.is_default and not addr.is_default:
+        await db.execute(
+            update(UserAddress)
+            .where(UserAddress.company_id == company_id)
+            .values(is_default=False)
+        )
+
+    addr.label = payload.label
+    addr.full_name = payload.full_name
+    addr.address_line1 = payload.line1
+    addr.address_line2 = payload.line2
+    addr.city = payload.city
+    addr.state = payload.state
+    addr.postal_code = payload.postal_code
+    addr.country = payload.country
+    addr.phone = payload.phone
+    addr.is_default = payload.is_default
+    await db.commit()
+    await db.refresh(addr)
+    return addr
+
+
+@router.patch("/addresses/{address_id}/set-default", response_model=AddressOut)
+async def set_default_address(
+    address_id: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+    from app.core.exceptions import NotFoundError
+    await db.execute(
+        update(UserAddress)
+        .where(UserAddress.company_id == company_id)
+        .values(is_default=False)
+    )
+    addr = (await db.execute(
+        select(UserAddress).where(
+            UserAddress.id == address_id, UserAddress.company_id == company_id
+        )
+    )).scalar_one_or_none()
+    if not addr:
+        raise NotFoundError("Address not found")
+    addr.is_default = True
     await db.commit()
     await db.refresh(addr)
     return addr
@@ -151,26 +220,51 @@ async def list_payment_methods(request: Request, db: AsyncSession = Depends(get_
     company_id = getattr(request.state, "company_id", None)
     if not company_id:
         raise ForbiddenError("Company account required")
-    from app.services.payment_service import PaymentService
     from app.models.company import Company
+    from app.services.qb_payments_service import QBPaymentsService
 
-    result = await db.execute(select(Company).where(Company.id == company_id))
-    company = result.scalar_one_or_none()
-    if not company or not company.stripe_customer_id:
+    company = (await db.execute(select(Company).where(Company.id == company_id))).scalar_one_or_none()
+    if not company or not company.qb_customer_id:
         return []
 
-    svc = PaymentService(db)
-    pms = await svc.list_saved_payment_methods(company.stripe_customer_id)
-    return [
-        {
-            "id": pm.id,
-            "brand": pm.card.brand,
-            "last4": pm.card.last4,
-            "exp_month": pm.card.exp_month,
-            "exp_year": pm.card.exp_year,
-        }
-        for pm in pms
-    ]
+    try:
+        svc = QBPaymentsService()
+        cards = svc.list_saved_cards(company.qb_customer_id)
+        default_id = company.default_payment_method_id
+        return [
+            {
+                "id": card.get("id"),
+                "brand": card.get("cardType", "Unknown"),
+                "last4": (card.get("number") or "")[-4:] or "****",
+                "exp_month": card.get("expMonth"),
+                "exp_year": card.get("expYear"),
+                "name": card.get("name"),
+                "billing_address": card.get("address"),
+                "is_default": card.get("id") == default_id,
+                "created": card.get("created"),
+            }
+            for card in (cards if isinstance(cards, list) else [])
+        ]
+    except Exception:
+        return []
+
+
+@router.patch("/payment-methods/{payment_method_id}/set-default")
+async def set_default_payment_method(
+    payment_method_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+    from app.models.company import Company
+
+    company = (await db.execute(select(Company).where(Company.id == company_id))).scalar_one_or_none()
+    if company:
+        company.default_payment_method_id = payment_method_id
+        await db.commit()
+    return {"message": "Default payment method updated"}
 
 
 @router.delete("/payment-methods/{payment_method_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -182,10 +276,21 @@ async def delete_payment_method(
     company_id = getattr(request.state, "company_id", None)
     if not company_id:
         raise ForbiddenError("Company account required")
-    from app.services.payment_service import PaymentService
+    from app.models.company import Company
+    from app.services.qb_payments_service import QBPaymentsService
 
-    svc = PaymentService(db)
-    await svc.detach_payment_method(payment_method_id)
+    company = (await db.execute(select(Company).where(Company.id == company_id))).scalar_one_or_none()
+    if not company or not company.qb_customer_id:
+        return
+
+    try:
+        svc = QBPaymentsService()
+        svc.delete_saved_card(company.qb_customer_id, payment_method_id)
+        if company.default_payment_method_id == payment_method_id:
+            company.default_payment_method_id = None
+            await db.commit()
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -193,11 +298,12 @@ async def delete_payment_method(
 # ---------------------------------------------------------------------------
 
 from app.schemas.account import (  # noqa: E402
-    ChangePasswordRequest, CompanyUserOut, ContactCreate, ContactOut,
-    MessageCreate, MessageOut, ProfileOut, ProfileUpdate, RoleUpdate, UserInvite,
+    ChangePasswordRequest, CompanyProfileUpdate, CompanyUserOut, ContactCreate,
+    ContactOut, MessageCreate, MessageOut, ProfileOut, ProfileUpdate, RoleUpdate, UserInvite,
+    UserUpdate,
 )
 from app.core.security import hash_password, verify_password  # noqa: E402
-from app.core.exceptions import NotFoundError, ValidationError  # noqa: E402
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError  # noqa: E402
 from app.models.company import CompanyUser, Contact  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.models.communication import Message  # noqa: E402
@@ -233,6 +339,95 @@ async def update_profile(
     return user
 
 
+@router.get("/profile/full")
+async def get_full_profile(request: Request, db: AsyncSession = Depends(get_db)):
+    """Return combined user + company profile for the account profile page."""
+    user_id = getattr(request.state, "user_id", None)
+    company_id = getattr(request.state, "company_id", None)
+    if not user_id:
+        raise ForbiddenError("Authentication required")
+
+    from app.models.company import Company
+
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise NotFoundError("User not found")
+
+    company = None
+    if company_id:
+        company = (await db.execute(
+            select(Company).where(Company.id == company_id)
+        )).scalar_one_or_none()
+
+    return {
+        "web_user": {
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+        },
+        "company": {
+            "account_number": str(company.id)[:8].upper(),
+            "name": company.name,
+            "trading_name": company.trading_name,
+            "phone": company.phone,
+            "fax": company.fax,
+            "website": company.website,
+            "tax_id": company.tax_id,
+            "tax_id_expiry": company.tax_id_expiry,
+            "business_type": company.business_type,
+            "secondary_business": company.secondary_business,
+            "estimated_annual_volume": company.estimated_annual_volume,
+            "ppac_number": company.ppac_number,
+            "ppai_number": company.ppai_number,
+            "asi_number": company.asi_number,
+        } if company else None,
+    }
+
+
+@router.patch("/profile/user")
+async def update_user_profile(
+    payload: ProfileUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update first_name / last_name / phone for the logged-in user."""
+    user_id = getattr(request.state, "user_id", None)
+    if not user_id:
+        raise ForbiddenError("Authentication required")
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise NotFoundError("User not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(user, field, value)
+    await db.commit()
+    return {"message": "User profile updated"}
+
+
+@router.patch("/profile/company")
+async def update_company_profile(
+    payload: CompanyProfileUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update editable company profile fields."""
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+
+    from app.models.company import Company
+
+    company = (await db.execute(
+        select(Company).where(Company.id == company_id)
+    )).scalar_one_or_none()
+    if not company:
+        raise NotFoundError("Company not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        if hasattr(company, field):
+            setattr(company, field, value)
+    await db.commit()
+    return {"message": "Company profile updated"}
+
+
 @router.patch("/change-password", status_code=status.HTTP_200_OK)
 async def change_password(
     payload: ChangePasswordRequest,
@@ -249,6 +444,24 @@ async def change_password(
         raise ValidationError("Current password is incorrect")
     user.hashed_password = hash_password(payload.new_password)
     await db.commit()
+
+    # Security notification — never block the response if email fails
+    try:
+        from app.services.email_service import EmailService
+        EmailService(db).send_raw(
+            to_email=user.email,
+            subject="Your AF Apparels password has been changed",
+            body_html=(
+                f"<h2>Password Changed Successfully</h2>"
+                f"<p>Hi {user.first_name},</p>"
+                f"<p>Your AF Apparels account password was successfully changed.</p>"
+                f"<p>If you did not make this change, please contact us immediately.</p>"
+                f"<br><p>AF Apparels Team</p>"
+            ),
+        )
+    except Exception:
+        pass
+
     return {"message": "Password updated"}
 
 
@@ -271,10 +484,9 @@ async def list_company_users(request: Request, db: AsyncSession = Depends(get_db
     company_id = getattr(request.state, "company_id", None)
     if not company_id:
         raise ForbiddenError("Company account required")
-    result = await db.execute(
+    members = (await db.execute(
         select(CompanyUser).where(CompanyUser.company_id == company_id)
-    )
-    members = result.scalars().all()
+    )).scalars().all()
     out = []
     for m in members:
         user = (await db.execute(select(User).where(User.id == m.user_id))).scalar_one_or_none()
@@ -286,6 +498,7 @@ async def list_company_users(request: Request, db: AsyncSession = Depends(get_db
                 first_name=user.first_name,
                 last_name=user.last_name,
                 role=m.role,
+                user_group=m.user_group,
                 is_active=user.is_active,
             ))
     return out
@@ -298,33 +511,73 @@ async def invite_user(
     db: AsyncSession = Depends(get_db),
 ):
     company_id, inviter_id = _require_owner(request)
-    # Create user if not exists
+
+    # Validate password
+    import re
+    if len(payload.password) < 8 or len(payload.password) > 20:
+        raise ValidationError("Password must be between 8 and 20 characters")
+    if not re.match(r"^[a-zA-Z]", payload.password):
+        raise ValidationError("Password must begin with a letter")
+
     existing = (await db.execute(select(User).where(User.email == payload.email))).scalar_one_or_none()
-    if not existing:
-        import secrets
-        temp_password = secrets.token_urlsafe(16)
+    if existing:
+        already_member = (await db.execute(
+            select(CompanyUser).where(
+                CompanyUser.company_id == company_id, CompanyUser.user_id == existing.id
+            )
+        )).scalar_one_or_none()
+        if already_member:
+            raise ConflictError("User already belongs to this company")
+        user_id = existing.id
+    else:
         new_user = User(
             email=payload.email,
-            hashed_password=hash_password(temp_password),
+            hashed_password=hash_password(payload.password),
             first_name=payload.first_name,
             last_name=payload.last_name,
             is_active=True,
+            email_verified=False,
         )
         db.add(new_user)
         await db.flush()
         user_id = new_user.id
-    else:
-        user_id = existing.id
-    # Add company membership
-    db.add(CompanyUser(company_id=company_id, user_id=user_id, role=payload.role))
+
+    db.add(CompanyUser(
+        company_id=company_id,
+        user_id=user_id,
+        role=payload.role,
+        user_group=payload.user_group,
+        is_active=True,
+        invited_by_id=inviter_id,
+    ))
     await db.commit()
-    return {"message": "User invited", "user_id": str(user_id)}
+
+    try:
+        from app.services.email_service import EmailService
+        email_svc = EmailService(db)
+        email_svc.send_raw(
+            to_email=payload.email,
+            subject="You have been invited to AF Apparels",
+            body_html=f"""
+            <h2>Welcome to AF Apparels!</h2>
+            <p>Hi {payload.first_name},</p>
+            <p>You have been invited to join the AF Apparels wholesale platform.</p>
+            <p><strong>Your login details:</strong></p>
+            <p>Email: {payload.email}<br>Password: {payload.password}</p>
+            <p><a href="http://localhost:3000/login">Click here to login</a></p>
+            <p>AF Apparels Team</p>
+            """,
+        )
+    except Exception:
+        pass
+
+    return {"message": "User invited successfully", "user_id": str(user_id)}
 
 
 @router.patch("/users/{user_id}", status_code=status.HTTP_200_OK)
 async def update_company_user(
     user_id: UUID,
-    payload: RoleUpdate,
+    payload: UserUpdate,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
@@ -336,9 +589,46 @@ async def update_company_user(
     )).scalar_one_or_none()
     if not member:
         raise NotFoundError("User not found in company")
-    member.role = payload.role
+
+    if payload.role is not None:
+        member.role = payload.role
+    if payload.user_group is not None:
+        member.user_group = payload.user_group
+
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if user:
+        if payload.first_name is not None:
+            user.first_name = payload.first_name
+        if payload.last_name is not None:
+            user.last_name = payload.last_name
+        if payload.is_active is not None:
+            user.is_active = payload.is_active
+
     await db.commit()
-    return {"message": "Role updated"}
+    return {"message": "User updated"}
+
+
+@router.post("/users/{user_id}/reset-password", status_code=status.HTTP_200_OK)
+async def reset_user_password(
+    user_id: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    company_id, _ = _require_owner(request)
+    member = (await db.execute(
+        select(CompanyUser).where(
+            CompanyUser.company_id == company_id, CompanyUser.user_id == user_id
+        )
+    )).scalar_one_or_none()
+    if not member:
+        raise NotFoundError("User not found in company")
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise NotFoundError("User not found")
+    from app.services.auth_service import AuthService
+    auth_svc = AuthService(db)
+    await auth_svc.send_password_reset(user.email)
+    return {"message": "Password reset email sent"}
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -348,6 +638,9 @@ async def remove_company_user(
     db: AsyncSession = Depends(get_db),
 ):
     company_id, _ = _require_owner(request)
+    current_user_id = getattr(request.state, "user_id", None)
+    if current_user_id and str(user_id) == str(current_user_id):
+        raise ValidationError("Cannot remove yourself")
     from sqlalchemy import delete as sa_delete
     await db.execute(
         sa_delete(CompanyUser).where(
@@ -644,3 +937,94 @@ async def get_rma(rma_id: UUID, request: Request, db: AsyncSession = Depends(get
     if not rma:
         raise NotFoundError("RMA not found")
     return rma
+
+
+# ---------------------------------------------------------------------------
+# Resend Registration Emails
+# ---------------------------------------------------------------------------
+
+@router.post("/resend-registration-emails")
+async def resend_registration_emails(
+    payload: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Resend welcome/registration emails to selected user groups and/or explicit addresses."""
+    company_id = getattr(request.state, "company_id", None)
+    company_role = getattr(request.state, "company_role", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+    if company_role != "owner":
+        raise ForbiddenError("Owner role required")
+
+    # Verify reCAPTCHA (skip if secret key not configured — dev convenience)
+    from app.core.config import settings as _settings
+    recaptcha_token = payload.get("recaptcha_token")
+    if _settings.RECAPTCHA_SECRET_KEY:
+        if not recaptcha_token:
+            raise ValidationError("reCAPTCHA verification required")
+        import httpx
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://www.google.com/recaptcha/api/siteverify",
+                data={
+                    "secret": _settings.RECAPTCHA_SECRET_KEY,
+                    "response": recaptcha_token,
+                },
+            )
+            result = resp.json()
+            if not result.get("success"):
+                raise ValidationError("reCAPTCHA verification failed")
+
+    selected_groups = payload.get("groups", [])
+    to_emails = [e.strip() for e in payload.get("to", "").split(",") if e.strip()]
+    cc_emails = [e.strip() for e in payload.get("cc", "").split(",") if e.strip()]
+    bcc_emails = [e.strip() for e in payload.get("bcc", "").split(",") if e.strip()]
+
+    if not selected_groups and not to_emails:
+        raise ValidationError("Select at least one user group or enter a TO email")
+
+    # Collect emails from selected groups
+    group_emails: list[str] = []
+    if selected_groups:
+        members = (await db.execute(
+            select(CompanyUser).where(
+                CompanyUser.company_id == company_id,
+                CompanyUser.user_group.in_(selected_groups),
+            )
+        )).scalars().all()
+        for member in members:
+            user = (await db.execute(
+                select(User).where(User.id == member.user_id)
+            )).scalar_one_or_none()
+            if user and user.email:
+                group_emails.append(user.email)
+
+    all_to = list(set(group_emails + to_emails))
+    if not all_to:
+        raise ValidationError("No recipients found for selected groups")
+
+    from app.services.email_service import EmailService as _EmailService
+    email_svc = _EmailService(db)
+
+    sent_count = 0
+    for email in all_to:
+        try:
+            email_svc.send_raw(
+                to_email=email,
+                subject="Welcome to AF Apparels B2B Platform",
+                body_html=(
+                    "<h2>Welcome to AF Apparels!</h2>"
+                    "<p>This is a reminder of your registration to the AF Apparels wholesale platform.</p>"
+                    f"<p>Please visit <a href='{_settings.FRONTEND_URL}/login'>our platform</a> to login.</p>"
+                    "<p>If you need help, please contact us.</p>"
+                    "<p>AF Apparels Team</p>"
+                ),
+                cc=cc_emails or None,
+                bcc=bcc_emails or None,
+            )
+            sent_count += 1
+        except Exception:
+            pass
+
+    return {"message": f"Emails sent successfully to {sent_count} recipient(s)", "sent_count": sent_count}

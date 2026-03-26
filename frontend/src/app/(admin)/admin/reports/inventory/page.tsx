@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
+import { adminService } from "@/services/admin.service";
 
 interface InventoryItem {
   sku: string;
@@ -30,13 +31,13 @@ export default function InventoryReportPage() {
   useEffect(() => {
     setLoading(true);
     apiClient
-      .get(`/admin/reports/inventory?low_stock_only=${lowStockOnly}`)
-      .then((r: any) => setData(r.data))
+      .get(`/api/v1/admin/reports/inventory?low_stock_only=${lowStockOnly}`)
+      .then((r: any) => setData(r))
       .finally(() => setLoading(false));
   }, [lowStockOnly]);
 
   function handleExport() {
-    window.open("/api/v1/admin/reports/inventory/export-csv", "_blank");
+    adminService.exportInventoryCsv().catch(() => {});
   }
 
   const filtered =

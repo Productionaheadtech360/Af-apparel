@@ -220,44 +220,59 @@ async def export_products_csv(db: AsyncSession = Depends(get_db)):
 async def _process_and_upload_image(
     content: bytes, product_id: UUID, filename: str
 ) -> dict:
-    """Resize to 150/400/800px + WebP, upload all 6 variants to S3."""
+    """Resize to 150/400/800px + WebP. Uploads to S3 if configured, else saves locally."""
     from PIL import Image as PILImage
-    import boto3
     import io as _io
+    import os
     from app.core.config import get_settings
 
     settings = get_settings()
-    s3 = boto3.client(
-        "s3",
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name=settings.AWS_REGION,
-    )
-    bucket = settings.S3_BUCKET_NAME
-    cdn = settings.CDN_BASE_URL.rstrip("/") if settings.CDN_BASE_URL else f"https://{bucket}.s3.amazonaws.com"
+    use_s3 = bool(settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY)
 
     img = PILImage.open(_io.BytesIO(content)).convert("RGB")
     sizes = {"thumbnail": 150, "medium": 400, "large": 800}
     urls: dict[str, str] = {}
 
-    base_key = f"products/{product_id}/{filename.rsplit('.', 1)[0]}"
+    base_name = filename.rsplit(".", 1)[0]
+    base_key = f"products/{product_id}/{base_name}"
+
+    if use_s3:
+        import boto3
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION,
+        )
+        bucket = settings.AWS_S3_BUCKET
+        cdn = settings.CDN_BASE_URL.rstrip("/") if settings.CDN_BASE_URL else f"https://{bucket}.s3.amazonaws.com"
+    else:
+        local_dir = f"/app/media/products/{product_id}"
+        os.makedirs(local_dir, exist_ok=True)
 
     for size_name, px in sizes.items():
         resized = img.copy()
         resized.thumbnail((px, px), PILImage.LANCZOS)
 
-        # JPEG upload
-        jpeg_buf = _io.BytesIO()
-        resized.save(jpeg_buf, "JPEG", quality=85, optimize=True)
-        jpeg_key = f"{base_key}_{size_name}.jpg"
-        s3.put_object(Bucket=bucket, Key=jpeg_key, Body=jpeg_buf.getvalue(), ContentType="image/jpeg")
-        urls[size_name] = f"{cdn}/{jpeg_key}"
+        if use_s3:
+            jpeg_buf = _io.BytesIO()
+            resized.save(jpeg_buf, "JPEG", quality=85, optimize=True)
+            jpeg_key = f"{base_key}_{size_name}.jpg"
+            s3.put_object(Bucket=bucket, Key=jpeg_key, Body=jpeg_buf.getvalue(), ContentType="image/jpeg")
+            urls[size_name] = f"{cdn}/{jpeg_key}"
 
-        # WebP upload
-        webp_buf = _io.BytesIO()
-        resized.save(webp_buf, "WEBP", quality=85)
-        webp_key = f"{base_key}_{size_name}.webp"
-        s3.put_object(Bucket=bucket, Key=webp_key, Body=webp_buf.getvalue(), ContentType="image/webp")
-        urls[f"{size_name}_webp"] = f"{cdn}/{webp_key}"
+            webp_buf = _io.BytesIO()
+            resized.save(webp_buf, "WEBP", quality=85)
+            webp_key = f"{base_key}_{size_name}.webp"
+            s3.put_object(Bucket=bucket, Key=webp_key, Body=webp_buf.getvalue(), ContentType="image/webp")
+            urls[f"{size_name}_webp"] = f"{cdn}/{webp_key}"
+        else:
+            jpeg_path = f"/app/media/{base_key}_{size_name}.jpg"
+            resized.save(jpeg_path, "JPEG", quality=85, optimize=True)
+            urls[size_name] = f"/media/{base_key}_{size_name}.jpg"
+
+            webp_path = f"/app/media/{base_key}_{size_name}.webp"
+            resized.save(webp_path, "WEBP", quality=85)
+            urls[f"{size_name}_webp"] = f"/media/{base_key}_{size_name}.webp"
 
     return urls

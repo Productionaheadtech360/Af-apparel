@@ -1,11 +1,10 @@
-"""EmailService — DB-stored Jinja2 templates + SendGrid delivery."""
+"""EmailService — DB-stored Jinja2 templates + Resend delivery."""
 import json
 import logging
 from uuid import UUID
 
+import resend
 from jinja2 import BaseLoader, Environment, TemplateError
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,41 +64,75 @@ class EmailService:
         }
 
     async def send(self, trigger_event: str, to_email: str, variables: dict) -> bool:
-        """Render template and send via SendGrid. Returns True on success."""
+        """Render template and send via Resend. Returns True on success."""
         rendered = await self.render(trigger_event, variables)
-        return self._send_via_sendgrid(
+        return self._send_via_resend(
             to_email=to_email,
             subject=rendered["subject"],
             body_html=rendered["body_html"],
             body_text=rendered.get("body_text"),
         )
 
-    def _send_via_sendgrid(
+    def send_raw(
         self,
         to_email: str,
         subject: str,
         body_html: str,
         body_text: str | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
     ) -> bool:
-        if not settings.SENDGRID_API_KEY:
-            logger.warning("SENDGRID_API_KEY not set — skipping email to %s", to_email)
-            return False
-        message = Mail(
-            from_email=(settings.EMAIL_FROM_ADDRESS, settings.EMAIL_FROM_NAME),
-            to_emails=to_email,
+        """Send an ad-hoc email without requiring a DB template."""
+        return self._send_via_resend(
+            to_email=to_email,
             subject=subject,
-            html_content=body_html,
-            plain_text_content=body_text,
+            body_html=body_html,
+            body_text=body_text,
+            cc=cc,
+            bcc=bcc,
         )
+
+    def _send_via_resend(
+        self,
+        to_email: str,
+        subject: str,
+        body_html: str,
+        body_text: str | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
+    ) -> bool:
+        if not settings.RESEND_API_KEY:
+            logger.warning("RESEND_API_KEY not set — skipping email to %s", to_email)
+            return False
+
+        resend.api_key = settings.RESEND_API_KEY
+        from_addr = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM_ADDRESS}>"
+
+        # In dev/test: redirect all emails to admin notification address
+        recipient = to_email
+        if settings.APP_ENV in ("development", "test") and settings.ADMIN_NOTIFICATION_EMAIL:
+            recipient = settings.ADMIN_NOTIFICATION_EMAIL
+
+        params: resend.Emails.SendParams = {
+            "from": from_addr,
+            "to": [recipient],
+            "subject": subject,
+            "html": body_html,
+        }
+        if body_text:
+            params["text"] = body_text
+        if cc:
+            params["cc"] = cc
+        if bcc:
+            params["bcc"] = bcc
+
         try:
-            sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
-            response = sg.send(message)
-            if response.status_code >= 400:
-                logger.error("SendGrid error %s for %s", response.status_code, to_email)
-                return False
+            result = resend.Emails.send(params)
+            email_id = result.get("id") if isinstance(result, dict) else getattr(result, "id", None)
+            logger.info("Resend email sent to %s (id=%s)", recipient, email_id)
             return True
         except Exception as exc:
-            logger.error("SendGrid exception for %s: %s", to_email, exc)
+            logger.error("Resend exception for %s: %s", recipient, exc)
             return False
 
     @staticmethod

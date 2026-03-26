@@ -1,5 +1,26 @@
-import { apiClient } from "@/lib/api-client";
+import { apiClient, getAccessToken } from "@/lib/api-client";
 import type { ProductDetail } from "@/types/product.types";
+
+const API_BASE =
+  typeof window === "undefined"
+    ? (process.env.INTERNAL_API_URL ?? "http://localhost:8000")
+    : (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000");
+
+async function downloadCsv(path: string, filename: string): Promise<void> {
+  const token = getAccessToken();
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("CSV export failed");
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export const adminService = {
   // Products
@@ -49,8 +70,8 @@ export const adminService = {
     return apiClient.postForm("/api/v1/admin/products/import-csv", form);
   },
 
-  exportProductsCsvUrl() {
-    return `${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/products/export-csv`;
+  async exportProductsCsv() {
+    return downloadCsv("/api/v1/admin/products/export-csv", "products-export.csv");
   },
 
   // Inventory
@@ -229,5 +250,27 @@ export const adminService = {
 
   async updateRma(id: string, data: { status: string; notes?: string }) {
     return apiClient.patch(`/api/v1/admin/rma/${id}`, data);
+  },
+
+  // CSV exports (authenticated blob download)
+  async exportSalesCsv(period: string) {
+    return downloadCsv(
+      `/api/v1/admin/reports/sales/export-csv?period=${period}`,
+      `sales-report-${period}.csv`
+    );
+  },
+
+  async exportInventoryCsv() {
+    return downloadCsv(
+      "/api/v1/admin/reports/inventory/export-csv",
+      "inventory-report.csv"
+    );
+  },
+
+  async exportCustomersCsv(period: string) {
+    return downloadCsv(
+      `/api/v1/admin/reports/customers/export-csv?period=${period}`,
+      `customers-report-${period}.csv`
+    );
   },
 };

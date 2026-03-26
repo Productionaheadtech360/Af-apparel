@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
+import { adminService } from "@/services/admin.service";
 
 const PERIODS = [
   { value: "week", label: "Last 7 Days" },
@@ -26,16 +27,13 @@ export default function CustomerReportPage() {
   useEffect(() => {
     setLoading(true);
     apiClient
-      .get(`/admin/reports/customers?period=${period}`)
-      .then((r: any) => setData(r.data))
+      .get(`/api/v1/admin/reports/customers?period=${period}`)
+      .then((r: any) => setData(r))
       .finally(() => setLoading(false));
   }, [period]);
 
   function handleExport() {
-    window.open(
-      `/api/v1/admin/reports/customers/export-csv?period=${period}`,
-      "_blank"
-    );
+    adminService.exportCustomersCsv(period).catch(() => {});
   }
 
   return (

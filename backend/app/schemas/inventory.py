@@ -7,14 +7,23 @@ from pydantic import BaseModel, Field
 class WarehouseCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     code: str = Field(..., min_length=1, max_length=20)
-    address: str | None = None
+    address_line1: str | None = None
+    city: str | None = None
+    state: str | None = None
+    postal_code: str | None = None
+    country: str = "US"
 
 
 class WarehouseOut(BaseModel):
     id: UUID
     name: str
     code: str
-    address: str | None
+    address_line1: str | None = None
+    city: str | None = None
+    state: str | None = None
+    postal_code: str | None = None
+    country: str = "US"
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
 

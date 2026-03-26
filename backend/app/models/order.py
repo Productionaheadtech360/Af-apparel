@@ -65,6 +65,10 @@ class Order(BaseModel):
     tracking_number: Mapped[str | None] = mapped_column(String(255))
     carrier: Mapped[str | None] = mapped_column(String(100))
 
+    # QuickBooks Payments
+    qb_payment_charge_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    qb_payment_status: Mapped[str | None] = mapped_column(String(50))
+
     # QuickBooks sync
     qb_sync_status: Mapped[str] = mapped_column(
         Enum("pending", "synced", "failed", "skipped", name="qb_order_sync_status"),
@@ -72,6 +76,15 @@ class Order(BaseModel):
         nullable=False,
     )
     qb_invoice_id: Mapped[str | None] = mapped_column(String(255))
+
+    # ── Schema compatibility aliases ────────────────────────────────────────────
+    @property
+    def order_notes(self) -> str | None:
+        return self.notes
+
+    @property
+    def item_count(self) -> int:
+        return len(self.items) if self.items is not None else 0
 
     # ── Relationships ─────────────────────────────────────────────────────────
     company: Mapped["Company"] = relationship("Company", back_populates="orders")

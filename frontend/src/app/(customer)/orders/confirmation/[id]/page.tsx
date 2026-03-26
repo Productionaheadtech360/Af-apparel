@@ -1,23 +1,25 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ordersService } from "@/services/orders.service";
 import { formatCurrency } from "@/lib/utils";
+import type { OrderDetail } from "@/types/order.types";
 
-export const metadata: Metadata = {
-  title: "Order Confirmed — AF Apparels Wholesale",
-};
+export default function OrderConfirmationPage() {
+  const { id } = useParams<{ id: string }>();
+  const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
+  useEffect(() => {
+    if (!id) return;
+    ordersService.getOrder(id)
+      .then(setOrder)
+      .catch(() => setNotFound(true));
+  }, [id]);
 
-export default async function OrderConfirmationPage({ params }: PageProps) {
-  const { id } = await params;
-
-  let order;
-  try {
-    order = await ordersService.getOrder(id);
-  } catch {
+  if (notFound) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="text-center max-w-md">
@@ -26,6 +28,14 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
             View all orders
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-400">Loading order…</p>
       </div>
     );
   }

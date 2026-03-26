@@ -23,6 +23,22 @@ class ProfileUpdate(BaseModel):
     phone: str | None = None
 
 
+class CompanyProfileUpdate(BaseModel):
+    name: str | None = None
+    trading_name: str | None = None
+    phone: str | None = None
+    fax: str | None = None
+    website: str | None = None
+    tax_id: str | None = None
+    tax_id_expiry: str | None = None
+    business_type: str | None = None
+    secondary_business: str | None = None
+    estimated_annual_volume: str | None = None
+    ppac_number: str | None = None
+    ppai_number: str | None = None
+    asi_number: str | None = None
+
+
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str = Field(..., min_length=8)
@@ -35,16 +51,28 @@ class CompanyUserOut(BaseModel):
     first_name: str
     last_name: str
     role: str
+    user_group: str
     is_active: bool
 
     model_config = {"from_attributes": True}
 
 
 class UserInvite(BaseModel):
-    email: EmailStr
     first_name: str
     last_name: str
+    email: str
     role: str = "buyer"
+    user_group: str = "Users"
+    password: str
+    password_hint: str | None = None
+
+
+class UserUpdate(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    role: str | None = None
+    user_group: str | None = None
+    is_active: bool | None = None
 
 
 class RoleUpdate(BaseModel):
@@ -52,29 +80,37 @@ class RoleUpdate(BaseModel):
 
 
 class ContactCreate(BaseModel):
+    # Contact Entry
     first_name: str
     last_name: str
-    email: EmailStr
+    department: str | None = None
+    time_zone: str | None = None
     phone: str | None = None
-    title: str | None = None
-    is_primary: bool = False
+    phone_ext: str | None = None
+    fax: str | None = None
+    email: str
+    web_address: str | None = None
+    notes: str | None = None
+    # Contact Detail
+    home_address1: str | None = None
+    home_address2: str | None = None
+    home_postal_code: str | None = None
+    home_city: str | None = None
+    home_state: str | None = None
+    home_country: str | None = "US"
+    home_phone: str | None = None
+    home_fax: str | None = None
+    home_email: str | None = None
+    alt_contacts: str | None = None
+    # Notifications
     notify_order_confirmation: bool = True
     notify_order_shipped: bool = True
     notify_invoices: bool = False
+    is_primary: bool = False
 
 
-class ContactOut(BaseModel):
+class ContactOut(ContactCreate):
     id: UUID
-    company_id: UUID
-    first_name: str
-    last_name: str
-    email: str
-    phone: str | None
-    title: str | None
-    is_primary: bool
-    notify_order_confirmation: bool
-    notify_order_shipped: bool
-    notify_invoices: bool
 
     model_config = {"from_attributes": True}
 

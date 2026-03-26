@@ -12,7 +12,7 @@ from app.models.system import AuditLog
 from app.schemas.email import EmailTemplateOut, EmailTemplateUpdate, PreviewRequest, PreviewResponse
 from app.services.email_service import EmailService
 
-router = APIRouter()
+router = APIRouter(prefix="/admin")
 
 
 @router.get("/email-templates", response_model=list[EmailTemplateOut])
@@ -85,7 +85,7 @@ async def send_test_email(
 
 # ── T206: Admin system settings ───────────────────────────────────────────────
 
-@router.get("/admin/settings")
+@router.get("/settings")
 async def get_platform_settings(
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
@@ -96,7 +96,7 @@ async def get_platform_settings(
     return {row.key: row.value for row in rows}
 
 
-@router.patch("/admin/settings")
+@router.patch("/settings")
 async def update_platform_settings(
     payload: dict,
     _: None = Depends(require_admin),
@@ -132,7 +132,7 @@ async def update_platform_settings(
 
 # ── T198: Audit Log ───────────────────────────────────────────────────────────
 
-@router.get("/admin/audit-log")
+@router.get("/audit-log")
 async def list_audit_log(
     admin_user_id: Optional[str] = Query(None),
     entity_type: Optional[str] = Query(None),

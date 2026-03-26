@@ -80,6 +80,7 @@ async def sales_report(
             func.sum(OrderItem.line_total).label("revenue"),
             func.count(OrderItem.id).label("items_sold"),
         )
+        .select_from(Order)
         .join(OrderItem, OrderItem.order_id == Order.id)
         .join(ProductVariant, ProductVariant.id == OrderItem.variant_id)
         .join(ProductCategory, ProductCategory.product_id == ProductVariant.product_id)
@@ -171,21 +172,20 @@ async def inventory_report(
     q = (
         select(
             ProductVariant.sku,
-            ProductVariant.name.label("variant_name"),
+            func.concat_ws(" ", ProductVariant.color, ProductVariant.size).label("variant_name"),
             Product.name.label("product_name"),
-            func.coalesce(func.sum(InventoryRecord.quantity_on_hand), 0).label("quantity_on_hand"),
-            func.coalesce(func.sum(InventoryRecord.quantity_reserved), 0).label("quantity_reserved"),
-            ProductVariant.low_stock_threshold,
+            func.coalesce(func.sum(InventoryRecord.quantity), 0).label("quantity_on_hand"),
+            func.coalesce(func.min(InventoryRecord.low_stock_threshold), 10).label("low_stock_threshold"),
         )
         .join(Product, Product.id == ProductVariant.product_id)
         .outerjoin(InventoryRecord, InventoryRecord.variant_id == ProductVariant.id)
-        .where(ProductVariant.is_active == True)
+        .where(ProductVariant.status == "active")
         .group_by(
             ProductVariant.id,
             ProductVariant.sku,
-            ProductVariant.name,
+            ProductVariant.color,
+            ProductVariant.size,
             Product.name,
-            ProductVariant.low_stock_threshold,
         )
         .order_by(Product.name, ProductVariant.sku)
     )
@@ -198,16 +198,16 @@ async def inventory_report(
     items = []
     low_stock_items = []
     for r in rows:
-        available = int(r["quantity_on_hand"]) - int(r["quantity_reserved"])
+        quantity_on_hand = int(r["quantity_on_hand"])
         threshold = r["low_stock_threshold"] or 10
-        is_low = available <= threshold
+        is_low = quantity_on_hand <= threshold
         item = {
             "sku": r["sku"],
             "product_name": r["product_name"],
             "variant_name": r["variant_name"],
-            "quantity_on_hand": int(r["quantity_on_hand"]),
-            "quantity_reserved": int(r["quantity_reserved"]),
-            "available": available,
+            "quantity_on_hand": quantity_on_hand,
+            "quantity_reserved": 0,
+            "available": quantity_on_hand,
             "low_stock_threshold": threshold,
             "is_low_stock": is_low,
         }
@@ -237,14 +237,15 @@ async def customer_report(
     start, end = _date_range(period)
 
     # New registrations over time
+    reg_trunc = func.date_trunc("day", Company.created_at)
     reg_q = (
         select(
-            func.date_trunc("day", Company.created_at).label("day"),
+            reg_trunc.label("day"),
             func.count(Company.id).label("count"),
         )
         .where(Company.created_at.between(start, end))
-        .group_by(func.date_trunc("day", Company.created_at))
-        .order_by(func.date_trunc("day", Company.created_at))
+        .group_by(reg_trunc)
+        .order_by(reg_trunc)
     )
     reg_rows = (await db.execute(reg_q)).mappings().all()
 
@@ -352,27 +353,24 @@ async def export_report_csv(
             writer.writerow([str(r["day"])[:10], r["cnt"], float(r["rev"] or 0)])
 
     elif report_type == "inventory":
-        writer.writerow(["SKU", "Product", "Variant", "On Hand", "Reserved", "Available", "Low Stock"])
+        writer.writerow(["SKU", "Product", "Variant", "On Hand", "Available", "Low Stock"])
         q = (
             select(
                 ProductVariant.sku,
                 Product.name.label("product_name"),
-                ProductVariant.name.label("variant_name"),
-                func.coalesce(func.sum(InventoryRecord.quantity_on_hand), 0).label("on_hand"),
-                func.coalesce(func.sum(InventoryRecord.quantity_reserved), 0).label("reserved"),
-                ProductVariant.low_stock_threshold,
+                func.concat_ws(" ", ProductVariant.color, ProductVariant.size).label("variant_name"),
+                func.coalesce(func.sum(InventoryRecord.quantity), 0).label("on_hand"),
+                func.coalesce(func.min(InventoryRecord.low_stock_threshold), 10).label("low_stock_threshold"),
             )
             .join(Product, Product.id == ProductVariant.product_id)
             .outerjoin(InventoryRecord, InventoryRecord.variant_id == ProductVariant.id)
-            .where(ProductVariant.is_active == True)
-            .group_by(ProductVariant.id, ProductVariant.sku, ProductVariant.name, Product.name, ProductVariant.low_stock_threshold)
+            .where(ProductVariant.status == "active")
+            .group_by(ProductVariant.id, ProductVariant.sku, ProductVariant.color, ProductVariant.size, Product.name)
         )
         for r in (await db.execute(q)).mappings().all():
             on_hand = int(r["on_hand"])
-            reserved = int(r["reserved"])
-            available = on_hand - reserved
             threshold = r["low_stock_threshold"] or 10
-            writer.writerow([r["sku"], r["product_name"], r["variant_name"], on_hand, reserved, available, "Yes" if available <= threshold else "No"])
+            writer.writerow([r["sku"], r["product_name"], r["variant_name"], on_hand, on_hand, "Yes" if on_hand <= threshold else "No"])
 
     elif report_type == "customers":
         writer.writerow(["Company", "Order Count", "Total Spend"])

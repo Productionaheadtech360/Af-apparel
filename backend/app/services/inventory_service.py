@@ -36,8 +36,25 @@ class InventoryService:
             raise NotFoundError(f"Warehouse {warehouse_id} not found")
         return wh
 
-    async def create_warehouse(self, name: str, code: str, address: str | None = None) -> Warehouse:
-        wh = Warehouse(name=name, code=code, address=address)
+    async def create_warehouse(
+        self,
+        name: str,
+        code: str,
+        address_line1: str | None = None,
+        city: str | None = None,
+        state: str | None = None,
+        postal_code: str | None = None,
+        country: str = "US",
+    ) -> Warehouse:
+        wh = Warehouse(
+            name=name,
+            code=code,
+            address_line1=address_line1,
+            city=city,
+            state=state,
+            postal_code=postal_code,
+            country=country,
+        )
         self.db.add(wh)
         await self.db.flush()
         await self.db.refresh(wh)
@@ -145,11 +162,11 @@ class InventoryService:
 
         # Log adjustment
         adj = InventoryAdjustment(
-            inventory_id=record.id,
+            inventory_record_id=record.id,
             reason=reason,
             quantity_before=quantity_before,
             quantity_after=quantity_after,
-            adjusted_by=adjusted_by,
+            adjusted_by_id=adjusted_by,
             notes=notes,
         )
         self.db.add(adj)

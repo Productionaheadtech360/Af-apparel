@@ -49,9 +49,19 @@ class Company(BaseModel):
 
     # QuickBooks
     qb_customer_id: Mapped[str | None] = mapped_column(String(255))
+    default_payment_method_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Stripe
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Extended profile fields
+    fax: Mapped[str | None] = mapped_column(String(50))
+    tax_id_expiry: Mapped[str | None] = mapped_column(String(20))
+    secondary_business: Mapped[str | None] = mapped_column(String(100))
+    estimated_annual_volume: Mapped[str | None] = mapped_column(String(50))
+    ppac_number: Mapped[str | None] = mapped_column(String(100))
+    ppai_number: Mapped[str | None] = mapped_column(String(100))
+    asi_number: Mapped[str | None] = mapped_column(String(100))
 
     # Notes
     admin_notes: Mapped[str | None] = mapped_column(Text)
@@ -91,6 +101,7 @@ class CompanyUser(BaseModel):
         default="buyer",
         nullable=False,
     )
+    user_group: Mapped[str] = mapped_column(String(50), default="Users", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     invited_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
@@ -109,11 +120,30 @@ class Contact(BaseModel):
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # Contact Entry
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    department: Mapped[str | None] = mapped_column(String(50))
+    time_zone: Mapped[str | None] = mapped_column(String(100))
     phone: Mapped[str | None] = mapped_column(String(50))
-    title: Mapped[str | None] = mapped_column(String(100))
+    phone_ext: Mapped[str | None] = mapped_column(String(20))
+    fax: Mapped[str | None] = mapped_column(String(50))
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    web_address: Mapped[str | None] = mapped_column(String(500))
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    # Contact Detail / Home Address
+    home_address1: Mapped[str | None] = mapped_column(String(255))
+    home_address2: Mapped[str | None] = mapped_column(String(255))
+    home_postal_code: Mapped[str | None] = mapped_column(String(20))
+    home_city: Mapped[str | None] = mapped_column(String(100))
+    home_state: Mapped[str | None] = mapped_column(String(100))
+    home_country: Mapped[str | None] = mapped_column(String(2), default="US")
+    home_phone: Mapped[str | None] = mapped_column(String(50))
+    home_fax: Mapped[str | None] = mapped_column(String(50))
+    home_email: Mapped[str | None] = mapped_column(String(255))
+    alt_contacts: Mapped[str | None] = mapped_column(Text)
+
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Notification preferences
@@ -133,6 +163,8 @@ class UserAddress(BaseModel):
         UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
     )
     label: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "Warehouse", "HQ"
+    full_name: Mapped[str | None] = mapped_column(String(200))
+    phone: Mapped[str | None] = mapped_column(String(50))
     address_line1: Mapped[str] = mapped_column(String(255), nullable=False)
     address_line2: Mapped[str | None] = mapped_column(String(255))
     city: Mapped[str] = mapped_column(String(100), nullable=False)

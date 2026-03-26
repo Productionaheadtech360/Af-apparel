@@ -1,3 +1,4 @@
+// frontend/src/app/(customer)/account/layout.tsx
 "use client";
 
 import Link from "next/link";
@@ -8,11 +9,13 @@ import { useAuthStore } from "@/stores/auth.store";
 const NAV_ITEMS = [
   { href: "/account", label: "Overview" },
   { href: "/account/orders", label: "Orders" },
-  { href: "/account/profile", label: "Profile" },
-  { href: "/account/addresses", label: "Addresses" },
-  { href: "/account/contacts", label: "Contacts" },
-  { href: "/account/users", label: "Users" },
-  { href: "/account/payment-methods", label: "Payment Methods" },
+  { href: "/account/profile", label: "Account Profile" },
+  { href: "/account/change-password", label: "Change Password" },
+  { href: "/account/addresses", label: "Address Book" },
+  { href: "/account/contacts", label: "Manage Contacts" },
+  { href: "/account/users", label: "Manage Users" },
+  { href: "/account/resend-emails", label: "Resend Registration Emails" },
+  { href: "/account/payment-methods", label: "Manage Payment Methods" },
   { href: "/account/statements", label: "Statements" },
   { href: "/account/messages", label: "Messages" },
   { href: "/account/inventory", label: "Inventory Report" },

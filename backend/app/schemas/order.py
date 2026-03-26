@@ -9,26 +9,32 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 class AddressIn(BaseModel):
+    label: str = "Default"
+    full_name: str | None = None
     line1: str
     line2: str | None = None
     city: str
     state: str
     postal_code: str
     country: str = "US"
+    phone: str | None = None
+    is_default: bool = False
 
 
 class AddressOut(BaseModel):
     id: UUID
-    label: str | None
-    line1: str
-    line2: str | None
+    label: str | None = None
+    full_name: str | None = None
+    line1: str = Field(validation_alias="address_line1")
+    line2: str | None = Field(None, validation_alias="address_line2")
     city: str
     state: str
     postal_code: str
     country: str
+    phone: str | None = None
     is_default: bool
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "populate_by_name": True}
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +46,15 @@ class CreatePaymentIntentRequest(BaseModel):
 
 
 class CheckoutConfirmRequest(BaseModel):
-    payment_intent_id: str
+    # Stripe flow (legacy — kept for backward compatibility)
+    payment_intent_id: str | None = None
+
+    # QuickBooks Payments flow
+    qb_token: str | None = None          # one-time charge token from QB.js or server tokenize
+    saved_card_id: str | None = None     # QB card ID from customer wallet
+    qb_customer_id: str | None = None    # QB customer ID (required when using saved card)
+    save_card: bool = False              # attach token to QB customer wallet after charge
+
     address_id: UUID | None = None
     shipping_address: AddressIn | None = None
     po_number: str | None = None

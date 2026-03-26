@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import React from "react";
 import { apiClient } from "@/lib/api-client";
 import { AuditLogDetail } from "@/components/admin/AuditLogDetail";
+
 
 interface AuditEntry {
   id: string;
@@ -45,8 +47,8 @@ export default function AuditLogPage() {
     if (dateFrom) qs.set("date_from", dateFrom);
     if (dateTo) qs.set("date_to", dateTo);
     apiClient
-      .get(`/admin/audit-log?${qs}`)
-      .then((r: any) => setData(r.data))
+      .get(`/api/v1/admin/audit-log?${qs}`)
+      .then((r: any) => setData(r))
       .finally(() => setLoading(false));
   }, [page, entityType, dateFrom, dateTo]);
 
@@ -139,7 +141,7 @@ export default function AuditLogPage() {
                     </tr>
                   ) : (
                     data.items.map((entry) => (
-                      <>
+                      <React.Fragment key={entry.id}>
                         <tr
                           key={entry.id}
                           className="hover:bg-gray-50 cursor-pointer"
@@ -189,7 +191,7 @@ export default function AuditLogPage() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     ))
                   )}
                 </tbody>

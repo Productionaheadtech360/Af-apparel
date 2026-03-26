@@ -1,4 +1,5 @@
 """FastAPI application factory."""
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -6,6 +7,7 @@ import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import check_db_connection
@@ -139,3 +141,7 @@ app.include_router(admin_reports.router, prefix=_V1)
 app.include_router(admin_quickbooks.router, prefix=_V1)
 app.include_router(admin_products.router, prefix=_V1)
 app.include_router(admin_inventory.router, prefix=_V1)
+
+# Static files — local image uploads when S3 is not configured
+os.makedirs("/app/media", exist_ok=True)
+app.mount("/media", StaticFiles(directory="/app/media"), name="media")

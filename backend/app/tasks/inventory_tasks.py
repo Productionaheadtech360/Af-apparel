@@ -26,11 +26,21 @@ def check_low_stock_levels() -> dict:
                 .group_by(InventoryRecord.variant_id)
                 .subquery()
             )
+            # Get per-variant minimum low_stock_threshold from inventory records
+            threshold_q = (
+                select(
+                    InventoryRecord.variant_id,
+                    func.coalesce(func.min(InventoryRecord.low_stock_threshold), 10).label("threshold"),
+                )
+                .group_by(InventoryRecord.variant_id)
+                .subquery()
+            )
             low_stock = await db.execute(
                 select(ProductVariant.sku, stock_q.c.total)
                 .join(stock_q, ProductVariant.id == stock_q.c.variant_id)
-                .where(stock_q.c.total <= ProductVariant.low_stock_threshold)
-                .where(ProductVariant.is_active.is_(True))
+                .join(threshold_q, ProductVariant.id == threshold_q.c.variant_id)
+                .where(stock_q.c.total <= threshold_q.c.threshold)
+                .where(ProductVariant.status == "active")
             )
             alerts = [{"sku": row.sku, "quantity": int(row.total)} for row in low_stock]
 

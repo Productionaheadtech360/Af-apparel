@@ -17,6 +17,8 @@ export default function CheckoutReviewPage() {
     shippingAddress,
     poNumber,
     orderNotes,
+    qbToken,
+    savedCardId,
     paymentIntentId,
     reset,
   } = useCheckoutStore();
@@ -31,7 +33,7 @@ export default function CheckoutReviewPage() {
   });
 
   async function handlePlaceOrder() {
-    if (!paymentIntentId) {
+    if (!qbToken && !savedCardId && !paymentIntentId) {
       setError("Payment not completed. Please go back to the payment step.");
       return;
     }
@@ -41,7 +43,9 @@ export default function CheckoutReviewPage() {
 
     try {
       const order = await ordersService.confirmOrder({
-        payment_intent_id: paymentIntentId,
+        qb_token: qbToken ?? undefined,
+        saved_card_id: savedCardId ?? undefined,
+        payment_intent_id: paymentIntentId ?? undefined,
         address_id: addressId ?? undefined,
         shipping_address: shippingAddress ?? undefined,
         po_number: poNumber || undefined,
@@ -106,7 +110,13 @@ export default function CheckoutReviewPage() {
             </Link>
           </div>
           <p className="text-sm text-gray-600">
-            {paymentIntentId ? "Payment authorized" : "No payment on file"}
+            {savedCardId
+              ? "Saved card selected"
+              : qbToken
+              ? "New card tokenized via QuickBooks Payments"
+              : paymentIntentId
+              ? "Payment authorized via Stripe"
+              : "No payment on file"}
           </p>
         </div>
 

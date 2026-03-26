@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { accountService } from "@/services/account.service";
+import { useAuthStore } from "@/stores/auth.store";
 
 interface Order {
   id: string;
@@ -23,11 +24,13 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function AccountOrdersPage() {
+  const { isLoading: authLoading, isAuthenticated } = useAuthStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading || !isAuthenticated()) return;
     async function load() {
       setIsLoading(true);
       try {
@@ -38,7 +41,7 @@ export default function AccountOrdersPage() {
       }
     }
     load();
-  }, [statusFilter]);
+  }, [authLoading, statusFilter]);
 
   return (
     <div>

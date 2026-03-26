@@ -5,8 +5,17 @@ export const accountService = {
   async getProfile() {
     return apiClient.get("/api/v1/account/profile");
   },
+  async getFullProfile() {
+    return apiClient.get("/api/v1/account/profile/full");
+  },
   async updateProfile(data: { first_name?: string; last_name?: string; phone?: string }) {
     return apiClient.patch("/api/v1/account/profile", data);
+  },
+  async updateUserProfile(data: object) {
+    return apiClient.patch("/api/v1/account/profile/user", data);
+  },
+  async updateCompanyProfile(data: object) {
+    return apiClient.patch("/api/v1/account/profile/company", data);
   },
   async changePassword(current_password: string, new_password: string) {
     return apiClient.patch("/api/v1/account/change-password", { current_password, new_password });
@@ -52,6 +61,9 @@ export const accountService = {
   },
   async deleteAddress(id: string) {
     return apiClient.delete(`/api/v1/account/addresses/${id}`);
+  },
+  async setDefaultAddress(id: string) {
+    return apiClient.patch(`/api/v1/account/addresses/${id}/set-default`, {});
   },
 
   // Payment methods

@@ -17,6 +17,7 @@ from app.schemas.order import (
     AdminOrderDetail,
     AdminOrderListItem,
     CancelOrderRequest,
+    OrderItemOut,
     OrderUpdateRequest,
     RMACreate,
     RMAOut,
@@ -130,11 +131,24 @@ async def get_admin_order(order_id: UUID, db: AsyncSession = Depends(get_db)):
     items_result = await db.execute(select(OrderItem).where(OrderItem.order_id == order_id))
     items = items_result.scalars().all()
 
-    return {
-        **{c.key: getattr(order, c.key) for c in order.__table__.columns},
-        "company_name": company_name,
-        "items": items,
-    }
+    return AdminOrderDetail(
+        id=order.id,
+        order_number=order.order_number,
+        status=order.status,
+        payment_status=order.payment_status,
+        po_number=order.po_number,
+        order_notes=order.notes,
+        subtotal=order.subtotal,
+        shipping_cost=order.shipping_cost,
+        total=order.total,
+        company_id=order.company_id,
+        company_name=company_name,
+        tracking_number=order.tracking_number,
+        qb_invoice_id=order.qb_invoice_id,
+        created_at=order.created_at,
+        updated_at=order.updated_at,
+        items=[OrderItemOut.model_validate(i) for i in items],
+    )
 
 
 @router.patch("/orders/{order_id}", response_model=dict)
