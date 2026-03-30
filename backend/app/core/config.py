@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",")]
 
+    # ── Cookie ────────────────────────────────────────────────────────────────
+    COOKIE_SECURE: bool = False       # Set True in production (HTTPS)
+    COOKIE_DOMAIN: str | None = None  # e.g. ".railway.app" for cross-subdomain
+    COOKIE_SAMESITE: str = "lax"      # "none" for cross-domain (Railway + Vercel)
+
     # ── Database ──────────────────────────────────────────────────────────────
     DATABASE_URL: str  # asyncpg URL
     DATABASE_URL_SYNC: str  # psycopg2 URL (for Alembic)

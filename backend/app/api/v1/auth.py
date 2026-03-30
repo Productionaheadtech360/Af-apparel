@@ -47,14 +47,15 @@ async def login(
     login_response, refresh_token = await service.login(data.email, data.password)
 
     response.set_cookie(
-    key=REFRESH_COOKIE_NAME,
-    value=refresh_token,
-    max_age=REFRESH_COOKIE_MAX_AGE,
-    httponly=True,
-    secure=settings.APP_ENV == "production",  # ✅ dev mein False
-    samesite="lax",
-    path="/api/v1/refresh",   # ✅ actual endpoint path
-)
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        max_age=REFRESH_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,  # type: ignore[arg-type]
+        path="/api/v1/refresh",
+        domain=settings.COOKIE_DOMAIN,
+    )
     return login_response
 
 
@@ -75,10 +76,10 @@ async def logout(
             await service.logout(user_id, jti)
 
     response.delete_cookie(
-    REFRESH_COOKIE_NAME,
-    path="/api/v1/refresh",
-    secure=settings.APP_ENV == "production",
-)
+        REFRESH_COOKIE_NAME,
+        path="/api/v1/refresh",
+        secure=settings.COOKIE_SECURE,
+    )
 
 @router.post("/refresh", response_model=TokenRefreshResponse)
 async def refresh(
@@ -101,9 +102,10 @@ async def refresh(
         value=new_refresh_token,
         max_age=REFRESH_COOKIE_MAX_AGE,
         httponly=True,
-        secure=settings.APP_ENV == "production",
-        samesite="lax",
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,  # type: ignore[arg-type]
         path="/api/v1/refresh",
+        domain=settings.COOKIE_DOMAIN,
     )
     return token_response
 

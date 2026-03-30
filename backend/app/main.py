@@ -85,6 +85,7 @@ async def health_check() -> dict:
     redis_ok = await check_redis_connection()
     return {
         "status": "ok" if (db_ok and redis_ok) else "degraded",
+        "version": "1.0.0",
         "db": "ok" if db_ok else "error",
         "redis": "ok" if redis_ok else "error",
     }
@@ -115,6 +116,8 @@ app.add_middleware(PricingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
+    # Wildcard for all Vercel preview + production deployments
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

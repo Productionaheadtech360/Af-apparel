@@ -24,22 +24,33 @@ const nextConfig: NextConfig = {
         hostname: "*.cloudflare.com",
         pathname: "/**",
       },
+      {
+        // Railway backend media
+        protocol: "https",
+        hostname: "*.railway.app",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        pathname: "/**",
+      },
     ],
     formats: ["image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
 
-  // API rewrites for development
+  // API rewrites — proxy /api/* to backend in all environments
+  // This keeps cookies same-origin and avoids CORS preflight in production.
   async rewrites() {
-    return process.env.NODE_ENV === "development"
-      ? [
-          {
-            source: "/api/:path*",
-            destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`,
-          },
-        ]
-      : [];
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
   },
 
   // Headers
