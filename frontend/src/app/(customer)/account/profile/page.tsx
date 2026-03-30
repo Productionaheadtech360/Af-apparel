@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
-import { accountService } from "@/services/account.service";
 import { useAuthStore } from "@/stores/auth.store";
 
 const PRIMARY_BUSINESS_OPTIONS = [
@@ -80,12 +79,7 @@ export default function AccountProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  // Change-password state (preserved from original page)
-  const [currentPw, setCurrentPw] = useState("");
-  const [newPw, setNewPw] = useState("");
-  const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [savingPw, setSavingPw] = useState(false);
+  const hasLoaded = useRef(false);
 
   const [userForm, setUserForm] = useState({ first_name: "", last_name: "" });
   const [companyForm, setCompanyForm] = useState({
@@ -107,6 +101,8 @@ export default function AccountProfilePage() {
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated()) return;
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
 
     apiClient.get<ProfileData>("/api/v1/account/profile/full")
       .then((d) => {
@@ -132,7 +128,7 @@ export default function AccountProfilePage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading]);
 
   async function handleSaveUser(e: React.FormEvent) {
     e.preventDefault();
@@ -159,22 +155,6 @@ export default function AccountProfilePage() {
       setMessage({ type: "error", text: "Failed to update company profile." });
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingPw(true);
-    setPwMsg(null);
-    try {
-      await accountService.changePassword(currentPw, newPw);
-      setPwMsg({ type: "success", text: "Password changed successfully." });
-      setCurrentPw("");
-      setNewPw("");
-    } catch {
-      setPwMsg({ type: "error", text: "Failed to change password. Check your current password." });
-    } finally {
-      setSavingPw(false);
     }
   }
 
@@ -408,55 +388,6 @@ export default function AccountProfilePage() {
         </form>
       )}
 
-      {/* ── Change Password ───────────────────────────────────────────────── */}
-      <form
-        onSubmit={handleChangePassword}
-        className="bg-white border border-gray-200 rounded-lg p-6 space-y-4"
-      >
-        <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-100 pb-3">
-          Change Password
-        </h2>
-
-        {pwMsg && (
-          <div
-            className={`px-4 py-3 rounded-md text-sm font-medium ${
-              pwMsg.type === "success"
-                ? "bg-green-50 text-green-700 border border-green-200"
-                : "bg-red-50 text-red-700 border border-red-200"
-            }`}
-          >
-            {pwMsg.text}
-          </div>
-        )}
-
-        <Field label="Current Password">
-          <input
-            type="password"
-            value={currentPw}
-            onChange={(e) => setCurrentPw(e.target.value)}
-            className={inputCls}
-          />
-        </Field>
-        <Field label="New Password">
-          <input
-            type="password"
-            value={newPw}
-            onChange={(e) => setNewPw(e.target.value)}
-            minLength={8}
-            className={inputCls}
-          />
-        </Field>
-
-        <div className="flex justify-end pt-1">
-          <button
-            type="submit"
-            disabled={savingPw || !currentPw || !newPw}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
-            {savingPw ? "Saving..." : "Update Password"}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

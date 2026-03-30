@@ -2,13 +2,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
 
 const NAV_ITEMS = [
   { href: "/account", label: "Overview" },
-  { href: "/account/orders", label: "Orders" },
   { href: "/account/profile", label: "Account Profile" },
   { href: "/account/change-password", label: "Change Password" },
   { href: "/account/addresses", label: "Address Book" },
@@ -16,24 +15,41 @@ const NAV_ITEMS = [
   { href: "/account/users", label: "Manage Users" },
   { href: "/account/resend-emails", label: "Resend Registration Emails" },
   { href: "/account/payment-methods", label: "Manage Payment Methods" },
+  { href: "/account/orders", label: "Orders Status" },
   { href: "/account/statements", label: "Statements" },
   { href: "/account/messages", label: "Messages" },
-  { href: "/account/inventory", label: "Inventory Report" },
-  { href: "/account/price-list", label: "Price List" },
+  { href: "/account/inventory", label: "Inventory Listing Report" },
+  // { href: "/account/price-list", label: "Price List" },
+  { href: "/account/abandoned-carts", label: "Abandoned Carts" },
 ];
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, isLoading, isAdmin, user } = useAuthStore();
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (isLoading) return;
+
     if (user?.is_admin) {
       router.replace("/admin/dashboard");
-    } else if (!isAuthenticated()) {
-      router.replace("/login");
+      return;
     }
+
+    if (!isAuthenticated()) {
+      // Small delay prevents flash-redirect when auth restores from sessionStorage
+      // a fraction after the layout first renders.
+      redirectTimer.current = setTimeout(() => {
+        if (!useAuthStore.getState().isAuthenticated()) {
+          router.replace("/login");
+        }
+      }, 300);
+    }
+
+    return () => {
+      if (redirectTimer.current) clearTimeout(redirectTimer.current);
+    };
   }, [isLoading, user, isAuthenticated, router]);
 
   if (isLoading) {

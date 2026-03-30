@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -20,12 +20,15 @@ export default function PaymentMethodsPage() {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated()) return;
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
     loadMethods();
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading]);
 
   async function loadMethods() {
     setLoading(true);

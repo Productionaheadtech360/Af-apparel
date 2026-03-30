@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -67,12 +67,15 @@ export default function ManageUsersPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated()) return;
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
     loadUsers();
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading]);
 
   async function loadUsers() {
     setLoading(true);

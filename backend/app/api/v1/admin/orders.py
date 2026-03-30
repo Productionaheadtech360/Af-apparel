@@ -166,10 +166,17 @@ async def update_admin_order(
         setattr(order, field, value)
     await db.commit()
 
-    # Trigger shipping email if status changed to "shipped" with tracking
-    if payload.status == "shipped" and old_status != "shipped":
-        from app.tasks.email_tasks import send_order_shipped_email
-        send_order_shipped_email.delay(str(order_id), payload.tracking_number or "")
+    # Trigger transactional emails on status change
+    if payload.status and payload.status != old_status:
+        if payload.status == "shipped":
+            from app.tasks.email_tasks import send_order_shipped_email
+            send_order_shipped_email.delay(str(order_id), order.tracking_number or "")
+        elif payload.status == "confirmed":
+            from app.tasks.email_tasks import send_invoice_email
+            send_invoice_email.delay(str(order_id))
+        elif payload.status == "cancelled":
+            from app.tasks.email_tasks import send_order_cancelled_email
+            send_order_cancelled_email.delay(str(order_id))
 
     return {"message": "Order updated"}
 
@@ -187,6 +194,10 @@ async def cancel_admin_order(
     if hasattr(order, "notes"):
         order.notes = f"Cancelled: {payload.reason}"
     await db.commit()
+
+    from app.tasks.email_tasks import send_order_cancelled_email
+    send_order_cancelled_email.delay(str(order_id), payload.reason)
+
     return {"message": "Order cancelled"}
 
 
@@ -243,3 +254,41 @@ async def update_rma(
     send_rma_status_email.delay(str(rma_id))
 
     return {"message": f"RMA {payload.status}"}
+
+
+# ---------------------------------------------------------------------------
+# Abandoned Carts — admin view (T208)
+# ---------------------------------------------------------------------------
+
+@router.get("/abandoned-carts")
+async def admin_list_abandoned_carts(
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin view — all abandoned carts across all companies, newest first."""
+    import json
+    from app.models.order import AbandonedCart
+
+    result = await db.execute(
+        select(AbandonedCart)
+        .order_by(AbandonedCart.abandoned_at.desc())
+        .limit(200)
+    )
+    carts = result.scalars().all()
+
+    out = []
+    for c in carts:
+        company = (await db.execute(
+            select(Company).where(Company.id == c.company_id)
+        )).scalar_one_or_none()
+        out.append({
+            "id": str(c.id),
+            "company_name": company.name if company else "Unknown",
+            "company_id": str(c.company_id),
+            "abandoned_at": c.abandoned_at,
+            "total": float(c.total),
+            "item_count": c.item_count,
+            "items": json.loads(c.items_snapshot),
+            "is_recovered": c.is_recovered,
+            "recovered_at": c.recovered_at,
+        })
+    return out

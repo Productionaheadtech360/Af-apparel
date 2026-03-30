@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth.store";
 import { accountService } from "@/services/account.service";
@@ -24,10 +24,13 @@ export default function AccountOverviewPage() {
   const isLoading = useAuthStore((state) => state.isLoading);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [recentOrders, setRecentOrders] = useState<OrderSummary[]>([]);
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
     // Don't fetch until auth is settled and user is a non-admin customer
     if (isLoading || !user || user.is_admin) return;
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
 
     async function load() {
       const [p, o] = await Promise.all([
@@ -38,7 +41,7 @@ export default function AccountOverviewPage() {
       setRecentOrders((o.items ?? []).slice(0, 5));
     }
     load();
-  }, [isLoading, user]);
+  }, [isLoading]);
 
   // Admin accounts don't have a customer dashboard
   if (!isLoading && user?.is_admin) {

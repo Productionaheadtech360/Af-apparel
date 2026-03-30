@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
 import { Header } from "@/components/layout/Header";
@@ -9,15 +9,24 @@ import { AdminSidebar } from "@/components/layout/AdminSidebar";
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isAdmin, isLoading } = useAuthStore();
   const router = useRouter();
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated()) {
-        router.replace("/login");
-      } else if (!isAdmin()) {
-        router.replace("/account");
-      }
+    if (isLoading) return;
+
+    if (!isAuthenticated()) {
+      redirectTimer.current = setTimeout(() => {
+        if (!useAuthStore.getState().isAuthenticated()) {
+          router.replace("/login");
+        }
+      }, 300);
+    } else if (!isAdmin()) {
+      router.replace("/account");
     }
+
+    return () => {
+      if (redirectTimer.current) clearTimeout(redirectTimer.current);
+    };
   }, [isLoading, isAuthenticated, isAdmin, router]);
 
   if (isLoading) {

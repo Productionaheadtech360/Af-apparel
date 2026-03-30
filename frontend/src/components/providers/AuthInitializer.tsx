@@ -40,6 +40,10 @@ export function AuthInitializer() {
         .catch(() => {
           // No valid refresh cookie — user must log in.
           useAuthStore.getState().clearAuth();
+        })
+        .finally(() => {
+          // Safety net: ensure isLoading never stays true if any code path missed it.
+          useAuthStore.getState().setLoading(false);
         });
     }
   }, []);

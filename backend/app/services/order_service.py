@@ -198,6 +198,23 @@ class OrderService:
         from app.tasks.email_tasks import send_order_confirmation_email
         send_order_confirmation_email.delay(str(order.id))
 
+        # 12. Auto-create statement charge transaction
+        try:
+            from app.models.statement import StatementTransaction
+            txn = StatementTransaction(
+                company_id=company_id,
+                transaction_date=order.created_at.strftime("%Y-%m-%d"),
+                description=f"Order #{order.order_number}",
+                transaction_type="charge",
+                amount=float(order.total),
+                reference_number=order.order_number,
+                order_id=order.id,
+            )
+            self.db.add(txn)
+            await self.db.flush()
+        except Exception:
+            pass
+
         return order
 
     # ------------------------------------------------------------------
@@ -218,19 +235,31 @@ class OrderService:
         return order
 
     async def list_orders_for_company(
-        self, company_id: UUID, page: int = 1, page_size: int = 20
+        self,
+        company_id: UUID,
+        page: int = 1,
+        page_size: int = 20,
+        q: str | None = None,
+        status: str | None = None,
     ) -> tuple[list[Order], int]:
         from sqlalchemy.orm import selectinload
 
+        base = select(Order).where(Order.company_id == company_id)
+        if q:
+            base = base.where(
+                (Order.order_number.ilike(f"%{q}%")) | (Order.po_number.ilike(f"%{q}%"))
+            )
+        if status:
+            base = base.where(Order.status == status)
+
         count_result = await self.db.execute(
-            select(func.count(Order.id)).where(Order.company_id == company_id)
+            select(func.count()).select_from(base.subquery())
         )
         total = count_result.scalar_one()
 
         result = await self.db.execute(
-            select(Order)
+            base
             .options(selectinload(Order.items))
-            .where(Order.company_id == company_id)
             .order_by(Order.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)

@@ -50,7 +50,6 @@ async def _log_attempt(entity_type: str, entity_id: str, status: str, error: str
 @celery_app.task(
     bind=True,
     max_retries=5,
-    name="quickbooks.sync_customer",
 )
 def sync_customer_to_qb(self, company_id: str):
     """Sync a Company to QuickBooks as a Customer."""
@@ -100,7 +99,6 @@ def sync_customer_to_qb(self, company_id: str):
 @celery_app.task(
     bind=True,
     max_retries=5,
-    name="quickbooks.sync_order_invoice",
 )
 def sync_order_invoice_to_qb(self, order_id: str):
     """Sync an Order to QuickBooks as an Invoice."""

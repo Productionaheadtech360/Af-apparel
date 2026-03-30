@@ -7,7 +7,7 @@ from app.core.celery import celery_app
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(bind=True, max_retries=2, name="pricelist.generate")
+@celery_app.task(bind=True, max_retries=2)
 def generate_price_list_task(
     self, request_id: str, company_id: str, format: str = "pdf"
 ) -> dict:

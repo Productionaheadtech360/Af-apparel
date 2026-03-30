@@ -51,7 +51,7 @@ def check_low_stock_levels() -> dict:
     return asyncio.get_event_loop().run_until_complete(_run())
 
 
-@celery_app.task(bind=True, max_retries=2, name="inventory.generate_bulk_asset_zip")
+@celery_app.task(bind=True, max_retries=2)
 def generate_bulk_asset_zip(self, product_ids: list[str], task_id: str) -> dict:
     """T203: Collect images/flyers for selected products, ZIP them, upload to S3, return URL."""
     import io

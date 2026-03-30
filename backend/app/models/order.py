@@ -92,6 +92,10 @@ class Order(BaseModel):
     items: Mapped[list["OrderItem"]] = relationship(
         "OrderItem", back_populates="order", cascade="all, delete-orphan"
     )
+    comments: Mapped[list["OrderComment"]] = relationship(
+        "OrderComment", back_populates="order", cascade="all, delete-orphan",
+        order_by="OrderComment.created_at"
+    )
 
 
 class OrderItem(BaseModel):
@@ -164,19 +168,48 @@ class CartItem(BaseModel):
 
 
 class AbandonedCart(BaseModel):
-    """Snapshot of an inactive cart for analytics / re-engagement."""
+    """Snapshot of an inactive company cart for analytics / re-engagement."""
 
     __tablename__ = "abandoned_carts"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
-    items_snapshot: Mapped[str] = mapped_column(Text, comment="JSON snapshot of cart items")
-    total_value: Mapped[float | None] = mapped_column(Numeric(10, 2))
-    email_sent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    items_snapshot: Mapped[str] = mapped_column(Text, nullable=False, comment="JSON snapshot of cart items")
+    total: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    item_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    abandoned_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    is_recovered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    recovered_at: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    recovery_order_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("orders.id", ondelete="SET NULL"), nullable=True
+    )
 
-    user: Mapped["User"] = relationship("User")
+    company: Mapped["Company"] = relationship("Company")
+    user: Mapped["User | None"] = relationship("User")
+
+
+class OrderComment(BaseModel):
+    """Buyer-visible comment or note on an order (from admin or buyer)."""
+
+    __tablename__ = "order_comments"
+
+    order_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
+        nullable=False, index=True
+    )
+    author_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    order: Mapped["Order"] = relationship("Order", back_populates="comments")
+    author: Mapped["User | None"] = relationship("User")
 
 
 class OrderTemplate(BaseModel):

@@ -97,6 +97,16 @@ export const accountService = {
   async reorder(id: string) {
     return apiClient.post(`/api/v1/orders/${id}/reorder`, {});
   },
+  async getOrderComments(orderId: string) {
+    return apiClient.get(`/api/v1/orders/${orderId}/comments`);
+  },
+  async addOrderComment(orderId: string, body: string) {
+    return apiClient.post(`/api/v1/orders/${orderId}/comments`, { body });
+  },
+  downloadOrderPdf(orderId: string, type: "confirmation" | "invoice" | "ship-confirmation" | "pack-slip") {
+    // Returns a URL to open/download — uses window.open or anchor download
+    return `/api/v1/orders/${orderId}/pdf/${type}`;
+  },
 
   // Price list
   async requestPriceList(format: "pdf" | "excel" = "pdf") {

@@ -761,24 +761,97 @@ async def send_message(
 
 @router.get("/inventory-report")
 async def get_inventory_report(
-    q: str | None = None,
-    category: str | None = None,
-    stock_level: str | None = None,  # low | out | in_stock
-    page: int = Query(1, ge=1),
-    page_size: int = Query(24, ge=1, le=100),
+    warehouse_id: str | None = None,
+    product_id: str | None = None,
+    color: str | None = None,
     request: Request = None,
     db: AsyncSession = Depends(get_db),
 ):
-    """Returns variant stock summary visible to account users."""
+    """Returns variant stock for customer — filtered by warehouse, product, color."""
     company_id = getattr(request.state, "company_id", None)
     if not company_id:
         raise ForbiddenError("Company account required")
-    from app.services.inventory_service import InventoryService
-    svc = InventoryService(db)
-    if stock_level == "low":
-        return await svc.get_low_stock_variants()
-    else:
-        return await svc.get_low_stock_variants(threshold_override=999999)
+
+    from app.models.inventory import InventoryRecord, Warehouse
+    from app.models.product import Product, ProductVariant
+
+    q = (
+        select(
+            ProductVariant.id.label("variant_id"),
+            ProductVariant.sku,
+            ProductVariant.color,
+            ProductVariant.size,
+            ProductVariant.sort_order,
+            Product.id.label("product_id"),
+            Product.name.label("product_name"),
+            Warehouse.id.label("warehouse_id"),
+            Warehouse.name.label("warehouse_name"),
+            InventoryRecord.quantity,
+        )
+        .join(Product, Product.id == ProductVariant.product_id)
+        .join(InventoryRecord, InventoryRecord.variant_id == ProductVariant.id)
+        .join(Warehouse, Warehouse.id == InventoryRecord.warehouse_id)
+        .where(ProductVariant.status == "active")
+        .where(Product.status == "active")
+        .where(Warehouse.is_active.is_(True))
+    )
+
+    if warehouse_id and warehouse_id != "all":
+        q = q.where(Warehouse.id == warehouse_id)
+    if product_id and product_id != "all":
+        q = q.where(Product.id == product_id)
+    if color and color != "all":
+        q = q.where(ProductVariant.color == color)
+
+    q = q.order_by(
+        Product.name,
+        ProductVariant.color,
+        ProductVariant.sort_order,
+        ProductVariant.size,
+    )
+
+    rows = (await db.execute(q)).mappings().all()
+
+    warehouses_result = await db.execute(
+        select(Warehouse).where(Warehouse.is_active.is_(True)).order_by(Warehouse.name)
+    )
+    warehouses = warehouses_result.scalars().all()
+
+    products_result = await db.execute(
+        select(Product.id, Product.name)
+        .where(Product.status == "active")
+        .order_by(Product.name)
+    )
+    products = products_result.all()
+
+    colors_result = await db.execute(
+        select(ProductVariant.color)
+        .where(ProductVariant.status == "active")
+        .where(ProductVariant.color.isnot(None))
+        .distinct()
+        .order_by(ProductVariant.color)
+    )
+    colors = [r[0] for r in colors_result.all() if r[0]]
+
+    return {
+        "items": [
+            {
+                "variant_id": str(r["variant_id"]),
+                "sku": r["sku"],
+                "product_id": str(r["product_id"]),
+                "product_name": r["product_name"],
+                "color": r["color"] or "—",
+                "size": r["size"] or "—",
+                "warehouse_id": str(r["warehouse_id"]),
+                "warehouse_name": r["warehouse_name"],
+                "available": int(r["quantity"]),
+            }
+            for r in rows
+        ],
+        "warehouses": [{"id": str(w.id), "name": w.name} for w in warehouses],
+        "products": [{"id": str(p[0]), "name": p[1]} for p in products],
+        "colors": colors,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1028,3 +1101,446 @@ async def resend_registration_emails(
             pass
 
     return {"message": f"Emails sent successfully to {sent_count} recipient(s)", "sent_count": sent_count}
+
+
+# ---------------------------------------------------------------------------
+# Statements (T147 — US-7)
+# ---------------------------------------------------------------------------
+
+from app.models.statement import StatementTransaction  # noqa: E402
+
+
+@router.get("/statements")
+async def list_statements(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    request: Request = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return statement transactions with running balance."""
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+
+    q = select(StatementTransaction).where(
+        StatementTransaction.company_id == company_id
+    )
+    if date_from:
+        q = q.where(StatementTransaction.transaction_date >= date_from)
+    if date_to:
+        q = q.where(StatementTransaction.transaction_date <= date_to)
+    q = q.order_by(StatementTransaction.transaction_date.asc(), StatementTransaction.created_at.asc())
+
+    result = await db.execute(q)
+    transactions = result.scalars().all()
+
+    running_balance = 0.0
+    items = []
+    for txn in transactions:
+        if txn.transaction_type == "charge":
+            running_balance += float(txn.amount)
+        else:
+            running_balance -= float(txn.amount)
+        items.append({
+            "id": str(txn.id),
+            "date": txn.transaction_date,
+            "description": txn.description,
+            "type": txn.transaction_type,
+            "amount": float(txn.amount),
+            "reference": txn.reference_number,
+            "order_id": str(txn.order_id) if txn.order_id else None,
+            "running_balance": round(running_balance, 2),
+        })
+
+    total_charges = sum(float(t.amount) for t in transactions if t.transaction_type == "charge")
+    total_payments = sum(float(t.amount) for t in transactions if t.transaction_type in ("payment", "credit", "refund"))
+
+    return {
+        "items": items,
+        "summary": {
+            "total_charges": round(total_charges, 2),
+            "total_payments": round(total_payments, 2),
+            "current_balance": round(total_charges - total_payments, 2),
+        },
+    }
+
+
+@router.post("/statements/sync-qb")
+async def sync_payments_from_qb(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Sync payments from QuickBooks Accounting API to statement transactions."""
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+
+    from app.models.company import Company
+
+    company = (await db.execute(
+        select(Company).where(Company.id == company_id)
+    )).scalar_one_or_none()
+
+    if not company or not company.qb_customer_id:
+        return {"message": "No QuickBooks customer linked", "synced": 0}
+
+    try:
+        from app.services.quickbooks_service import QuickBooksService
+        import httpx
+
+        qb_svc = QuickBooksService()
+        access_token = qb_svc.get_access_token()
+
+        base_url = (
+            "https://sandbox-quickbooks.api.intuit.com"
+            if settings.QB_ENVIRONMENT == "sandbox"
+            else "https://quickbooks.api.intuit.com"
+        )
+        query = f"SELECT * FROM Payment WHERE CustomerRef = '{company.qb_customer_id}' MAXRESULTS 100"
+
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                f"{base_url}/v3/company/{settings.QB_COMPANY_ID}/query",
+                params={"query": query, "minorversion": "65"},
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/json",
+                },
+            )
+
+        if resp.status_code != 200:
+            return {"message": f"QB sync failed (HTTP {resp.status_code})", "synced": 0}
+
+        payments = resp.json().get("QueryResponse", {}).get("Payment", [])
+        synced = 0
+        for payment in payments:
+            qb_id = str(payment.get("Id", ""))
+            existing = (await db.execute(
+                select(StatementTransaction).where(
+                    StatementTransaction.qb_transaction_id == qb_id,
+                    StatementTransaction.company_id == company_id,
+                )
+            )).scalar_one_or_none()
+
+            if not existing:
+                db.add(StatementTransaction(
+                    company_id=company_id,
+                    transaction_date=payment.get("TxnDate", ""),
+                    description="Payment Received",
+                    transaction_type="payment",
+                    amount=float(payment.get("TotalAmt", 0)),
+                    reference_number=payment.get("PaymentRefNum") or None,
+                    qb_transaction_id=qb_id,
+                ))
+                synced += 1
+
+        await db.commit()
+        return {"message": f"Synced {synced} new payment(s)", "synced": synced}
+
+    except Exception as exc:
+        return {"message": f"QB sync error: {exc}", "synced": 0}
+
+
+@router.get("/statements/pdf")
+async def download_statement_pdf(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    request: Request = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Download account statement as PDF."""
+    import io
+
+    from fastapi.responses import StreamingResponse
+
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+
+    q = select(StatementTransaction).where(
+        StatementTransaction.company_id == company_id
+    )
+    if date_from:
+        q = q.where(StatementTransaction.transaction_date >= date_from)
+    if date_to:
+        q = q.where(StatementTransaction.transaction_date <= date_to)
+    q = q.order_by(StatementTransaction.transaction_date.asc(), StatementTransaction.created_at.asc())
+
+    result = await db.execute(q)
+    transactions = result.scalars().all()
+
+    from app.models.company import Company
+    company = (await db.execute(
+        select(Company).where(Company.id == company_id)
+    )).scalar_one_or_none()
+    company_name = company.name if company else "AF Apparels"
+
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_RIGHT
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import inch
+    from reportlab.platypus import (
+        Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+    )
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=letter,
+        rightMargin=0.5 * inch, leftMargin=0.5 * inch,
+        topMargin=0.5 * inch, bottomMargin=0.5 * inch,
+    )
+    styles = getSampleStyleSheet()
+    story = []
+
+    story.append(Paragraph("AF APPARELS", ParagraphStyle("title", fontSize=18, fontName="Helvetica-Bold")))
+    story.append(Paragraph("Account Statement", ParagraphStyle("sub", fontSize=12, textColor=colors.grey)))
+    story.append(Paragraph(f"Company: {company_name}", styles["Normal"]))
+    if date_from or date_to:
+        story.append(Paragraph(
+            f"Period: {date_from or 'Beginning'} to {date_to or 'Present'}",
+            styles["Normal"],
+        ))
+    story.append(Spacer(1, 20))
+
+    rows = [["Date", "Description", "Reference", "Charges", "Credits", "Balance"]]
+    running = 0.0
+    for txn in transactions:
+        if txn.transaction_type == "charge":
+            running += float(txn.amount)
+            charge_col = f"${float(txn.amount):,.2f}"
+            credit_col = ""
+        else:
+            running -= float(txn.amount)
+            charge_col = ""
+            credit_col = f"${float(txn.amount):,.2f}"
+        rows.append([
+            txn.transaction_date,
+            txn.description,
+            txn.reference_number or "",
+            charge_col,
+            credit_col,
+            f"${running:,.2f}",
+        ])
+
+    tbl = Table(
+        rows,
+        colWidths=[1.0 * inch, 2.2 * inch, 1.0 * inch, 0.9 * inch, 0.9 * inch, 0.9 * inch],
+    )
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e3a5f")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8f9fa")]),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dee2e6")),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(tbl)
+
+    story.append(Spacer(1, 20))
+    total_charges = sum(float(t.amount) for t in transactions if t.transaction_type == "charge")
+    total_payments = sum(float(t.amount) for t in transactions if t.transaction_type in ("payment", "credit", "refund"))
+    balance = total_charges - total_payments
+
+    summary = Table(
+        [
+            ["", "Total Charges:", f"${total_charges:,.2f}"],
+            ["", "Total Payments:", f"${total_payments:,.2f}"],
+            ["", "Current Balance:", f"${balance:,.2f}"],
+        ],
+        colWidths=[3.5 * inch, 1.5 * inch, 1.0 * inch],
+    )
+    summary.setStyle(TableStyle([
+        ("FONTNAME", (1, 2), (2, 2), "Helvetica-Bold"),
+        ("LINEABOVE", (1, 2), (2, 2), 1, colors.black),
+        ("ALIGN", (2, 0), (2, -1), "RIGHT"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+    ]))
+    story.append(summary)
+
+    doc.build(story)
+
+    safe_name = company_name.replace(" ", "_")
+    period = date_from or "All"
+    filename = f"Statement_{safe_name}_{period}.pdf"
+    return StreamingResponse(
+        io.BytesIO(buffer.getvalue()),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.post("/statements/email")
+async def email_statement(
+    payload: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Email current statement to primary contacts."""
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+
+    from app.models.company import Company, Contact
+    from app.services.email_service import EmailService
+
+    company = (await db.execute(
+        select(Company).where(Company.id == company_id)
+    )).scalar_one_or_none()
+    company_name = company.name if company else "AF Apparels"
+
+    # Prefer primary contacts; fall back to any contact
+    contacts = (await db.execute(
+        select(Contact).where(
+            Contact.company_id == company_id,
+            Contact.is_primary.is_(True),
+        )
+    )).scalars().all()
+    if not contacts:
+        contacts = (await db.execute(
+            select(Contact).where(Contact.company_id == company_id)
+        )).scalars().all()
+
+    if not contacts:
+        raise ValidationError("No contacts found to email statement to")
+
+    statement_url = f"{settings.FRONTEND_URL}/account/statements"
+    svc = EmailService(db)
+    sent = 0
+    for contact in list(contacts)[:3]:
+        ok = svc.send_raw(
+            to_email=contact.email,
+            subject=f"Account Statement — {company_name}",
+            body_html=(
+                f"<h2>Account Statement</h2>"
+                f"<p>Dear {contact.first_name},</p>"
+                f"<p>Your latest account statement is ready.</p>"
+                f"<p><a href='{statement_url}' style='background:#1d4ed8;color:#fff;"
+                f"padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block'>"
+                f"View Statement Online</a></p>"
+                f"<p style='color:#6b7280;font-size:13px'>AF Apparels Wholesale</p>"
+            ),
+        )
+        if ok:
+            sent += 1
+
+    return {"message": f"Statement emailed to {sent} contact(s)"}
+
+
+# ---------------------------------------------------------------------------
+# Abandoned Carts (T208 — customer view)
+# ---------------------------------------------------------------------------
+
+import uuid as _uuid  # noqa: E402 — avoids collision with UUID type alias above
+
+
+@router.get("/abandoned-carts")
+async def list_abandoned_carts(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return unrecovered abandoned carts for this company."""
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+
+    from app.models.order import AbandonedCart
+
+    result = await db.execute(
+        select(AbandonedCart)
+        .where(
+            AbandonedCart.company_id == company_id,
+            AbandonedCart.is_recovered.is_(False),
+        )
+        .order_by(AbandonedCart.abandoned_at.desc())
+    )
+    carts = result.scalars().all()
+
+    return [
+        {
+            "id": str(c.id),
+            "abandoned_at": c.abandoned_at,
+            "total": float(c.total),
+            "item_count": c.item_count,
+            "items": __import__("json").loads(c.items_snapshot),
+            "is_recovered": c.is_recovered,
+        }
+        for c in carts
+    ]
+
+
+@router.post("/abandoned-carts/{cart_id}/recover")
+async def recover_abandoned_cart(
+    cart_id: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Restore abandoned cart items back into the company's active cart."""
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+
+    import json as _json
+    from datetime import datetime, timezone
+    from sqlalchemy import delete as sa_delete
+    from app.models.order import AbandonedCart, CartItem
+    from app.models.product import ProductVariant
+
+    cart = (await db.execute(
+        select(AbandonedCart).where(
+            AbandonedCart.id == cart_id,
+            AbandonedCart.company_id == company_id,
+        )
+    )).scalar_one_or_none()
+    if not cart:
+        raise NotFoundError("Cart not found")
+
+    items = _json.loads(cart.items_snapshot)
+
+    # Clear the current active cart first
+    await db.execute(sa_delete(CartItem).where(CartItem.company_id == company_id))
+
+    # Re-add each item if the variant still exists
+    for item in items:
+        variant = (await db.execute(
+            select(ProductVariant).where(
+                ProductVariant.id == _uuid.UUID(item["variant_id"])
+            )
+        )).scalar_one_or_none()
+        if variant:
+            db.add(CartItem(
+                company_id=company_id,
+                variant_id=_uuid.UUID(item["variant_id"]),
+                quantity=item["quantity"],
+                unit_price=item["unit_price"],
+            ))
+
+    cart.is_recovered = True
+    cart.recovered_at = datetime.now(timezone.utc).isoformat()
+    await db.commit()
+    return {"message": "Cart recovered successfully"}
+
+
+@router.delete("/abandoned-carts/{cart_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_abandoned_cart(
+    cart_id: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    company_id = getattr(request.state, "company_id", None)
+    if not company_id:
+        raise ForbiddenError("Company account required")
+
+    from sqlalchemy import delete as sa_delete
+    from app.models.order import AbandonedCart
+
+    await db.execute(
+        sa_delete(AbandonedCart).where(
+            AbandonedCart.id == cart_id,
+            AbandonedCart.company_id == company_id,
+        )
+    )
+    await db.commit()

@@ -8,8 +8,9 @@ from app.models.shipping import ShippingTier  # noqa: F401
 from app.models.company import Company, CompanyUser, UserAddress  # noqa: F401
 from app.models.product import Product, ProductVariant, ProductImage, Category  # noqa: F401
 from app.models.inventory import Warehouse, InventoryRecord, InventoryAdjustment  # noqa: F401
-from app.models.order import Order, OrderItem, CartItem, AbandonedCart, OrderTemplate  # noqa: F401
+from app.models.order import Order, OrderItem, CartItem, AbandonedCart, OrderTemplate, OrderComment  # noqa: F401
 from app.models.wholesale import WholesaleApplication  # noqa: F401
 from app.models.rma import RMARequest, RMAItem  # noqa: F401
 from app.models.system import AuditLog, Settings  # noqa: F401
 from app.models.communication import Message, EmailTemplate  # noqa: F401
+from app.models.statement import StatementTransaction  # noqa: F401

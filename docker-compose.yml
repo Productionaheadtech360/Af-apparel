@@ -82,7 +82,7 @@ services:
     dns:
       - 8.8.8.8
       - 8.8.4.4
-    command: celery -A app.core.celery worker --loglevel=info --concurrency=4
+    command: celery -A app.core.celery worker --loglevel=info --concurrency=4 -Q celery,email,quickbooks,pricelist,inventory,default
 
   # ── Celery Beat (periodic tasks) ──────────────────────────────────────────────
   celery_beat:
