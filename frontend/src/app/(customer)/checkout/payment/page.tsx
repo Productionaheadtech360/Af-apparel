@@ -37,7 +37,7 @@ export default function CheckoutPaymentPage() {
         setSavedCards(cards);
         if (cards.length > 0) {
           const def = cards.find((c) => c.is_default) ?? cards[0];
-          setSelectedCardId(def.id);
+          setSelectedCardId(def!.id);
           setShowNewCardForm(false);
         } else {
           setShowNewCardForm(true);

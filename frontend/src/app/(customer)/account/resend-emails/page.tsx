@@ -1,10 +1,13 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
+import type ReCAPTCHAType from "react-google-recaptcha";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth.store";
 
-const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), { ssr: false });
+const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), {
+  ssr: false,
+}) as typeof ReCAPTCHAType;
 const USER_GROUPS = [
   "Admin",
   "Accounting",

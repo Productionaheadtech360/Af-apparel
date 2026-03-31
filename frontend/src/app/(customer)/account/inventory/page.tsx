@@ -111,7 +111,7 @@ export default function InventoryListingPage() {
       if (!acc[item.product_id]) {
         acc[item.product_id] = { product_name: item.product_name, variants: [] };
       }
-      acc[item.product_id].variants.push(item);
+      acc[item.product_id]!.variants.push(item);
       return acc;
     },
     {} as Record<string, { product_name: string; variants: InventoryItem[] }>

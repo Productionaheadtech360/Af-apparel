@@ -96,7 +96,7 @@ export default function ManageUsersPage() {
     if (!password[0]?.match(/[a-zA-Z]/)) {
       return "Password must begin with a letter";
     }
-    const loginId = email.split("@")[0].toLowerCase();
+    const loginId = (email.split("@")[0] ?? "").toLowerCase();
     for (let i = 0; i <= loginId.length - 3; i++) {
       const chunk = loginId.slice(i, i + 3);
       if (password.toLowerCase().includes(chunk)) {
