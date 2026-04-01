@@ -11,6 +11,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# Don't ignore frontend source lib (Python venv pattern above would match it)
+!frontend/src/lib/
 parts/
 sdist/
 var/
