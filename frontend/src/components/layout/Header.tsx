@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
 import { authService } from "@/services/auth.service";
 import { apiClient } from "@/lib/api-client";
+import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 
 export function Header() {
   const { user, isAuthenticated, isAdmin, clearAuth, isLoading } = useAuthStore();
@@ -37,14 +38,7 @@ export function Header() {
 
   return (
     <>
-      {/* Announcement bar */}
-      <div style={{ background: "#E8242A", color: "#fff", textAlign: "center", fontSize: "12px", fontWeight: 700, letterSpacing: ".06em", padding: "9px 24px", textTransform: "uppercase" }}>
-        🇺🇸 Factory-Direct Wholesale Blanks
-        <span style={{ opacity: .7, margin: "0 12px" }}>·</span>
-        2,000+ American Businesses
-        <span style={{ opacity: .7, margin: "0 12px" }}>·</span>
-        Same-Day Shipping — Dallas, TX
-      </div>
+      <AnnouncementBar />
 
       {/* Main header */}
       <header style={{ background: "#080808", borderBottom: "1px solid rgba(255,255,255,.06)" }} className="sticky top-0 z-40">
