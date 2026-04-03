@@ -54,7 +54,7 @@ export default async function HomePage() {
               <p style={{ fontSize: "16px", color: "#666", lineHeight: 1.75, marginBottom: "30px", maxWidth: "530px" }}>
                 Factory-direct blank apparel with <strong style={{ color: "#aaa", fontWeight: 600 }}>no middlemen</strong>, no minimums on in-stock items, and same-day shipping from Dallas. Print-optimized fabrics tested for DTF, screen printing, and embroidery.
               </p>
-              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "40px" }}>
+              <div className="hero-cta-row" style={{ marginBottom: "40px" }}>
                 <Link href="/wholesale/register" style={{ background: "#E8242A", color: "#fff", padding: "15px 36px", fontSize: "15px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
                   Apply for Wholesale →
                 </Link>
@@ -62,7 +62,7 @@ export default async function HomePage() {
                   Browse Catalog
                 </Link>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", borderTop: "1px solid #1a1a1a", paddingTop: "28px" }}>
+              <div className="hero-stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", borderTop: "1px solid #1a1a1a", paddingTop: "28px" }}>
                 {[
                   { n: "2,000+", l: "Businesses" },
                   { n: "50+", l: "Colors" },

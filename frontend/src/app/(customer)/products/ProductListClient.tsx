@@ -274,7 +274,7 @@ export function ProductListClient({
       )}
 
       {/* ── Main content ── */}
-      <div style={{ flex: 1, padding: "24px 28px", minWidth: 0 }}>
+      <div className="prod-content-pad" style={{ flex: 1, padding: "24px 28px", minWidth: 0 }}>
 
         {/* Top bar: count + mobile filter button */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>

@@ -103,29 +103,31 @@ export function Header() {
               </Link>
             )}
 
-            {isAuthenticated() ? (
-              <>
-                <span style={{ fontSize: "13px", color: "#888" }} className="hidden sm:block">
-                  {user?.first_name}
-                  {isAdmin() && <span style={{ marginLeft: "6px", fontSize: "10px", background: "rgba(26,92,255,.2)", color: "#6B9FFF", padding: "2px 8px", borderRadius: "4px", fontWeight: 700 }}>Admin</span>}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  style={{ background: "transparent", color: "#e8242a", padding: "10px 18px", fontSize: "13px", border: "1.5px solid #e8242a", borderRadius: "5px", cursor: "pointer", fontWeight: 700, transition: "all .2s" }}
-                >
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" style={{ background: "transparent", color: "#2d8cff", padding: "10px 18px", fontSize: "13px", border: "1.5px solid #2d8cff", borderRadius: "5px", fontWeight: 700, textDecoration: "none", transition: "all .2s" }}>
-                  Log In
-                </Link>
-                <Link href="/wholesale/register" style={{ background: "#E8242A", color: "#fff", padding: "10px 22px", fontSize: "13px", borderRadius: "5px", fontWeight: 700, textDecoration: "none", transition: "all .2s", border: "none" }}>
-                  Apply Now
-                </Link>
-              </>
-            )}
+            <div className="hidden md:flex" style={{ gap: "10px", alignItems: "center" }}>
+              {isAuthenticated() ? (
+                <>
+                  <span style={{ fontSize: "13px", color: "#888" }}>
+                    {user?.first_name}
+                    {isAdmin() && <span style={{ marginLeft: "6px", fontSize: "10px", background: "rgba(26,92,255,.2)", color: "#6B9FFF", padding: "2px 8px", borderRadius: "4px", fontWeight: 700 }}>Admin</span>}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    style={{ background: "transparent", color: "#e8242a", padding: "10px 18px", fontSize: "13px", border: "1.5px solid #e8242a", borderRadius: "5px", cursor: "pointer", fontWeight: 700, transition: "all .2s" }}
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" style={{ background: "transparent", color: "#2d8cff", padding: "10px 18px", fontSize: "13px", border: "1.5px solid #2d8cff", borderRadius: "5px", fontWeight: 700, textDecoration: "none", transition: "all .2s" }}>
+                    Log In
+                  </Link>
+                  <Link href="/wholesale/register" style={{ background: "#E8242A", color: "#fff", padding: "10px 22px", fontSize: "13px", borderRadius: "5px", fontWeight: 700, textDecoration: "none", transition: "all .2s", border: "none" }}>
+                    Apply Now
+                  </Link>
+                </>
+              )}
+            </div>
 
             {/* Mobile hamburger */}
             <button

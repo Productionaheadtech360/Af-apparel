@@ -409,7 +409,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         {/* Product Tabs */}
         <div style={{ marginTop: "56px", borderTop: "1px solid #E2E0DA" }}>
           {/* Tab bar */}
-          <div style={{ display: "flex", gap: "0", borderBottom: "1px solid #E2E0DA", overflowX: "auto" }}>
+          <div className="pd-tab-bar" style={{ gap: "0", borderBottom: "1px solid #E2E0DA" }}>
             {TABS.map((tab) => (
               <button
                 key={tab}
