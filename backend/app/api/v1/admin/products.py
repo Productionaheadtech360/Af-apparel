@@ -238,7 +238,9 @@ async def get_admin_product(slug: str, db: AsyncSession = Depends(get_db)):
     query = query.options(
         selectinload(Product.variants).selectinload(ProductVariant.inventory_records),
         selectinload(Product.images),
-        selectinload(Product.category_links).selectinload(ProductCategory.category),
+        selectinload(Product.category_links)
+        .selectinload(ProductCategory.category)
+        .selectinload(Category.children),
     )
     result = await db.execute(query)
     product = result.scalar_one_or_none()

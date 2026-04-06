@@ -47,6 +47,7 @@ export default function AdminProductEditPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -62,18 +63,25 @@ export default function AdminProductEditPage() {
 
   async function load() {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const [p, cats] = await Promise.all([
         adminService.getProduct(slug),
-        productsService.getCategories(),
+        productsService.getCategories().catch(() => [] as Category[]),
       ]);
-      setProduct(p ?? null);
+      if (!p) {
+        setLoadError("Product not returned by API");
+        return;
+      }
+      setProduct(p);
       setCategories(cats ?? []);
-      if (p?.variants?.length) {
-        // auto-expand first color group
+      if (p.variants?.length) {
         const firstColor = p.variants[0]?.color ?? "No Color";
         setExpandedGroups([firstColor]);
       }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLoadError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -194,10 +202,28 @@ export default function AdminProductEditPage() {
     return (
       <div style={{ fontFamily: "var(--font-jakarta)", padding: "48px", textAlign: "center" }}>
         <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔍</div>
-        <div style={{ fontSize: "16px", color: "#2A2830", fontWeight: 600 }}>Product not found</div>
-        <button onClick={() => router.push("/admin/products")} style={{ marginTop: "16px", padding: "10px 20px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600 }}>
-          Back to Products
-        </button>
+        <div style={{ fontSize: "16px", color: "#2A2830", fontWeight: 600 }}>
+          {loadError ? "Error loading product" : "Product not found"}
+        </div>
+        {loadError && (
+          <div style={{ marginTop: "8px", fontSize: "13px", color: "#E8242A", background: "rgba(232,36,42,.06)", padding: "10px 16px", borderRadius: "8px", display: "inline-block", maxWidth: "480px" }}>
+            {loadError}
+          </div>
+        )}
+        <div style={{ marginTop: "16px", display: "flex", gap: "10px", justifyContent: "center" }}>
+          <button
+            onClick={() => load()}
+            style={{ padding: "10px 20px", background: "#F4F3EF", color: "#2A2830", border: "1px solid #E2E0DA", borderRadius: "8px", cursor: "pointer", fontWeight: 600 }}
+          >
+            Retry
+          </button>
+          <button
+            onClick={() => router.push("/admin/products")}
+            style={{ padding: "10px 20px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600 }}
+          >
+            Back to Products
+          </button>
+        </div>
       </div>
     );
   }
