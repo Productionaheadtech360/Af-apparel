@@ -82,6 +82,10 @@ async def list_admin_orders(
             total=order.total,
             item_count=item_count,
             created_at=order.created_at,
+            tracking_number=order.tracking_number,
+            courier=order.courier,
+            courier_service=order.courier_service,
+            shipped_at=order.shipped_at,
         ))
 
     return PaginatedResponse(items=items, total=total, page=page, page_size=page_size, pages=(total + page_size - 1) // page_size)

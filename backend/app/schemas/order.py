@@ -123,6 +123,10 @@ class AdminOrderListItem(BaseModel):
     total: Decimal
     item_count: int
     created_at: datetime
+    tracking_number: str | None = None
+    courier: str | None = None
+    courier_service: str | None = None
+    shipped_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
