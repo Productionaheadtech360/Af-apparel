@@ -39,8 +39,8 @@ export default function NewProductPage() {
     setSaving(true);
     setError(null);
     try {
-      const product = await adminService.createProduct(form) as { id: string };
-      router.push(`/admin/products/${product.id}/edit`);
+      const product = await adminService.createProduct(form) as { id: string; slug: string };
+      router.push(`/admin/products/${product.slug}/edit`);
     } catch (err: any) {
       setError(err?.message ?? "Failed to create product");
       setSaving(false);

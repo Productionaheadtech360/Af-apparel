@@ -39,9 +39,10 @@ async def list_admin_products(
 ):
     svc = ProductService(db)  # noqa: F841
     from sqlalchemy.orm import selectinload
+    from app.models.inventory import InventoryRecord
 
     query = select(Product).options(
-        selectinload(Product.variants),
+        selectinload(Product.variants).selectinload(ProductVariant.inventory_records),
         selectinload(Product.images),
         selectinload(Product.category_links)
         .selectinload(ProductCategory.category)
@@ -54,7 +55,16 @@ async def list_admin_products(
     query = query.offset((page - 1) * page_size).limit(page_size)
 
     result = await db.execute(query)
-    return result.scalars().all()
+    products = result.scalars().all()
+
+    # Populate stock_quantity on each variant from inventory records
+    for product in products:
+        for variant in product.variants:
+            variant.stock_quantity = sum(
+                rec.quantity for rec in variant.inventory_records if rec.quantity > 0
+            )
+
+    return products
 
 
 @router.post("", response_model=ProductDetail, status_code=status.HTTP_201_CREATED)
@@ -226,7 +236,7 @@ async def get_admin_product(slug: str, db: AsyncSession = Depends(get_db)):
         query = select(Product).where(Product.slug == slug)
 
     query = query.options(
-        selectinload(Product.variants),
+        selectinload(Product.variants).selectinload(ProductVariant.inventory_records),
         selectinload(Product.images),
         selectinload(Product.category_links).selectinload(ProductCategory.category),
     )
@@ -234,6 +244,12 @@ async def get_admin_product(slug: str, db: AsyncSession = Depends(get_db)):
     product = result.scalar_one_or_none()
     if not product:
         raise NotFoundError(f"Product '{slug}' not found")
+
+    for variant in product.variants:
+        variant.stock_quantity = sum(
+            rec.quantity for rec in variant.inventory_records if rec.quantity > 0
+        )
+
     return product
 
 
