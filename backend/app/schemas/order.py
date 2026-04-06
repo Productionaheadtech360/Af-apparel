@@ -144,6 +144,7 @@ class OrderUpdateRequest(BaseModel):
     tracking_number: str | None = None
     courier: str | None = None
     courier_service: str | None = None
+    notes: str | None = None
 
 
 class OrderStatusUpdate(BaseModel):
