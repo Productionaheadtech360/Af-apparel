@@ -57,7 +57,7 @@ services:
     dns:
       - 8.8.8.8
       - 8.8.4.4
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
 
   # ── Celery Worker ─────────────────────────────────────────────────────────────
   celery_worker:

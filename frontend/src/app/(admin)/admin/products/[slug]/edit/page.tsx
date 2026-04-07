@@ -5,7 +5,19 @@ import { useParams, useRouter } from "next/navigation";
 import { adminService } from "@/services/admin.service";
 import { productsService } from "@/services/products.service";
 import { apiClient } from "@/lib/api-client";
-import { RichTextEditor } from "@/components/admin/RichTextEditor";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(
+  () => import("@/components/admin/RichTextEditor").then(m => m.RichTextEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{ border: "1.5px solid #E2E0DA", borderRadius: "8px", padding: "14px 16px", minHeight: "160px", color: "#aaa", fontSize: "14px" }}>
+        Loading editor…
+      </div>
+    ),
+  }
+);
 import type { Category, ProductDetail, ProductVariant } from "@/types/product.types";
 
 // ── Style constants ────────────────────────────────────────────────────────
