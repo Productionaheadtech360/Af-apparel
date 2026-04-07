@@ -82,9 +82,10 @@ export default function CollectionsPage() {
       }
       closeModal();
       await loadCollections();
-    } catch (err) {
-      alert("Failed to save collection. Check console.");
-      console.error(err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save collection";
+      console.error("Collections save error:", err);
+      alert(msg);
     } finally {
       setSaving(false);
     }
@@ -95,8 +96,10 @@ export default function CollectionsPage() {
     try {
       await apiClient.delete(`/api/v1/admin/products/categories/${id}`);
       await loadCollections();
-    } catch {
-      alert("Failed to delete collection.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete collection";
+      console.error("Collections delete error:", err);
+      alert(msg);
     }
   }
 
