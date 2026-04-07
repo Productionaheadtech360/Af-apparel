@@ -130,7 +130,8 @@
       "Bash(docker port:*)",
       "Bash(curl -s http://localhost/api/v1/health)",
       "Bash(curl -s --connect-timeout 5 http://127.0.0.1:8000/health)",
-      "Bash(curl -s --connect-timeout 5 http://127.0.0.1:3000/login)"
+      "Bash(curl -s --connect-timeout 5 http://127.0.0.1:3000/login)",
+      "Bash(curl -s -X OPTIONS \"http://127.0.0.1:8000/api/v1/login\" -H \"Origin: http://localhost:3000\" -H \"Access-Control-Request-Method: POST\" -D - -o /dev/null)"
     ]
   }
 }
