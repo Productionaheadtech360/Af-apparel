@@ -21,6 +21,8 @@ from app.schemas.product import (
     ProductDetail,
     ProductListItem,
     ProductUpdate,
+    VariantCreate,
+    VariantOut,
 )
 from app.services.product_service import ProductService
 
@@ -156,6 +158,34 @@ async def reorder_product_images(
     return {"reordered": len(image_ids)}
 
 
+@router.post("/{product_id}/variants", response_model=VariantOut, status_code=201)
+async def add_variant(
+    product_id: UUID,
+    payload: VariantCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Add a single variant to a product."""
+    result = await db.execute(select(Product).where(Product.id == product_id))
+    product = result.scalar_one_or_none()
+    if not product:
+        raise NotFoundError(f"Product {product_id} not found")
+
+    variant = ProductVariant(
+        product_id=product_id,
+        sku=payload.sku,
+        color=payload.color,
+        size=payload.size,
+        retail_price=payload.retail_price,
+        compare_price=payload.compare_price,
+        status=payload.status,
+    )
+    db.add(variant)
+    await db.commit()
+    await db.refresh(variant)
+    variant.stock_quantity = 0
+    return variant
+
+
 @router.post("/{product_id}/variants/bulk-generate")
 async def bulk_generate_variants(
     product_id: UUID, payload: BulkGenerateRequest, db: AsyncSession = Depends(get_db)
@@ -191,6 +221,53 @@ async def update_variant(
 
     await db.commit()
     return {"id": str(variant.id), "sku": variant.sku}
+
+
+@router.post("/categories", status_code=201)
+async def create_category(
+    payload: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.schemas.product import CategoryOut as _CategoryOut
+
+    name = payload.get("name", "").strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="name is required")
+
+    slug = payload.get("slug") or name.lower().replace(" ", "-")
+    cat = Category(name=name, slug=slug, description=payload.get("description"))
+    db.add(cat)
+    await db.commit()
+    await db.refresh(cat)
+    return {"id": str(cat.id), "name": cat.name, "slug": cat.slug, "description": cat.description, "is_active": cat.is_active}
+
+
+@router.patch("/categories/{category_id}")
+async def update_category(
+    category_id: UUID,
+    payload: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Category).where(Category.id == category_id))
+    cat = result.scalar_one_or_none()
+    if not cat:
+        raise NotFoundError("Category not found")
+    for field in ("name", "slug", "description", "is_active"):
+        if field in payload:
+            setattr(cat, field, payload[field])
+    await db.commit()
+    await db.refresh(cat)
+    return {"id": str(cat.id), "name": cat.name, "slug": cat.slug, "description": cat.description, "is_active": cat.is_active}
+
+
+@router.delete("/categories/{category_id}", status_code=204)
+async def delete_category(category_id: UUID, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Category).where(Category.id == category_id))
+    cat = result.scalar_one_or_none()
+    if not cat:
+        raise NotFoundError("Category not found")
+    await db.delete(cat)
+    await db.commit()
 
 
 @router.post("/bulk-action")

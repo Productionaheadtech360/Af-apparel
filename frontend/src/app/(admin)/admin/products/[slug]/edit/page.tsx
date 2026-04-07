@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminService } from "@/services/admin.service";
 import { productsService } from "@/services/products.service";
+import { apiClient } from "@/lib/api-client";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import type { Category, ProductDetail, ProductVariant } from "@/types/product.types";
 
 // ── Style constants ────────────────────────────────────────────────────────
@@ -60,6 +62,11 @@ export default function AdminProductEditPage() {
 
   // Variant local edits: variantId → field overrides
   const [variantEdits, setVariantEdits] = useState<Record<string, Record<string, string>>>({});
+
+  // Add Variant modal
+  const [showAddVariant, setShowAddVariant] = useState(false);
+  const [newVariant, setNewVariant] = useState({ color: "", size: "", sku: "", retail_price: "" });
+  const [addingVariant, setAddingVariant] = useState(false);
 
   async function load() {
     setIsLoading(true);
@@ -120,6 +127,36 @@ export default function AdminProductEditPage() {
   async function saveVariant(variantId: string) {
     if (!product || !variantEdits[variantId]) return;
     await adminService.updateVariant(product.id, variantId, variantEdits[variantId]);
+  }
+
+  async function handleAddVariant() {
+    if (!product || !newVariant.color || !newVariant.size) return;
+    setAddingVariant(true);
+    try {
+      const colorCode = newVariant.color.slice(0, 3).toUpperCase();
+      const sizeCode = newVariant.size.toUpperCase();
+      const productCode = product.name.split(" ").map(w => w[0] ?? "").join("").toUpperCase();
+      const sku = newVariant.sku.trim() || `${productCode}-${colorCode}-${sizeCode}-${Date.now().toString(36).toUpperCase()}`;
+
+      const created = await apiClient.post<ProductVariant>(`/api/v1/admin/products/${product.id}/variants`, {
+        sku,
+        color: newVariant.color,
+        size: newVariant.size,
+        retail_price: parseFloat(newVariant.retail_price) || 0,
+        status: "active",
+      });
+
+      setProduct(prev => prev ? { ...prev, variants: [...prev.variants, created] } : prev);
+      setNewVariant({ color: "", size: "", sku: "", retail_price: "" });
+      setShowAddVariant(false);
+      // Auto-expand the new color group
+      if (created.color) setExpandedGroups(prev => [...new Set([...prev, created.color!])]);
+    } catch (err) {
+      alert("Failed to add variant. Check the console for details.");
+      console.error(err);
+    } finally {
+      setAddingVariant(false);
+    }
   }
 
   async function handleDeleteVariant(variantId: string) {
@@ -279,15 +316,11 @@ export default function AdminProductEditPage() {
             </div>
             <div>
               <label style={labelStyle}>Description</label>
-              <textarea
+              <RichTextEditor
                 value={product.description ?? ""}
-                onChange={e => setProduct(p => p ? { ...p, description: e.target.value } : p)}
-                rows={6}
-                style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
+                onChange={val => setProduct(p => p ? { ...p, description: val } : p)}
+                placeholder="Describe this product — fabric details, print compatibility, sizing notes…"
               />
-              <div style={{ fontSize: "11px", color: "#aaa", marginTop: "4px" }}>
-                {product.description?.length ?? 0} characters
-              </div>
             </div>
           </div>
 
@@ -339,7 +372,7 @@ export default function AdminProductEditPage() {
                   {expandAll ? "Collapse All" : "Expand All"}
                 </button>
                 <button
-                  onClick={() => router.push(`/admin/products/${slug}/edit#variants`)}
+                  onClick={() => setShowAddVariant(true)}
                   style={{ padding: "6px 14px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                 >
                   + Add Variant
@@ -625,6 +658,82 @@ export default function AdminProductEditPage() {
 
         </div>
       </div>
+
+      {/* ── Add Variant Modal ──────────────────────────────────────── */}
+      {showAddVariant && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", borderRadius: "12px", width: "480px", padding: "28px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", color: "#2A2830", letterSpacing: ".04em" }}>ADD VARIANT</h3>
+              <button onClick={() => setShowAddVariant(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#aaa" }}>✕</button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
+              <div>
+                <label style={labelStyle}>Color <span style={{ color: "#E8242A" }}>*</span></label>
+                <input
+                  value={newVariant.color}
+                  onChange={e => setNewVariant(v => ({ ...v, color: e.target.value }))}
+                  placeholder="e.g. Navy, Black, White"
+                  list="color-suggestions"
+                  style={inputStyle}
+                />
+                <datalist id="color-suggestions">
+                  {Object.keys(COLOR_MAP).map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
+              <div>
+                <label style={labelStyle}>Size <span style={{ color: "#E8242A" }}>*</span></label>
+                <select
+                  value={newVariant.size}
+                  onChange={e => setNewVariant(v => ({ ...v, size: e.target.value }))}
+                  style={{ ...inputStyle, background: "#fff" }}
+                >
+                  <option value="">Select size…</option>
+                  {["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "One Size"].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>SKU</label>
+                <input
+                  value={newVariant.sku}
+                  onChange={e => setNewVariant(v => ({ ...v, sku: e.target.value }))}
+                  placeholder="Auto-generated if empty"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Price ($)</label>
+                <input
+                  type="number"
+                  value={newVariant.retail_price}
+                  onChange={e => setNewVariant(v => ({ ...v, retail_price: e.target.value }))}
+                  placeholder="0.00"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" }}>
+              <button
+                onClick={() => setShowAddVariant(false)}
+                style={{ padding: "10px 20px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "13px" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddVariant}
+                disabled={addingVariant || !newVariant.color || !newVariant.size}
+                style={{ padding: "10px 20px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "13px", opacity: (addingVariant || !newVariant.color || !newVariant.size) ? 0.6 : 1 }}
+              >
+                {addingVariant ? "Adding…" : "Add Variant"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -153,6 +153,15 @@ class ImageUploadResponse(BaseModel):
     url_large: str
 
 
+class VariantCreate(BaseModel):
+    sku: str = Field(..., min_length=1, max_length=100)
+    color: str | None = None
+    size: str | None = None
+    retail_price: Decimal = Field(Decimal("0"), ge=0)
+    compare_price: Decimal | None = None
+    status: str = "active"
+
+
 class BulkGenerateRequest(BaseModel):
     colors: list[str] = Field(..., min_length=1)
     sizes: list[str] = Field(..., min_length=1)

@@ -177,3 +177,46 @@
 .marquee-track:hover {
   animation-play-state: paused;
 }
+
+/* ── TipTap Rich Text Editor ──────────────────────────────────────── */
+.rich-editor-content .ProseMirror {
+  outline: none;
+  min-height: 140px;
+}
+
+.rich-editor-content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+.rich-editor-content .ProseMirror h1 { font-size: 1.8em; font-weight: 700; margin: 12px 0 8px; }
+.rich-editor-content .ProseMirror h2 { font-size: 1.4em; font-weight: 700; margin: 10px 0 6px; }
+.rich-editor-content .ProseMirror h3 { font-size: 1.2em; font-weight: 700; margin: 8px 0 4px; }
+
+.rich-editor-content .ProseMirror ul { padding-left: 20px; list-style-type: disc; }
+.rich-editor-content .ProseMirror ol { padding-left: 20px; list-style-type: decimal; }
+.rich-editor-content .ProseMirror li { margin: 4px 0; }
+
+.rich-editor-content .ProseMirror blockquote {
+  border-left: 3px solid #E2E0DA;
+  padding-left: 14px;
+  color: #7A7880;
+  font-style: italic;
+  margin: 10px 0;
+}
+
+.rich-editor-content .ProseMirror code {
+  background: #F4F3EF;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: monospace;
+}
+
+.rich-editor-content .ProseMirror a { color: #1A5CFF; text-decoration: underline; cursor: pointer; }
+.rich-editor-content .ProseMirror strong { font-weight: 700; }
+.rich-editor-content .ProseMirror em { font-style: italic; }
+.rich-editor-content .ProseMirror s { text-decoration: line-through; }
