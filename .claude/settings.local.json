@@ -123,7 +123,14 @@
       "Bash(AT=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3MGViYzM5Zi01NjYxLTRhNzEtODE0Yy04ODg5NDhhNDFiM2IiLCJleHAiOjE3NzM4MTg4MTYsImlhdCI6MTc3MzgxNzkxNiwidHlwZSI6ImFjY2VzcyIsImp0aSI6IjM2ZjU3MDZmLTBjNjEtNDc5OS1iNmQ3LTA3NGMzZWUxZmE1OSIsImlzX2FkbWluIjp0cnVlfQ.sI3DsrN4vsExAH2v7F6sRmIyCHyNvfac0F1z-wDWUe4\"\nCT=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkNGExY2IwOS0yMDFhLTQ0OTgtOTZjNC1jNmE3MWNiZDMzZjgiLCJleHAiOjE3NzM4MTg3ODAsImlhdCI6MTc3MzgxNzg4MCwidHlwZSI6ImFjY2VzcyIsImp0aSI6IjRlNDhhY2RmLThmZmEtNDE5Mi04NzBkLWE3Y2NlNDEwN2FmNiIsImlzX2FkbWluIjpmYWxzZSwiY29tcGFueV9pZCI6ImYyMmI3YTgxLTNlOGMtNGZkZi1hZjA3LTcyZTU4NDFiYmVhYSIsImNvbXBhbnlfcm9sZSI6Im93bmVyIiwicHJpY2luZ190aWVyX2lkIjoiYWY0OTBhNWUtYTA2YS00YTg2LWI0ZDUtYTE0ZDMyYzFlZDkzIn0.Z8d4tIihOfkpTbPCgnMG8umblAQjgfAAx_xLfg-IYQY\"\n\ncurl -s http://localhost:8000/api/v1/admin/warehouses -H \"Authorization: Bearer $AT\"\necho \"\"\ncurl -s http://localhost:8000/api/v1/products/categories -H \"Authorization: Bearer $CT\"\necho \"\")",
       "Bash(CT=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkNGExY2IwOS0yMDFhLTQ0OTgtOTZjNC1jNmE3MWNiZDMzZjgiLCJleHAiOjE3NzM4MTkyNTcsImlhdCI6MTc3MzgxODM1NywidHlwZSI6ImFjY2VzcyIsImp0aSI6Ijc2MDc2MzdjLTI2NzEtNGZlMy1iOWYwLWRjOTAwMTU1NDhmYiIsImlzX2FkbWluIjpmYWxzZSwiY29tcGFueV9pZCI6ImYyMmI3YTgxLTNlOGMtNGZkZi1hZjA3LTcyZTU4NDFiYmVhYSIsImNvbXBhbnlfcm9sZSI6Im93bmVyIiwicHJpY2luZ190aWVyX2lkIjoiYWY0OTBhNWUtYTA2YS00YTg2LWI0ZDUtYTE0ZDMyYzFlZDkzIn0.IgSbrAkniFM03j9Nkxpp-O7dcYqkByZy216Md-kEHHI\"\nAT=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3MGViYzM5Zi01NjYxLTRhNzEtODE0Yy04ODg5NDhhNDFiM2IiLCJleHAiOjE3NzM4MTkzMjYsImlhdCI6MTc3MzgxODQyNiwidHlwZSI6ImFjY2VzcyIsImp0aSI6IjQ1ZjM1ZjhkLTQ5YTctNDE1MC05OGU0LWIxNGEwOTMwNzhlMiIsImlzX2FkbWluIjp0cnVlfQ.gaC5beS1Uq7y7S1TK-CvBkzhDIVGmlMRcfP-OoPuN3U\"\n\necho \"=== CATEGORIES ===\" && curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/api/v1/products/categories -H \"Authorization: Bearer $CT\"\necho \"\"\necho \"=== WAREHOUSES ===\" && curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/api/v1/admin/warehouses -H \"Authorization: Bearer $AT\"\necho \"\"\necho \"=== REPORTS SALES ===\" && curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/api/v1/admin/reports/sales?period=month\" -H \"Authorization: Bearer $AT\"\necho \"\"\necho \"=== REPORTS CUSTOMERS ===\" && curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/api/v1/admin/reports/customers?period=month\" -H \"Authorization: Bearer $AT\"\necho \"\")",
       "Bash(\"/c/Users/RT/Desktop/AF Apparel/backend/app/api/v1/admin/orders.py\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npm list:*)",
+      "Bash(curl -v http://localhost:8000/health)",
+      "Bash(docker port:*)",
+      "Bash(curl -s http://localhost/api/v1/health)",
+      "Bash(curl -s --connect-timeout 5 http://127.0.0.1:8000/health)",
+      "Bash(curl -s --connect-timeout 5 http://127.0.0.1:3000/login)"
     ]
   }
 }
