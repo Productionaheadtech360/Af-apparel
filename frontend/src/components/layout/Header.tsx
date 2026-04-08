@@ -45,16 +45,13 @@ export function Header() {
         <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: "68px", gap: "24px" }}>
 
           {/* Logo */}
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}>
-            <div style={{ display: "flex", alignItems: "center", lineHeight: 1 }}>
-              <span style={{ fontFamily: "var(--font-bebas)", fontSize: "36px", color: "#1A5CFF", lineHeight: 1, letterSpacing: "-.02em" }}>A</span>
-              <span style={{ fontFamily: "var(--font-bebas)", fontSize: "36px", color: "#E8242A", lineHeight: 1, letterSpacing: "-.02em" }}>F</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontFamily: "var(--font-bebas)", fontSize: "13px", color: "#fff", letterSpacing: ".18em", lineHeight: 1 }}>APPARELS</span>
-              <span style={{ fontSize: "9px", color: "#444", letterSpacing: ".15em", fontWeight: 600, textTransform: "uppercase" }}>Wholesale B2B Platform</span>
-            </div>
-          </Link>
+<Link href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+  <img 
+    src="/Af-apparel logo.jpeg" 
+    alt="AF Apparels Logo" 
+    style={{ height: "48px", width: "auto", objectFit: "contain" }} 
+  />
+</Link>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex" style={{ gap: "4px", alignItems: "center" }}>
