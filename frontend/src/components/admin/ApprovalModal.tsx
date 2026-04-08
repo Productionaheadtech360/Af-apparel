@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { adminService } from "@/services/admin.service";
 
-interface PricingTier { id: string; name: string; discount_percent: number; }
+interface PricingTier { id: string; name: string; discount_percent?: number; discount_percentage?: number; }
 interface ShippingTier { id: string; name: string; }
 
 interface ApprovalModalProps {
@@ -24,10 +24,15 @@ export function ApprovalModal({ applicationId, companyName, onClose, onSuccess }
 
   useEffect(() => {
     async function load() {
-      const [pt, st] = await Promise.all([
+      // Fetch independently so one failure doesn't block the other
+      const [ptResult, stResult] = await Promise.allSettled([
         adminService.listPricingTiers() as Promise<PricingTier[]>,
         adminService.listShippingTiers() as Promise<ShippingTier[]>,
       ]);
+      const pt = ptResult.status === "fulfilled" && Array.isArray(ptResult.value)
+        ? ptResult.value : [];
+      const st = stResult.status === "fulfilled" && Array.isArray(stResult.value)
+        ? stResult.value : [];
       setPricingTiers(pt);
       setShippingTiers(st);
       if (pt.length > 0) setPricingTierId(pt[0]?.id ?? "");
@@ -71,9 +76,14 @@ export function ApprovalModal({ applicationId, companyName, onClose, onSuccess }
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="">Select tier…</option>
-              {pricingTiers.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.discount_percent}% off)</option>
-              ))}
+              {pricingTiers.map((t) => {
+                const disc = t.discount_percentage ?? t.discount_percent ?? 0;
+                return (
+                  <option key={t.id} value={t.id}>
+                    {t.name}{disc ? ` (${disc}% off)` : ""}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
