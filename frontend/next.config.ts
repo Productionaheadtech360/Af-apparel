@@ -14,8 +14,8 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      { protocol: "http", hostname: "localhost" },
-      { protocol: "https", hostname: "*.railway.app" },
+      { protocol: "http",  hostname: "**" },
+      { protocol: "https", hostname: "**" },
     ],
   },
 };

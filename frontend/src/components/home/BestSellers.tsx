@@ -4,14 +4,26 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { productsService } from "@/services/products.service";
 
+interface ProductImageOut {
+  url_thumbnail: string;
+  url_medium: string;
+  url_medium_webp?: string | null;
+}
+
 interface ProductItem {
   id: string;
   name: string;
   slug: string;
   base_price?: number;
-  primary_image?: string | null;
+  primary_image?: ProductImageOut | string | null;
   moq?: number;
   categories?: { name: string }[];
+}
+
+function imageUrl(img: ProductImageOut | string | null | undefined): string | null {
+  if (!img) return null;
+  if (typeof img === "string") return img;
+  return img.url_medium_webp ?? img.url_medium ?? null;
 }
 
 const FALLBACK: ProductItem[] = [
@@ -75,9 +87,9 @@ export function BestSellers() {
               >
                 {/* Image */}
                 <div style={{ height: "220px", background: "linear-gradient(135deg,#f0ede8 0%,#e8e4df 100%)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-                  {product.primary_image ? (
+                  {imageUrl(product.primary_image) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={product.primary_image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={imageUrl(product.primary_image)!} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
                     <span style={{ fontSize: "52px", opacity: 0.25 }}>👕</span>
                   )}
