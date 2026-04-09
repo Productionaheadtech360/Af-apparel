@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { adminService } from "@/services/admin.service";
+import { ApiClientError } from "@/lib/api-client";
 
 // ── CSV template ──────────────────────────────────────────────────────────────
 const SAMPLE_CSV = `name,category,description,base_price,moq,vendor,product_type,colors,sizes,status
@@ -139,6 +140,12 @@ export function ImportProductsModal({ onClose, onSuccess }: Props) {
   }
 
   // ── Import ──────────────────────────────────────────────────────────────────
+  function generateSlug(name: string): string {
+    const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const suffix = Date.now().toString().slice(-5);
+    return `${base}-${suffix}`;
+  }
+
   async function runImport() {
     setStep("importing");
     setImportProgress(0);
@@ -148,23 +155,27 @@ export function ImportProductsModal({ onClose, onSuccess }: Props) {
       const row = rows[i]!;
       setImportProgress(Math.round(((i + 0.5) / rows.length) * 100));
       try {
+        // ProductCreate schema: name, slug, description, moq, status, product_type, vendor, tags, category_ids
+        // base_price is NOT in ProductCreate — pricing lives on variants (retail_price)
         const product = await adminService.createProduct({
           name: row.name,
+          slug: generateSlug(row.name),
           description: row.description || undefined,
-          base_price: row.base_price,
           moq: row.moq,
           vendor: row.vendor || undefined,
           product_type: row.product_type || undefined,
           status: row.status || "draft",
-          category_name: row.category || undefined,
+          category_ids: [],
         });
 
         // Generate variants if colors + sizes provided
+        // BulkGenerateRequest: colors, sizes, base_retail_price (required)
         if (product && (product as { id?: string }).id && row.colors.length > 0 && row.sizes.length > 0) {
           const productId = (product as { id: string }).id;
           await adminService.bulkGenerateVariants(productId, {
             colors: row.colors,
             sizes: row.sizes,
+            base_retail_price: row.base_price,
           }).catch(() => {/* non-fatal */});
         }
 
@@ -172,7 +183,12 @@ export function ImportProductsModal({ onClose, onSuccess }: Props) {
         res.created.push(row.name);
       } catch (err) {
         res.failed++;
-        const msg = err instanceof Error ? err.message : "Unknown error";
+        let msg = "Unknown error";
+        if (err instanceof ApiClientError) {
+          msg = `[${err.status}] ${err.message}`;
+        } else if (err instanceof Error) {
+          msg = err.message;
+        }
         res.errors.push(`${row.name}: ${msg}`);
       }
       setImportProgress(Math.round(((i + 1) / rows.length) * 100));
