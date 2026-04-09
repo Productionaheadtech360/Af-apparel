@@ -164,6 +164,12 @@
   .af-container { padding-left: 16px !important; padding-right: 16px !important; }
 }
 
+/* Spinner animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* Announcement bar marquee */
 @keyframes marquee {
   0%   { transform: translateX(0); }

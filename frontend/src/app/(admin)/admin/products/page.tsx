@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminService } from "@/services/admin.service";
 import type { ProductDetail } from "@/types/product.types";
+import { ImportProductsModal } from "@/components/admin/ImportProductsModal";
 
 // ── Style constants ────────────────────────────────────────────────────────
 const thStyle: React.CSSProperties = {
@@ -34,6 +35,7 @@ export default function AdminProductsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
@@ -150,6 +152,12 @@ export default function AdminProductsPage() {
         </select>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
+          <button
+            onClick={() => setShowImport(true)}
+            style={{ padding: "10px 16px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+          >
+            📥 Import
+          </button>
           <button
             onClick={() => adminService.exportProductsCsv()}
             style={{ padding: "10px 16px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
@@ -305,6 +313,14 @@ export default function AdminProductsPage() {
           </div>
         </div>
       </div>
+
+      {/* Import Modal */}
+      {showImport && (
+        <ImportProductsModal
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { setShowImport(false); load(); }}
+        />
+      )}
 
       {/* Bulk Edit Modal */}
       {showBulkEdit && (
