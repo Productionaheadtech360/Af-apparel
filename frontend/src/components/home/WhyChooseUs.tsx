@@ -26,9 +26,12 @@ export default function WhyChooseUs() {
               </div>
             ))}
           </div>
-          <div className="hidden lg:flex" style={{ background: "linear-gradient(135deg,#F4F3EF 0%,#e5e0d8 100%)", borderRadius: "16px", height: "440px", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", color: "#bbb", fontWeight: 600, fontSize: "13px", border: "1px solid #E2E0DA" }}>
-            <div style={{ fontSize: "60px", opacity: .3 }}>🏭</div>
-            <span>WAREHOUSE / TEAM IMAGE</span>
+          <div className="hidden lg:flex" style={{ background: "linear-gradient(135deg,#F4F3EF 0%,#e5e0d8 100%)", borderRadius: "16px", height: "440px", position: "relative", overflow: "hidden", border: "1px solid #E2E0DA" }}>
+            <img
+              src="/private_labels_af.webp"
+              alt="Private Labels"
+              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "16px" }}
+            />
           </div>
         </div>
       </div>

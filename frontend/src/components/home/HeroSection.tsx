@@ -43,19 +43,23 @@ export default function HeroSection() {
             ))}
           </div>
         </div>
-        <div className="hidden lg:flex" style={{ position: "relative" }}>
+        {/* <div className="hidden lg:flex" style={{ position: "relative" }}>
           <div style={{ background: "linear-gradient(135deg,#1a1a1a 0%,#111 100%)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "12px", height: "400px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", position: "relative", overflow: "hidden", width: "100%" }}>
-            <div style={{ position: "absolute", top: "-40%", right: "-30%", width: "300px", height: "300px", background: "radial-gradient(circle,rgba(26,92,255,.15) 0%,transparent 70%)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", top: "-20%", right: "-30%", width: "300px", height: "300px", background: "radial-gradient(circle,rgba(26,92,255,.15) 0%,transparent 70%)", pointerEvents: "none" }} />
             <div style={{ fontSize: "64px", opacity: .3 }}>👕</div>
             <div style={{ fontSize: "13px", color: "#333", fontWeight: 600, letterSpacing: ".05em" }}>HERO LIFESTYLE IMAGE</div>
             <div style={{ position: "absolute", top: "-12px", right: "20px", background: "#E8242A", color: "#fff", fontFamily: "var(--font-bebas)", fontSize: "14px", letterSpacing: ".06em", padding: "6px 16px", borderRadius: "4px" }}>NEW ARRIVALS</div>
-            <div style={{ position: "absolute", bottom: "24px", left: "-28px", background: "rgba(255,255,255,.04)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,.1)", borderRadius: "10px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "12px" }}>
-              <span style={{ fontSize: "22px" }}>⚡</span>
-              <div>
-                <strong style={{ display: "block", color: "#fff", fontSize: "13px", fontWeight: 700 }}>Same-Day Shipping</strong>
-                <span style={{ fontSize: "11px", color: "#555" }}>Orders before 2 PM CT</span>
-              </div>
-            </div>
+          </div>
+        </div> */}
+        <div className="hidden lg:flex" style={{ position: "relative" }}>
+          <div style={{ background: "linear-gradient(135deg,#1a1a1a 0%,#111 100%)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "12px", height: "400px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", position: "relative", overflow: "hidden", width: "100%" }}>
+            <div style={{ position: "absolute", top: "-20%", right: "-30%", width: "300px", height: "300px", background: "radial-gradient(circle,rgba(26,92,255,.15) 0%,transparent 70%)", pointerEvents: "none" }} />
+            <img
+              src="/image1.webp"
+              alt="Hero Lifestyle Image"
+              style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", top: 0, left: 0, borderRadius: "12px" }}
+            />
+            <div style={{ position: "absolute", top: "10px", right: "20px", background: "#E8242A", color: "#fff", fontFamily: "var(--font-bebas)", fontSize: "14px", letterSpacing: ".06em", padding: "6px 16px", borderRadius: "4px" }}>NEW ARRIVALS</div>
           </div>
         </div>
       </div>
