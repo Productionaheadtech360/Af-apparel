@@ -172,7 +172,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "flex-start" }} className="product-detail-grid">
 
           {/* ── LEFT: Image Gallery ─────────────────────────────────────── */}
-          <div>
+          <div style={{width: "650px"}}>
             {/* Main image */}
             <div style={{ aspectRatio: "1", borderRadius: "12px", overflow: "hidden", background: "#F4F3EF", marginBottom: "12px", border: "1px solid #E2E0DA", position: "relative" }}>
               {images[activeImageIdx] ? (
