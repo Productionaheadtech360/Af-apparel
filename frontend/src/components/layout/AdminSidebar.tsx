@@ -174,10 +174,6 @@ export function AdminSidebar() {
         </div>
       )}
 
-      {/* ── ANALYTICS ── */}
-      <div style={SECTION_HEAD}>Analytics</div>
-      <NavLink href="/admin/reports" label="Reports" icon="📈" />
-
       {/* ── SETTINGS ── */}
       <div style={SECTION_HEAD}>Settings</div>
       <NavLink href="/admin/settings" label="Settings" icon="⚙️" />

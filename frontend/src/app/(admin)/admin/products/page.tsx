@@ -41,6 +41,7 @@ export default function AdminProductsPage() {
 
   // Bulk edit state: productId → partial edits
   const [bulkEdits, setBulkEdits] = useState<Record<string, Record<string, string>>>({});
+  const bulkFields = ["status", "vendor", "product_type"] as const;
 
   async function load(p = page) {
     setIsLoading(true);
@@ -75,8 +76,8 @@ export default function AdminProductsPage() {
 
   async function handleBulkDelete() {
     if (!selectedIds.length) return;
-    if (!confirm(`Archive ${selectedIds.length} product(s)?`)) return;
-    await adminService.bulkAction(selectedIds, "archived");
+    if (!confirm(`Permanently delete ${selectedIds.length} product(s)? This cannot be undone.`)) return;
+    await Promise.all(selectedIds.map(id => adminService.deleteProduct(id)));
     setSelectedIds([]);
     load();
   }
@@ -334,6 +335,9 @@ export default function AdminProductsPage() {
             </div>
 
             <div style={{ padding: "20px 24px" }}>
+              <p style={{ fontSize: "12px", color: "#7A7880", marginBottom: "12px" }}>
+                💡 Tip: You can paste rows from Excel/Sheets (columns: Vendor, Type) directly into the table cells.
+              </p>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
                   <tr style={{ background: "#F4F3EF", borderBottom: "2px solid #E2E0DA" }}>
@@ -342,7 +346,27 @@ export default function AdminProductsPage() {
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody
+                  onPaste={e => {
+                    // Support pasting tab-separated data from Excel/Sheets
+                    const text = e.clipboardData.getData("text");
+                    if (!text.includes("\t") && !text.includes("\n")) return;
+                    e.preventDefault();
+                    const lines = text.trim().split("\n");
+                    lines.forEach((line, i) => {
+                      const product = selectedProducts[i];
+                      if (!product) return;
+                      const cols = line.split("\t");
+                      const updates: Record<string, string> = {};
+                      if (cols[0] !== undefined) updates.vendor = cols[0]!.trim();
+                      if (cols[1] !== undefined) updates.product_type = cols[1]!.trim();
+                      setBulkEdits(prev => ({
+                        ...prev,
+                        [product.id]: { ...(prev[product.id] ?? {}), ...updates },
+                      }));
+                    });
+                  }}
+                >
                   {selectedProducts.map(p => (
                     <tr key={p.id} style={{ borderBottom: "1px solid #F4F3EF" }}>
                       <td style={{ padding: "10px 12px", fontWeight: 600, fontSize: "13px", color: "#2A2830" }}>{p.name}</td>

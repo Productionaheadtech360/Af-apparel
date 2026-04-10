@@ -11,7 +11,8 @@ interface Collection {
   slug: string;
   description?: string | null;
   product_count?: number;
-  image?: string | null;
+  image?: string | null;      // legacy fallback
+  image_url?: string | null;  // from CategoryOut schema
   is_active?: boolean;
 }
 
@@ -33,7 +34,7 @@ export default function CollectionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", slug: "", description: "" });
+  const [form, setForm] = useState({ name: "", slug: "", description: "", image_url: "" });
   const [saving, setSaving] = useState(false);
 
   async function loadCollections() {
@@ -52,20 +53,20 @@ export default function CollectionsPage() {
 
   function openCreate() {
     setEditingId(null);
-    setForm({ name: "", slug: "", description: "" });
+    setForm({ name: "", slug: "", description: "", image_url: "" });
     setShowModal(true);
   }
 
   function openEdit(col: Collection) {
     setEditingId(col.id);
-    setForm({ name: col.name, slug: col.slug, description: col.description ?? "" });
+    setForm({ name: col.name, slug: col.slug, description: col.description ?? "", image_url: col.image_url ?? col.image ?? "" });
     setShowModal(true);
   }
 
   function closeModal() {
     setShowModal(false);
     setEditingId(null);
-    setForm({ name: "", slug: "", description: "" });
+    setForm({ name: "", slug: "", description: "", image_url: "" });
   }
 
   async function handleSave() {
@@ -76,6 +77,7 @@ export default function CollectionsPage() {
         name: form.name,
         slug: form.slug || generateSlug(form.name),
         description: form.description || null,
+        image_url: form.image_url.trim() || null,
       };
       if (editingId) {
         await apiClient.patch(`/api/v1/admin/products/categories/${editingId}`, payload);
@@ -147,8 +149,9 @@ export default function CollectionsPage() {
             >
               {/* Image / placeholder */}
               <div style={{ height: "140px", background: "linear-gradient(135deg,#f0ede8,#e8e4df)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                {col.image ? (
-                  <img src={col.image} alt={col.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {(col.image_url ?? col.image) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={(col.image_url ?? col.image)!} alt={col.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
                   <span style={{ fontSize: "40px", opacity: 0.3 }}>🗂️</span>
                 )}
@@ -245,7 +248,7 @@ export default function CollectionsPage() {
               </div>
             </div>
 
-            <div style={{ marginBottom: "22px" }}>
+            <div style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>Description</label>
               <textarea
                 value={form.description}
@@ -254,6 +257,22 @@ export default function CollectionsPage() {
                 placeholder="Optional description for this collection…"
                 style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
               />
+            </div>
+
+            <div style={{ marginBottom: "22px" }}>
+              <label style={labelStyle}>Image URL</label>
+              <input
+                value={form.image_url}
+                onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))}
+                placeholder="https://example.com/collection-image.jpg"
+                style={inputStyle}
+              />
+              {form.image_url && (
+                <div style={{ marginTop: "8px", width: "80px", height: "80px", borderRadius: "6px", overflow: "hidden", border: "1px solid #E2E0DA" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={form.image_url} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                </div>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>

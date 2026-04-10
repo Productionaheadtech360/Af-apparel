@@ -42,6 +42,8 @@ const thStyle: React.CSSProperties = {
   letterSpacing: ".06em", color: "#7A7880", fontWeight: 700,
 };
 
+const SIZE_ORDER = ["XXS","XS","S","S/M","M","M/L","L","XL","2XL","3XL","4XL","5XL","6XL","ONE SIZE"];
+
 const COLOR_MAP: Record<string, string> = {
   White: "#FFFFFF", Black: "#111111", Grey: "#9CA3AF", "Sport Grey": "#9CA3AF",
   Navy: "#1e3a5f", Red: "#E8242A", Blue: "#1A5CFF", "Light Blue": "#7DD3FC",
@@ -74,6 +76,23 @@ export default function AdminProductEditPage() {
 
   // Variant local edits: variantId → field overrides
   const [variantEdits, setVariantEdits] = useState<Record<string, Record<string, string>>>({});
+
+  // Bulk apply to all variants
+  const [bulkApply, setBulkApply] = useState({ price: "", compare: "", stock: "" });
+
+  async function applyToAllVariants() {
+    if (!product) return;
+    const updates: Record<string, string> = {};
+    if (bulkApply.price.trim()) updates.retail_price = bulkApply.price.trim();
+    if (bulkApply.compare.trim()) updates.compare_price = bulkApply.compare.trim();
+    if (bulkApply.stock.trim()) updates.stock_quantity = bulkApply.stock.trim();
+    if (!Object.keys(updates).length) return;
+    await Promise.all(
+      product.variants.map(v => adminService.updateVariant(product.id, v.id, updates))
+    );
+    setBulkApply({ price: "", compare: "", stock: "" });
+    await load();
+  }
 
   // Add Variant modal
   const [showAddVariant, setShowAddVariant] = useState(false);
@@ -116,7 +135,17 @@ export default function AdminProductEditPage() {
       if (!map[color]) map[color] = [];
       map[color].push(v);
     });
-    return Object.entries(map).map(([color, variants]) => ({ color, variants }));
+    return Object.entries(map).map(([color, variants]) => ({
+      color,
+      variants: [...variants].sort((a, b) => {
+        const ai = SIZE_ORDER.indexOf((a.size ?? "").toUpperCase());
+        const bi = SIZE_ORDER.indexOf((b.size ?? "").toUpperCase());
+        if (ai === -1 && bi === -1) return (a.size ?? "").localeCompare(b.size ?? "");
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      }),
+    }));
   }, [product?.variants]);
 
   function toggleGroup(color: string) {
@@ -391,6 +420,32 @@ export default function AdminProductEditPage() {
                 </button>
               </div>
             </div>
+
+            {/* Apply to All bar */}
+            {groupedVariants.length > 0 && (
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "14px", padding: "12px 14px", background: "#F4F3EF", borderRadius: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#7A7880", whiteSpace: "nowrap" }}>APPLY TO ALL:</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "12px", color: "#aaa" }}>Price $</span>
+                  <input type="number" placeholder="—" value={bulkApply.price} onChange={e => setBulkApply(p => ({ ...p, price: e.target.value }))} style={{ width: "72px", padding: "5px 7px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px" }} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "12px", color: "#aaa" }}>Compare $</span>
+                  <input type="number" placeholder="—" value={bulkApply.compare} onChange={e => setBulkApply(p => ({ ...p, compare: e.target.value }))} style={{ width: "72px", padding: "5px 7px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px" }} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "12px", color: "#aaa" }}>Stock</span>
+                  <input type="number" placeholder="—" value={bulkApply.stock} onChange={e => setBulkApply(p => ({ ...p, stock: e.target.value }))} style={{ width: "60px", padding: "5px 7px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px" }} />
+                </div>
+                <button
+                  onClick={applyToAllVariants}
+                  disabled={!bulkApply.price && !bulkApply.compare && !bulkApply.stock}
+                  style={{ padding: "5px 14px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "5px", fontSize: "12px", fontWeight: 700, cursor: "pointer", opacity: (!bulkApply.price && !bulkApply.compare && !bulkApply.stock) ? 0.4 : 1 }}
+                >
+                  Apply
+                </button>
+              </div>
+            )}
 
             {groupedVariants.length === 0 ? (
               <div style={{ padding: "32px", textAlign: "center", color: "#aaa", fontSize: "13px" }}>
