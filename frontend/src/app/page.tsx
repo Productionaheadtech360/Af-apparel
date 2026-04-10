@@ -27,7 +27,7 @@ export default async function HomePage() {
       <main style={{ fontFamily: "var(--font-jakarta)" }}>
         <HeroSection />
         <TrustStrip />
-        <BrandLogos />
+        {/* <BrandLogos /> */}
         <CategoryGrid categories={categories} />
         <BestSellers />
         <HowItWorks />
