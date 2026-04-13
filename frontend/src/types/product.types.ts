@@ -65,6 +65,9 @@ export interface ProductDetail {
   tags: string[] | null;
   created_at: string;
   updated_at: string;
+  fabric?: string | null;
+  product_code?: string | null;
+  weight?: string | null;
 }
 
 /** Product asset (flyer, spec sheet). */
