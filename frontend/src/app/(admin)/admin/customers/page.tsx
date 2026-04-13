@@ -50,7 +50,7 @@ export default function AdminCustomersPage() {
   const [rfmFilter, setRfmFilter] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const PAGE_SIZE = 50;
 
   async function load() {

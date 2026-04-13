@@ -64,7 +64,7 @@ export default function AdminProductEditPage() {
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);

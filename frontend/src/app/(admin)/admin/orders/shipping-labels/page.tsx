@@ -44,7 +44,7 @@ const PKG_TYPES = ["Box", "Poly Bag", "Flat Pack", "Pallet", "Envelope"];
 export default function ShippingLabelsPage() {
   const [labels, setLabels] = useState<ShippingLabel[]>([]);
   const [filtered, setFiltered] = useState<ShippingLabel[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [tab, setTab] = useState<"all" | "pending" | "in_transit" | "delivered">("all");
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [pkgTypes, setPkgTypes] = useState<Record<string, string>>({});

@@ -19,7 +19,7 @@ export default function AdminInventoryPage() {
   const [rows, setRows] = useState<InventoryRow[]>([]);
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [adjustTarget, setAdjustTarget] = useState<InventoryRow | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function load() {
     setIsLoading(true);

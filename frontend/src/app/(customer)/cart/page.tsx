@@ -13,7 +13,7 @@ import type { Cart, CartItem } from "@/types/order.types";
 export default function CartPage() {
   const router = useRouter();
   const [cart, setCart] = useState<Cart | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);

@@ -34,7 +34,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function DraftOrdersPage() {
   const [orders, setOrders] = useState<DraftOrder[]>([]);
   const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function load() {
     setIsLoading(true);

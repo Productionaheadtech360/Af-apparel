@@ -30,7 +30,7 @@ export default function AdminOrdersPage() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const PAGE_SIZE = 50;
 
   async function load() {

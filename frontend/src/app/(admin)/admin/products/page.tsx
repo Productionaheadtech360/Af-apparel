@@ -30,7 +30,7 @@ export default function AdminProductsPage() {
   const router = useRouter();
   const [products, setProducts] = useState<ProductDetail[]>([]);
   const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
