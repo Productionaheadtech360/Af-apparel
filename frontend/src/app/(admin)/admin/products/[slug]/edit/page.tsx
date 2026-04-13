@@ -250,6 +250,7 @@ export default function AdminProductEditPage() {
         fabric: (product as any).fabric,
         product_code: (product as any).product_code,
         weight: (product as any).weight,
+        gender: (product as any).gender,
       });
       await Promise.all([...variantSaves, productSave]);
       setVariantEdits({});
@@ -598,6 +599,20 @@ export default function AdminProductEditPage() {
                 placeholder="e.g. AF Apparels"
                 style={inputStyle}
               />
+            </div>
+            <div style={{ marginBottom: "14px" }}>
+              <label style={labelStyle}>Gender</label>
+              <select
+                value={(product as any).gender ?? ""}
+                onChange={e => setProduct(p => p ? { ...p, gender: e.target.value } as any : p)}
+                style={{ ...inputStyle, background: "#fff" }}
+              >
+                <option value="">Select gender…</option>
+                <option value="mens">Men's</option>
+                <option value="womens">Women's</option>
+                <option value="youth">Youth</option>
+                <option value="unisex">Unisex</option>
+              </select>
             </div>
 
             <div style={{ marginBottom: "14px" }}>
