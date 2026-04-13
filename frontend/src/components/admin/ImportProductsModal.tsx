@@ -188,19 +188,22 @@ export function ImportProductsModal({ onClose, onSuccess }: Props) {
     setImportProgress(0);
     const res: ImportResult = { success: 0, failed: 0, created: [], errors: [] };
 
-    // Pre-load category list and default warehouse once for all rows
     let categoryList: { id: string; name: string }[] = [];
     try {
       const cats = await productsService.getCategories();
       categoryList = (cats ?? []).map(c => ({ id: (c as { id: string }).id, name: c.name }));
-    } catch {/* non-fatal */}
+    } catch {/* non-fatal */ }
 
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i]!;
-      setImportProgress(Math.round(((i + 0.5) / rows.length) * 100));
+    const { apiClient: client } = await import("@/lib/api-client");
 
+    async function processRow(row: PreviewRow, index: number) {
       try {
-        // ── Step 1: Create product ───────────────────────────────────────────
+        // Category match
+        const categoryMatch = row.category.trim()
+          ? categoryList.find(c => c.name.toLowerCase() === row.category.toLowerCase().trim())
+          : undefined;
+
+        // Step 1: Create product WITH category in one call
         const slug = row.slug.trim() || generateSlug(row.name);
         const product = await adminService.createProduct({
           name: row.name,
@@ -210,44 +213,27 @@ export function ImportProductsModal({ onClose, onSuccess }: Props) {
           vendor: row.vendor || undefined,
           product_type: row.product_type || undefined,
           status: row.status || "draft",
-          category_ids: [],
+          category_ids: categoryMatch ? [categoryMatch.id] : [],
         });
 
         const productId = (product as { id: string }).id;
 
-        // ── Step 2: Assign category if found ────────────────────────────────
-        if (row.category.trim() && categoryList.length > 0) {
-          const match = categoryList.find(
-            c => c.name.toLowerCase() === row.category.toLowerCase().trim()
-          );
-          if (match) {
-            await adminService.updateProduct(productId, {
-              category_ids: [match.id],
-            }).catch(() => {/* non-fatal */});
-          }
-        }
-
-        // ── Step 3: Add images per color ────────────────────────────────────
+        // Step 2: Images — parallel
         const imageMap = parseImageMap(row.images_raw, row.colors);
-        let imagesAdded = 0;
-        for (const [color, url] of Object.entries(imageMap)) {
-          if (!url) continue;
-          await adminService.addImageFromUrl(
-            productId,
-            url,
-            color,
-            imagesAdded === 0,
-          ).catch(() => {/* non-fatal */});
-          imagesAdded++;
-        }
+        await Promise.all(
+          Object.entries(imageMap).map(([color, url], idx) =>
+            url
+              ? adminService.addImageFromUrl(productId, url, color, idx === 0).catch(() => { })
+              : Promise.resolve()
+          )
+        );
 
-        // ── Step 4: Bulk-create variants in one batch call ──────────────────
+        // Step 3: Variants — single batch call
         const colors = row.colors.length > 0 ? row.colors : ["Default"];
         const sizes = row.sizes.length > 0 ? row.sizes : ["S", "M", "L", "XL"];
         let variantsCreated = 0;
 
         if (colors.length > 0 && sizes.length > 0) {
-          // Build all variants upfront with correct SKUs from sku_prefix
           const allVariants = colors.flatMap(color =>
             sizes.map(size => ({
               sku: buildSku(row.sku_prefix, row.name, color, size),
@@ -258,16 +244,13 @@ export function ImportProductsModal({ onClose, onSuccess }: Props) {
             }))
           );
 
-          const { apiClient: client } = await import("@/lib/api-client");
           try {
-            // Primary: single batch call with explicit SKUs
             const batchRes = await client.post<{ created: number }>(
               `/api/v1/admin/products/${productId}/variants/batch`,
               { variants: allVariants },
             );
             variantsCreated = batchRes?.created ?? allVariants.length;
           } catch {
-            // Fallback: bulkGenerateVariants (SKUs auto-generated from slug)
             try {
               const bulkRes = await adminService.bulkGenerateVariants(productId, {
                 colors,
@@ -275,7 +258,7 @@ export function ImportProductsModal({ onClose, onSuccess }: Props) {
                 base_retail_price: row.base_price,
               }) as { generated: number } | null;
               variantsCreated = bulkRes?.generated ?? allVariants.length;
-            } catch {/* variants skipped — product still created */}
+            } catch {/* skip */ }
           }
         }
 
@@ -295,7 +278,16 @@ export function ImportProductsModal({ onClose, onSuccess }: Props) {
         res.errors.push(`${row.name}: ${msg}`);
       }
 
-      setImportProgress(Math.round(((i + 1) / rows.length) * 100));
+      // Progress update
+      const done = res.success + res.failed;
+      setImportProgress(Math.round((done / rows.length) * 100));
+    }
+
+    // Process 3 products at a time
+    const CONCURRENCY = 3;
+    for (let i = 0; i < rows.length; i += CONCURRENCY) {
+      const batch = rows.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map((row, batchIdx) => processRow(row, i + batchIdx)));
     }
 
     setResult(res);
