@@ -24,6 +24,8 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     q: typeof params.q === "string" ? params.q : undefined,
     page: params.page ? Number(params.page) : 1,
     page_size: 24,
+    gender: typeof params.gender === "string" ? params.gender : undefined,
+    in_stock: params.in_stock === "true" ? true : undefined,
   };
 
   const [categoriesResult, productsResult] = await Promise.allSettled([

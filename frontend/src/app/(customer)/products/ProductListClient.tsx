@@ -72,6 +72,8 @@ export function ProductListClient({
   const currentCategory = searchParams.get("category") ?? "";
   const currentSize = searchParams.get("size") ?? "";
   const currentColor = searchParams.get("color") ?? "";
+  const currentGender = searchParams.get("gender") ?? "";
+  const currentInStock = searchParams.get("in_stock ") ?? "";
 
   function buildFilterUrl(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -112,7 +114,20 @@ export function ProductListClient({
     setFilterOpen(false);
   }
 
-  const hasFilters = currentCategory || currentSize || currentColor;
+  function handleGenderClick(gender: string) {
+    const next = currentGender === gender ? null : gender;
+    router.push(buildFilterUrl({ gender: next }));
+    setFilterOpen(false);
+  }
+
+  function handleInStockClick() {
+    const next = currentInStock === "true" ? null : "true";
+    router.push(buildFilterUrl({ in_stock: next }));
+    setFilterOpen(false);
+  }
+
+
+  const hasFilters = currentCategory || currentSize || currentColor || currentGender || currentInStock;
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -143,6 +158,40 @@ export function ProductListClient({
   // Sidebar content (shared by desktop & mobile drawer)
   const sidebarContent = (
     <div>
+      {/* Gender */}
+      <div style={{ marginBottom: "24px" }}>
+        <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "11px", letterSpacing: ".14em", color: "#aaa", marginBottom: "12px", textTransform: "uppercase" }}>
+          Gender
+        </h4>
+        {[
+          { label: "Men's", value: "mens" },
+          { label: "Women's", value: "womens" },
+          { label: "Youth", value: "youth" },
+          { label: "Unisex", value: "unisex" },
+        ].map(g => (
+          <div
+            key={g.value}
+            onClick={() => handleGenderClick(g.value)}
+            style={{ fontSize: "13px", color: currentGender === g.value ? "#1A5CFF" : "#7A7880", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontWeight: currentGender === g.value ? 700 : 500, background: currentGender === g.value ? "rgba(26,92,255,.06)" : "transparent" }}
+          >
+            {g.label}
+          </div>
+        ))}
+      </div>
+
+      {/* In Stock */}
+      <div style={{ marginBottom: "24px" }}>
+        <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "11px", letterSpacing: ".14em", color: "#aaa", marginBottom: "12px", textTransform: "uppercase" }}>
+          Availability
+        </h4>
+        <div
+          onClick={handleInStockClick}
+          style={{ fontSize: "13px", color: currentInStock === "true" ? "#1A5CFF" : "#7A7880", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontWeight: currentInStock === "true" ? 700 : 500, background: currentInStock === "true" ? "rgba(26,92,255,.06)" : "transparent", display: "flex", alignItems: "center", gap: "8px" }}
+        >
+          <span style={{ fontSize: "8px", color: "#059669" }}>●</span> In Stock Only
+        </div>
+      </div>
+
       {/* Category */}
       <div style={{ marginBottom: "24px" }}>
         <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "11px", letterSpacing: ".14em", color: "#aaa", marginBottom: "12px", textTransform: "uppercase" }}>
