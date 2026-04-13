@@ -42,7 +42,7 @@ export function Header() {
 
       {/* Main header */}
       <header style={{ background: "#080808", borderBottom: "1px solid rgba(255,255,255,.06)" }} className="sticky top-0 z-40">
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: "68px", gap: "24px" }}>
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: "85px", gap: "24px" }}>
 
 
           {/* Logo */}
@@ -50,7 +50,7 @@ export function Header() {
             <img
               src="/Af-apparel logo.jpeg"
               alt="AF Apparels Logo"
-              style={{ height: "48px", width: "auto", objectFit: "contain" }}
+              style={{ height: "60px", width: "auto", objectFit: "contain" }}
             />
           </Link>
 
@@ -59,35 +59,35 @@ export function Header() {
             {/* Shop nav — always visible */}
             {([
               { href: "/products", label: "Shop All" },
-              { href: "/products?category=mens", label: "Men's" },
-              { href: "/products?category=womens", label: "Women's" },
-              { href: "/products?category=youth", label: "Youth" },
+              { href: "/products?category=mens", label: "men-s" },
+              { href: "/products?category=womens", label: "women-s" },
+              { href: "/products?category=youth", label: "youth" },
             ] as { href: string; label: string }[]).map(({ href, label }) => (
-              <Link key={href} href={href} style={{ color: "#888", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
+              <Link key={href} href={href} style={{ color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,.06)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#888"; (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#d3d0d0"; (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
                 {label}
               </Link>
             ))}
             {/* Admin link */}
             {isAdmin() && (
-              <Link href="/admin/dashboard" style={{ color: "#888", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
+              <Link href="/admin/dashboard" style={{ color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,.06)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#888"; (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#d3d0d0"; (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
                 Admin Panel
               </Link>
             )}
             {/* Authenticated non-admin links */}
             {isAuthenticated() && !isAdmin() && (
               <>
-                <Link href="/quick-order" style={{ color: "#888", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
+                <Link href="/quick-order" style={{ color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,.06)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#888"; (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
+                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#d3d0d0"; (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
                   Quick Order
                 </Link>
-                <Link href="/account" style={{ color: "#888", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
+                <Link href="/account" style={{ color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,.06)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#888"; (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
+                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#d3d0d0"; (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
                   My Account
                 </Link>
               </>
@@ -98,7 +98,7 @@ export function Header() {
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             {/* Cart */}
             {isAuthenticated() && !isAdmin() && (
-              <Link href="/cart" style={{ position: "relative", background: "transparent", border: "1.5px solid #2a2a2a", color: "#888", padding: "9px 14px", borderRadius: "5px", cursor: "pointer", fontSize: "18px", transition: "all .2s", display: "flex", alignItems: "center" }}>
+              <Link href="/cart" style={{ position: "relative", background: "transparent", border: "1.5px solid #2a2a2a", color: "#d3d0d0", padding: "9px 14px", borderRadius: "5px", cursor: "pointer", fontSize: "18px", transition: "all .2s", display: "flex", alignItems: "center" }}>
                 🛒
                 {cartCount > 0 && (
                   <span style={{ position: "absolute", top: "-6px", right: "-6px", background: "#E8242A", color: "#fff", fontSize: "9px", fontWeight: 800, width: "18px", height: "18px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -111,7 +111,7 @@ export function Header() {
             <div className="hidden md:flex" style={{ gap: "10px", alignItems: "center" }}>
               {isAuthenticated() ? (
                 <>
-                  <span style={{ fontSize: "13px", color: "#888" }}>
+                  <span style={{ fontSize: "13px", color: "#d3d0d0" }}>
                     {user?.first_name}
                     {isAdmin() && <span style={{ marginLeft: "6px", fontSize: "10px", background: "rgba(26,92,255,.2)", color: "#6B9FFF", padding: "2px 8px", borderRadius: "4px", fontWeight: 700 }}>Admin</span>}
                   </span>
@@ -138,7 +138,7 @@ export function Header() {
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="md:hidden"
-              style={{ padding: "6px", color: "#888", background: "transparent", border: "1.5px solid #2a2a2a", borderRadius: "5px", cursor: "pointer" }}
+              style={{ padding: "6px", color: "#d3d0d0", background: "transparent", border: "1.5px solid #2a2a2a", borderRadius: "5px", cursor: "pointer" }}
               aria-label="Toggle menu"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -162,24 +162,24 @@ export function Header() {
               { href: "/products?category=womens", label: "Women's" },
               { href: "/products?category=youth", label: "Youth" },
             ].map(({ href, label }) => (
-              <Link key={href} href={href} onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#888", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+              <Link key={href} href={href} onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
                 {label}
               </Link>
             ))}
             {isAdmin() && (
-              <Link href="/admin/dashboard" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#888", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+              <Link href="/admin/dashboard" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
                 Admin Panel
               </Link>
             )}
             {isAuthenticated() && !isAdmin() && (
               <>
-                <Link href="/quick-order" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#888", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+                <Link href="/quick-order" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
                   Quick Order
                 </Link>
-                <Link href="/account" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#888", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+                <Link href="/account" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
                   My Account
                 </Link>
-                <Link href="/cart" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#888", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+                <Link href="/cart" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
                   Cart {cartCount > 0 && `(${cartCount})`}
                 </Link>
               </>
@@ -195,7 +195,7 @@ export function Header() {
               </>
             )}
             {isAuthenticated() && (
-              <button onClick={handleLogout} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 0", color: "#888", fontSize: "13px", fontWeight: 600, background: "transparent", border: "none", cursor: "pointer", textTransform: "uppercase", letterSpacing: ".04em", borderTop: "1px solid rgba(255,255,255,.06)" }}>
+              <button onClick={handleLogout} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 0", color: "#d3d0d0", fontSize: "13px", fontWeight: 600, background: "transparent", border: "none", cursor: "pointer", textTransform: "uppercase", letterSpacing: ".04em", borderTop: "1px solid rgba(255,255,255,.06)" }}>
                 Sign out
               </button>
             )}
