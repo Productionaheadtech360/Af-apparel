@@ -381,7 +381,12 @@ export function ProductListClient({
                     {/* Body */}
                     <div style={{ padding: "14px 16px" }}>
                       <div style={{ fontSize: "10px", color: "#aaa", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: "3px", fontWeight: 600 }}>
-                        {product.categories?.[0]?.name ?? "Apparel"}
+                        {[
+                          (product as any).fabric,
+                          (product as any).product_code,
+                          (product as any).weight,
+                        ].filter(Boolean).join(" · ") || product.categories?.[0]?.name || "Apparel"}
+
                       </div>
                       <div style={{ fontFamily: "var(--font-bebas)", fontSize: "16px", letterSpacing: ".02em", marginBottom: "10px", color: "#2A2830", lineHeight: 1.2 }}>
                         {product.name}

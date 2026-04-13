@@ -28,15 +28,15 @@ function imageUrl(img: ProductImageOut | string | null | undefined): string | nu
 }
 
 const FALLBACK: ProductItem[] = [
-  { id: "1", name: "Classic White T-Shirt",  slug: "classic-white-t-shirt",  base_price: 8.99,  categories: [{ name: "T-Shirts" }] },
-  { id: "2", name: "Business Polo Shirt",    slug: "business-polo-shirt",    base_price: 28.00, categories: [{ name: "Polo Shirts" }] },
-  { id: "3", name: "Sport Hoodie",           slug: "sport-hoodie",           base_price: 32.00, categories: [{ name: "Hoodies" }] },
-  { id: "4", name: "Casual Denim Jacket",    slug: "casual-denim-jacket",    base_price: 65.00, categories: [{ name: "Jackets" }] },
+  { id: "1", name: "Classic White T-Shirt", slug: "classic-white-t-shirt", base_price: 8.99, categories: [{ name: "T-Shirts" }] },
+  { id: "2", name: "Business Polo Shirt", slug: "business-polo-shirt", base_price: 28.00, categories: [{ name: "Polo Shirts" }] },
+  { id: "3", name: "Sport Hoodie", slug: "sport-hoodie", base_price: 32.00, categories: [{ name: "Hoodies" }] },
+  { id: "4", name: "Casual Denim Jacket", slug: "casual-denim-jacket", base_price: 65.00, categories: [{ name: "Jackets" }] },
 ];
 
 const BADGES: Record<number, { label: string; bg: string }> = {
   0: { label: "BEST SELLER", bg: "#E8242A" },
-  1: { label: "POPULAR",     bg: "#1A5CFF" },
+  1: { label: "POPULAR", bg: "#1A5CFF" },
 };
 
 export function BestSellers() {
@@ -104,7 +104,11 @@ export function BestSellers() {
                 {/* Info */}
                 <div style={{ padding: "16px 18px" }}>
                   <div style={{ fontSize: "11px", color: "#7A7880", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: "5px", fontWeight: 600 }}>
-                    {product.categories?.[0]?.name ?? "Apparel"}
+                    {[
+                      (product as any).fabric,
+                      (product as any).product_code,
+                      (product as any).weight,
+                    ].filter(Boolean).join(" · ") || product.categories?.[0]?.name || "Apparel"}
                   </div>
                   <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "17px", letterSpacing: ".03em", marginBottom: "8px", color: "#2A2830", lineHeight: 1.2 }}>
                     {product.name}
