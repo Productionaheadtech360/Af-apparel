@@ -31,6 +31,7 @@ interface Category {
   id: string;
   name: string;
   slug: string;
+  image_url?: string | null;
 }
 
 interface CategoryGridProps {
@@ -53,7 +54,17 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
               style={{ background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px", overflow: "hidden", cursor: "pointer", transition: "all .25s", textDecoration: "none", display: "block" }}
               className="cat-card-hover">
               <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#f0ede8 0%,#e8e4df 100%)", position: "relative" }}>
-                <span style={{ fontSize: "52px", opacity: .35 }}>{categoryIcons[cat.slug] ?? "👕"}</span>
+                {/* ✅ image_url hai to image dikhao, warna emoji */}
+                {(cat as any).image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={(cat as any).image_url}
+                    alt={cat.name}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }}
+                  />
+                ) : (
+                  <span style={{ fontSize: "52px", opacity: .35 }}>{categoryIcons[cat.slug] ?? "👕"}</span>
+                )}
               </div>
               <div style={{ padding: "20px 22px" }}>
                 <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "18px", letterSpacing: ".03em", marginBottom: "5px", color: "#2A2830" }}>{cat.name}</h4>
