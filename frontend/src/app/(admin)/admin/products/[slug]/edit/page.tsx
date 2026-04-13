@@ -43,7 +43,7 @@ const thStyle: React.CSSProperties = {
   letterSpacing: ".06em", color: "#7A7880", fontWeight: 700,
 };
 
-const SIZE_ORDER = ["XXS","XS","S","S/M","M","M/L","L","XL","2XL","3XL","4XL","5XL","6XL","ONE SIZE"];
+const SIZE_ORDER = ["XXS", "XS", "S", "S/M", "M", "M/L", "L", "XL", "2XL", "3XL", "4XL", "5XL", "6XL", "ONE SIZE"];
 
 const COLOR_MAP: Record<string, string> = {
   White: "#FFFFFF", Black: "#111111", Grey: "#9CA3AF", "Sport Grey": "#9CA3AF",
@@ -247,6 +247,9 @@ export default function AdminProductEditPage() {
         vendor: product.vendor,
         tags: product.tags,
         category_ids: product.categories.map(c => c.id),
+        fabric: (product as any).fabric,
+        product_code: (product as any).product_code,
+        weight: (product as any).weight,
       });
       await Promise.all([...variantSaves, productSave]);
       setVariantEdits({});
@@ -269,7 +272,7 @@ export default function AdminProductEditPage() {
     setProduct(p => p ? { ...p, tags: (p.tags ?? []).filter(t => t !== tag) } : p);
   }
 
-  if (isLoading  && !product) {
+  if (isLoading && !product) {
     return (
       <div style={{ fontFamily: "var(--font-jakarta)", display: "flex", alignItems: "center", justifyContent: "center", height: "300px", color: "#aaa", fontSize: "14px" }}>
         Loading product…
@@ -593,6 +596,36 @@ export default function AdminProductEditPage() {
                 value={product.vendor ?? ""}
                 onChange={e => setProduct(p => p ? { ...p, vendor: e.target.value } : p)}
                 placeholder="e.g. AF Apparels"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={labelStyle}>Fabric</label>
+              <input
+                value={(product as any).fabric ?? ""}
+                onChange={e => setProduct(p => p ? { ...p, fabric: e.target.value } as any : p)}
+                placeholder="e.g. 100% Cotton, 50/50 Cotton-Poly"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={labelStyle}>Product Code</label>
+              <input
+                value={(product as any).product_code ?? ""}
+                onChange={e => setProduct(p => p ? { ...p, product_code: e.target.value } as any : p)}
+                placeholder="e.g. G5000, PC61"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={labelStyle}>Weight</label>
+              <input
+                value={(product as any).weight ?? ""}
+                onChange={e => setProduct(p => p ? { ...p, weight: e.target.value } as any : p)}
+                placeholder="e.g. 5.3 oz, 6.1 oz"
                 style={inputStyle}
               />
             </div>
