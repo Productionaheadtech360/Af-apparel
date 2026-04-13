@@ -11,14 +11,14 @@ export default function HeroSection() {
             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#1A5CFF", display: "inline-block" }} />
             Direct From Manufacturer · Dallas, TX
           </div>
-          <h1 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(52px,6vw,84px)", color: "#fff", lineHeight: ".95", letterSpacing: ".01em", marginBottom: "20px" }}>
+          <h1 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(52px,6vw,84px)", color: "#000", lineHeight: ".95", letterSpacing: ".01em", marginBottom: "20px" }}>
             PREMIUM
             <span style={{ color: "#1A5CFF" }}> AMERICAN </span>
             BLANKS AT{" "}
             <span style={{ color: "#E8242A" }}>WHOLESALE</span>
           </h1>
-          <p style={{ fontSize: "16px", color: "#666", lineHeight: 1.75, marginBottom: "30px", maxWidth: "530px" }}>
-            Factory-direct blank apparel with <strong style={{ color: "#aaa", fontWeight: 600 }}>no middlemen</strong>, no minimums on in-stock items, and same-day shipping from Dallas. Print-optimized fabrics tested for DTF, screen printing, and embroidery.
+          <p style={{ fontSize: "16px", color: "#000", lineHeight: 1.75, marginBottom: "30px", maxWidth: "530px" }}>
+            Factory-direct blank apparel with <strong style={{ color: "#000", fontWeight: 800 }}>no middlemen</strong>, no minimums on in-stock items, and same-day shipping from Dallas. Print-optimized fabrics tested for DTF, screen printing, and embroidery.
           </p>
           <div className="hero-cta-row" style={{ marginBottom: "40px" }}>
             <Link href="/wholesale/register" style={{ background: "#E8242A", color: "#fff", padding: "15px 36px", fontSize: "15px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
@@ -37,7 +37,7 @@ export default function HeroSection() {
               { n: "No MOQ", l: "In-Stock" },
             ].map((stat, i) => (
               <div key={stat.l} style={{ padding: i === 0 ? "0 16px 0 0" : "0 16px", textAlign: "left", borderLeft: i > 0 ? "1px solid #1a1a1a" : "none" }}>
-                <div style={{ fontFamily: "var(--font-bebas)", fontSize: "26px", color: "#fff", lineHeight: 1, marginBottom: "3px" }}>{stat.n}</div>
+                <div style={{ fontFamily: "var(--font-bebas)", fontSize: "26px", color: "#000", lineHeight: 1, marginBottom: "3px" }}>{stat.n}</div>
                 <div style={{ fontSize: "10px", color: "#444", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 600 }}>{stat.l}</div>
               </div>
             ))}
