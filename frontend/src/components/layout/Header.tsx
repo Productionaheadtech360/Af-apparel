@@ -41,7 +41,7 @@ export function Header() {
       <AnnouncementBar />
 
       {/* Main header */}
-      <header style={{ background: "#d3d0d0", borderBottom: "1px solid rgba(255,255,255,.06)" }} className="sticky top-0 z-40">
+      <header style={{ background: "#080808", borderBottom: "1px solid rgba(255,255,255,.06)" }} className="sticky top-0 z-40">
         <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: "68px", gap: "24px" }}>
 
 
