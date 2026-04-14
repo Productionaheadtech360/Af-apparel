@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api-client'
+import { ClipboardIcon, TruckIcon, CheckCircleIcon, DollarSignIcon, DownloadIcon } from '@/components/ui/icons'
 
 interface PurchaseOrderItem {
   id: string
@@ -252,8 +253,8 @@ export default function PurchaseOrdersPage() {
           <p style={{ fontSize: '13px', color: '#7A7880', marginTop: '4px' }}>Manage incoming inventory from suppliers</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button style={{ padding: '10px 18px', border: '1px solid #E2E0DA', borderRadius: '8px', background: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-            📥 Export
+          <button style={{ padding: '10px 18px', border: '1px solid #E2E0DA', borderRadius: '8px', background: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <DownloadIcon size={14} color="#2A2830" /> Export
           </button>
           <button onClick={() => setShowCreate(true)}
             style={{ background: '#1A5CFF', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>
@@ -265,14 +266,14 @@ export default function PurchaseOrdersPage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '24px' }}>
         {([
-          { label: 'Open POs',        value: String(stats.open),     icon: '📋', color: '#1A5CFF' },
-          { label: 'Pending Receipt', value: String(stats.pending),  icon: '🚚', color: '#D97706' },
-          { label: 'Received',        value: String(stats.received), icon: '✅', color: '#059669' },
-          { label: 'Total Value',     value: `$${stats.total_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, icon: '💰', color: '#2A2830' },
-        ] as const).map(s => (
+          { label: 'Open POs',        value: String(stats.open),     icon: <ClipboardIcon size={24} color="#1A5CFF" />, color: '#1A5CFF' },
+          { label: 'Pending Receipt', value: String(stats.pending),  icon: <TruckIcon size={24} color="#D97706" />, color: '#D97706' },
+          { label: 'Received',        value: String(stats.received), icon: <CheckCircleIcon size={24} color="#059669" />, color: '#059669' },
+          { label: 'Total Value',     value: `$${stats.total_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, icon: <DollarSignIcon size={24} color="#2A2830" />, color: '#2A2830' },
+        ]).map(s => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid #E2E0DA', borderRadius: '10px', padding: '18px 20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '24px' }}>{s.icon}</span>
+              {s.icon}
               <div>
                 <div style={{ fontFamily: 'var(--font-bebas)', fontSize: '28px', color: s.color, lineHeight: 1 }}>{s.value}</div>
                 <div style={{ fontSize: '11px', color: '#7A7880', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>{s.label}</div>
@@ -285,7 +286,7 @@ export default function PurchaseOrdersPage() {
       {/* Table / Empty state */}
       {orders.length === 0 ? (
         <div style={{ background: '#fff', border: '1px solid #E2E0DA', borderRadius: '10px', padding: '60px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '12px' }}>📋</div>
+          <div style={{ marginBottom: '12px' }}><ClipboardIcon size={48} color="#aaa" /></div>
           <h3 style={{ fontFamily: 'var(--font-bebas)', fontSize: '22px', color: '#2A2830', marginBottom: '8px' }}>NO PURCHASE ORDERS YET</h3>
           <p style={{ fontSize: '14px', color: '#7A7880', marginBottom: '20px' }}>Create your first purchase order to track incoming inventory</p>
           <button onClick={() => setShowCreate(true)}

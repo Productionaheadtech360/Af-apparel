@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { adminService } from "@/services/admin.service";
 import type { ProductDetail } from "@/types/product.types";
 import { ImportProductsModal } from "@/components/admin/ImportProductsModal";
+import { SearchIcon, DownloadIcon, EditIcon, TrashIcon } from "@/components/ui/icons";
 
 // ── Style constants ────────────────────────────────────────────────────────
 const thStyle: React.CSSProperties = {
@@ -137,7 +138,7 @@ export default function AdminProductsPage() {
       <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "16px", flexWrap: "wrap" }}>
         {/* Search */}
         <div style={{ flex: 1, minWidth: "240px", position: "relative" }}>
-          <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#aaa", fontSize: "14px" }}>🔍</span>
+          <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#aaa", display: "flex" }}><SearchIcon size={14} color="#aaa" /></span>
           <input
             placeholder="Search products..."
             value={search}
@@ -161,9 +162,9 @@ export default function AdminProductsPage() {
         <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
           <button
             onClick={() => setShowImport(true)}
-            style={{ padding: "10px 16px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+            style={{ padding: "10px 16px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
           >
-            📥 Import
+            <DownloadIcon size={14} color="#2A2830" /> Import
           </button>
           <button
             onClick={() => adminService.exportProductsCsv()}
@@ -189,15 +190,15 @@ export default function AdminProductsPage() {
           <button onClick={() => handleBulkAction("archived")} style={bulkBtnStyle}>Archive</button>
           <button
             onClick={() => { initBulkEdits(); setShowBulkEdit(true); }}
-            style={{ ...bulkBtnStyle, background: "rgba(255,255,255,.2)" }}
+            style={{ ...bulkBtnStyle, background: "rgba(255,255,255,.2)", display: "inline-flex", alignItems: "center", gap: "5px" }}
           >
-            ✏️ Bulk Edit
+            <EditIcon size={13} color="#fff" /> Bulk Edit
           </button>
           <button
             onClick={handleBulkDelete}
-            style={{ ...bulkBtnStyle, background: "rgba(232,36,42,.4)" }}
+            style={{ ...bulkBtnStyle, background: "rgba(232,36,42,.4)", display: "inline-flex", alignItems: "center", gap: "5px" }}
           >
-            🗑️ Delete
+            <TrashIcon size={13} color="#fff" /> Delete
           </button>
           <button
             onClick={() => setSelectedIds([])}

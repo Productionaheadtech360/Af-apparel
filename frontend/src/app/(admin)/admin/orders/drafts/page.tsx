@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
+import { FileTextIcon } from "@/components/ui/icons";
 
 interface DraftOrder {
   id: string;
@@ -89,7 +90,7 @@ export default function DraftOrdersPage() {
             ) : orders.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ padding: "56px", textAlign: "center" as const }}>
-                  <div style={{ fontSize: "32px", marginBottom: "10px" }}>📝</div>
+                  <div style={{ marginBottom: "10px" }}><FileTextIcon size={32} color="#aaa" /></div>
                   <div style={{ fontSize: "14px", color: "#aaa", fontWeight: 600 }}>No draft orders</div>
                   <div style={{ fontSize: "12px", color: "#bbb", marginTop: "4px" }}>Pending orders will appear here</div>
                 </td>

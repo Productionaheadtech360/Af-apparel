@@ -7,6 +7,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect } from "react";
+import { LinkIcon } from "@/components/ui/icons";
 
 interface Props {
   value: string;
@@ -191,7 +192,7 @@ export function RichTextEditor({ value, onChange, placeholder }: Props) {
           active={editor.isActive("link")}
           title="Add link"
         >
-          🔗
+          <LinkIcon size={14} />
         </ToolbarBtn>
         <ToolbarBtn
           onClick={() => editor.chain().focus().toggleBlockquote().run()}

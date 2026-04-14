@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
 import { adminService } from "@/services/admin.service";
+import { TagIcon, CheckIcon, TrashIcon } from "@/components/ui/icons";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -214,7 +215,7 @@ export default function PricingTiersPage() {
         <div style={{ textAlign: "center", padding: "60px", color: "#bbb", fontSize: "14px" }}>Loading…</div>
       ) : tiers.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px", background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px" }}>
-          <div style={{ fontSize: "32px", marginBottom: "12px" }}>🏷️</div>
+          <div style={{ marginBottom: "12px" }}><TagIcon size={32} color="#2A2830" /></div>
           <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#2A2830", marginBottom: "6px" }}>No Pricing Tiers</div>
           <div style={{ fontSize: "13px", color: "#7A7880", marginBottom: "20px" }}>Create your first tier to start segmenting wholesale customers</div>
           <button onClick={openCreate} style={{ padding: "10px 20px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
@@ -261,7 +262,7 @@ export default function PricingTiersPage() {
                   <div style={{ background: "#F4F3EF", borderRadius: "8px", padding: "12px" }}>
                     <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", color: "#aaa", marginBottom: "4px" }}>Shipping</div>
                     <div style={{ fontSize: "14px", fontWeight: 700, color: "#2A2830" }}>
-                      {tier.free_shipping ? "✅ Free" : tier.shipping_discount_percentage ? `${tier.shipping_discount_percentage}% off` : "Standard"}
+                      {tier.free_shipping ? <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckIcon size={12} color="#059669" /> Free</span> : tier.shipping_discount_percentage ? `${tier.shipping_discount_percentage}% off` : "Standard"}
                     </div>
                   </div>
                   <div style={{ background: "#F4F3EF", borderRadius: "8px", padding: "12px" }}>
@@ -475,7 +476,7 @@ export default function PricingTiersPage() {
                       <button
                         onClick={() => setForm(f => ({ ...f, volume_breaks: f.volume_breaks.filter((_, idx) => idx !== i) }))}
                         style={{ marginLeft: "auto", background: "none", border: "none", color: "#E8242A", cursor: "pointer", fontSize: "16px" }}>
-                        🗑️
+                        <TrashIcon size={14} color="#E8242A" />
                       </button>
                     </div>
                   ))}

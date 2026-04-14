@@ -215,7 +215,7 @@ export function ProductListClient({
           onClick={handleInStockClick}
           style={{ fontSize: "13px", color: currentInStock === "true" ? "#1A5CFF" : "#7A7880", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontWeight: currentInStock === "true" ? 700 : 500, background: currentInStock === "true" ? "rgba(26,92,255,.06)" : "transparent", display: "flex", alignItems: "center", gap: "8px" }}
         >
-          <span style={{ fontSize: "8px", color: "#059669" }}>●</span> In Stock Only
+          <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#059669"/></svg> In Stock Only
         </div>
       </div>
 
@@ -564,7 +564,7 @@ export function ProductListClient({
                       )}
                       {/* In-stock badge */}
                       <div style={{ position: "absolute", top: "12px", right: "12px", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10px", fontWeight: 700, color: "#059669" }}>
-                        <span style={{ fontSize: "7px" }}>●</span> In Stock
+                        <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="#059669"/></svg> In Stock
                       </div>
                     </div>
 

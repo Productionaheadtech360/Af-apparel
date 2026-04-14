@@ -1,25 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { TrendingUpIcon, PackageIcon, UsersIcon } from "@/components/ui/icons";
 
 const REPORT_CARDS = [
   {
     href: "/reports/sales",
     title: "Sales Report",
     description: "Revenue by period, category breakdown, top products",
-    icon: "📈",
+    icon: <TrendingUpIcon size={36} color="#1A5CFF" />,
   },
   {
     href: "/reports/inventory",
     title: "Inventory Report",
     description: "Stock levels, low-stock alerts, movement history",
-    icon: "📦",
+    icon: <PackageIcon size={36} color="#1A5CFF" />,
   },
   {
     href: "/reports/customers",
     title: "Customer Report",
     description: "New registrations, approval rate, AOV by tier",
-    icon: "👥",
+    icon: <UsersIcon size={36} color="#1A5CFF" />,
   },
 ];
 
@@ -40,7 +41,7 @@ export default function ReportsDashboard() {
             href={card.href}
             className="block bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md hover:border-blue-300 transition-all"
           >
-            <div className="text-4xl mb-3">{card.icon}</div>
+            <div className="mb-3">{card.icon}</div>
             <h2 className="text-lg font-semibold text-gray-900">{card.title}</h2>
             <p className="text-sm text-gray-500 mt-1">{card.description}</p>
             <span className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline">

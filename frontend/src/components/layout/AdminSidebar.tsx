@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import {
+  BarChartIcon, PackageIcon, BuildingIcon, ShirtIcon,
+  SettingsIcon, BookIcon, SearchIcon, RefreshIcon,
+} from "@/components/ui/icons";
 
 const SECTION_HEAD: React.CSSProperties = {
   fontSize: "10px", fontWeight: 700, textTransform: "uppercase",
@@ -35,7 +39,7 @@ export function AdminSidebar() {
   useEffect(() => { if (isProductsActive) setProductsOpen(true); }, [isProductsActive]);
   useEffect(() => { if (isCustomersActive) setCustomersOpen(true); }, [isCustomersActive]);
 
-  function NavLink({ href, label, icon }: { href: string; label: string; icon: string }) {
+  function NavLink({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) {
     const active = pathname === href || (href !== "/admin" && pathname.startsWith(href + "/"));
     return (
       <Link href={href} style={{
@@ -75,7 +79,7 @@ export function AdminSidebar() {
 
       {/* ── OVERVIEW ── */}
       <div style={SECTION_HEAD}>Overview</div>
-      <NavLink href="/admin/dashboard" label="Dashboard" icon="📊" />
+      <NavLink href="/admin/dashboard" label="Dashboard" icon={<BarChartIcon size={15} color="currentColor" />} />
 
       {/* ── ORDERS ── */}
       <div style={SECTION_HEAD}>Orders</div>
@@ -94,7 +98,7 @@ export function AdminSidebar() {
         onMouseLeave={e => { if (!isOrdersActive) (e.currentTarget as HTMLElement).style.background = isOrdersActive ? "rgba(26,92,255,.08)" : "transparent"; }}
       >
         <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "15px" }}>📦</span>
+          <PackageIcon size={15} color="currentColor" />
           <span>Orders</span>
         </span>
         <span style={{ fontSize: "10px", color: "#aaa", transition: "transform .2s", transform: ordersOpen ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▼</span>
@@ -109,7 +113,7 @@ export function AdminSidebar() {
         </div>
       )}
 
-      <NavLink href="/admin/returns" label="Returns (RMA)" icon="↩️" />
+      <NavLink href="/admin/returns" label="Returns (RMA)" icon={<RefreshIcon size={15} color="currentColor" />} />
 
       {/* ── CUSTOMERS ── */}
       <div style={SECTION_HEAD}>Customers</div>
@@ -128,7 +132,7 @@ export function AdminSidebar() {
         onMouseLeave={e => { if (!isCustomersActive) (e.currentTarget as HTMLElement).style.background = isCustomersActive ? "rgba(26,92,255,.08)" : "transparent"; }}
       >
         <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "15px" }}>🏢</span>
+          <BuildingIcon size={15} color="currentColor" />
           <span>Customers</span>
         </span>
         <span style={{ fontSize: "10px", color: "#aaa", transition: "transform .2s", transform: customersOpen ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▼</span>
@@ -159,7 +163,7 @@ export function AdminSidebar() {
         onMouseLeave={e => { if (!isProductsActive) (e.currentTarget as HTMLElement).style.background = isProductsActive ? "rgba(26,92,255,.08)" : "transparent"; }}
       >
         <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "15px" }}>👕</span>
+          <ShirtIcon size={15} color="currentColor" />
           <span>Products</span>
         </span>
         <span style={{ fontSize: "10px", color: "#aaa", transition: "transform .2s", transform: productsOpen ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▼</span>
@@ -176,9 +180,9 @@ export function AdminSidebar() {
 
       {/* ── SETTINGS ── */}
       <div style={SECTION_HEAD}>Settings</div>
-      <NavLink href="/admin/settings" label="Settings" icon="⚙️" />
-      <NavLink href="/admin/settings/quickbooks" label="QuickBooks" icon="📒" />
-      <NavLink href="/admin/settings/audit-log" label="Audit Log" icon="🔍" />
+      <NavLink href="/admin/settings" label="Settings" icon={<SettingsIcon size={15} color="currentColor" />} />
+      <NavLink href="/admin/settings/quickbooks" label="QuickBooks" icon={<BookIcon size={15} color="currentColor" />} />
+      <NavLink href="/admin/settings/audit-log" label="Audit Log" icon={<SearchIcon size={15} color="currentColor" />} />
     </aside>
   );
 }

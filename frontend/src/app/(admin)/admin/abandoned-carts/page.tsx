@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
+import { ShoppingCartIcon } from "@/components/ui/icons";
 
 interface CartItem {
   variant_id: string;
@@ -130,7 +131,7 @@ export default function AdminAbandonedCartsPage() {
         <div className="py-12 text-center text-gray-400">Loading…</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 bg-white border border-gray-200 rounded-lg">
-          <p className="text-4xl mb-3">🛒</p>
+          <div className="mb-3 flex justify-center"><ShoppingCartIcon size={40} color="#9CA3AF" /></div>
           <p className="text-gray-500 font-medium">No carts found</p>
           <p className="text-gray-400 text-sm mt-1">
             {filter === "all"

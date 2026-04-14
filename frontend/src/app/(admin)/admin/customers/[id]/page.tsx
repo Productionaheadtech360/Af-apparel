@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminService } from "@/services/admin.service";
+import { MailIcon, PhoneIcon, UserIcon, BuildingIcon, GlobeIcon, CreditCardIcon, BookIcon, TagIcon } from "@/components/ui/icons";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -372,10 +373,10 @@ export default function CustomerDetailPage() {
                 </span>
               </div>
               <div style={{ fontSize: "13px", color: "#7A7880", marginTop: "5px", display: "flex", gap: "14px", flexWrap: "wrap" }}>
-                {customer.email && <span>✉ {customer.email}</span>}
-                {customer.phone && <span>📞 {customer.phone}</span>}
-                {customer.contact_name && <span>👤 {customer.contact_name}</span>}
-                <span>📅 Since {new Date(customer.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span>
+                {customer.email && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><MailIcon size={12} color="#7A7880" /> {customer.email}</span>}
+                {customer.phone && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><PhoneIcon size={12} color="#7A7880" /> {customer.phone}</span>}
+                {customer.contact_name && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><UserIcon size={12} color="#7A7880" /> {customer.contact_name}</span>}
+                <span>Since {new Date(customer.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span>
               </div>
             </div>
           </div>
@@ -617,17 +618,17 @@ export default function CustomerDetailPage() {
             {/* Contact info */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
               {[
-                { icon: "✉", label: "Email",    val: customer.email },
-                { icon: "📞", label: "Phone",    val: customer.phone },
-                { icon: "👤", label: "Contact",  val: customer.contact_name },
-                { icon: "🏢", label: "Type",     val: customer.business_type },
-                { icon: "🌐", label: "Website",  val: customer.website },
-                { icon: "🪪", label: "Tax ID",   val: customer.tax_id },
-                { icon: "💳", label: "Stripe",   val: customer.stripe_customer_id },
-                { icon: "📒", label: "QB ID",    val: customer.qb_customer_id },
+                { icon: <MailIcon size={13} color="#7A7880" />, label: "Email",    val: customer.email },
+                { icon: <PhoneIcon size={13} color="#7A7880" />, label: "Phone",    val: customer.phone },
+                { icon: <UserIcon size={13} color="#7A7880" />, label: "Contact",  val: customer.contact_name },
+                { icon: <BuildingIcon size={13} color="#7A7880" />, label: "Type",     val: customer.business_type },
+                { icon: <GlobeIcon size={13} color="#7A7880" />, label: "Website",  val: customer.website },
+                { icon: <TagIcon size={13} color="#7A7880" />, label: "Tax ID",   val: customer.tax_id },
+                { icon: <CreditCardIcon size={13} color="#7A7880" />, label: "Stripe",   val: customer.stripe_customer_id },
+                { icon: <BookIcon size={13} color="#7A7880" />, label: "QB ID",    val: customer.qb_customer_id },
               ].filter(r => r.val).map(r => (
                 <div key={r.label} style={{ display: "flex", alignItems: "flex-start", gap: "8px", fontSize: "13px" }}>
-                  <span style={{ fontSize: "13px", flexShrink: 0, marginTop: "1px" }}>{r.icon}</span>
+                  <span style={{ flexShrink: 0, marginTop: "1px" }}>{r.icon}</span>
                   <div style={{ minWidth: "56px", color: "#7A7880", flexShrink: 0 }}>{r.label}</div>
                   <div style={{ color: "#2A2830", fontWeight: 600, wordBreak: "break-all" }}>{r.val}</div>
                 </div>

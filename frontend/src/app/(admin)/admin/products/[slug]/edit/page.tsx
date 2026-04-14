@@ -7,6 +7,7 @@ import { adminService } from "@/services/admin.service";
 import { productsService } from "@/services/products.service";
 import { apiClient } from "@/lib/api-client";
 import dynamic from "next/dynamic";
+import { SearchIcon, TrashIcon } from "@/components/ui/icons";
 
 const RichTextEditor = dynamic(
   () => import("@/components/admin/RichTextEditor").then(m => m.RichTextEditor),
@@ -284,7 +285,7 @@ export default function AdminProductEditPage() {
   if (!product) {
     return (
       <div style={{ fontFamily: "var(--font-jakarta)", padding: "48px", textAlign: "center" }}>
-        <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔍</div>
+        <div style={{ marginBottom: "12px" }}><SearchIcon size={32} color="#aaa" /></div>
         <div style={{ fontSize: "16px", color: "#2A2830", fontWeight: 600 }}>
           {loadError ? "Error loading product" : "Product not found"}
         </div>
@@ -531,8 +532,8 @@ export default function AdminProductEditPage() {
                           <td style={{ padding: "10px 16px" }}>
                             <button
                               onClick={() => handleDeleteVariant(variant.id)}
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "16px", padding: "2px 4px" }}
-                            >🗑</button>
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", padding: "2px 4px", display: "inline-flex" }}
+                            ><TrashIcon size={16} color="#E8242A" /></button>
                           </td>
                         </tr>
                       ))}
@@ -766,9 +767,9 @@ export default function AdminProductEditPage() {
                 await adminService.deleteProduct(product.id);
                 router.push("/admin/products");
               }}
-              style={{ width: "100%", padding: "10px", background: "rgba(232,36,42,.08)", color: "#E8242A", border: "1px solid #FECACA", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
+              style={{ width: "100%", padding: "10px", background: "rgba(232,36,42,.08)", color: "#E8242A", border: "1px solid #FECACA", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "13px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
             >
-              🗑 Delete Product
+              <TrashIcon size={14} color="#E8242A" /> Delete Product
             </button>
           </div>
 

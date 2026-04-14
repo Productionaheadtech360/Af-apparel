@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PhoneIcon, MailIcon } from "@/components/ui/icons";
 
 export function Footer() {
   return (
@@ -17,8 +18,8 @@ export function Footer() {
           </div>
           <p style={{ fontSize: "13px", color: "#666", lineHeight: 1.75, marginTop: "14px" }}>
             Factory-direct wholesale blank apparel. Serving 2,000+ businesses across the US from our Dallas, TX warehouse.<br /><br />
-            📞 (214) 272-7213<br />
-            ✉️ wholesale@afapparels.com
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><PhoneIcon size={13} color="#666" /> (214) 272-7213</span><br />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><MailIcon size={13} color="#666" /> wholesale@afapparels.com</span>
           </p>
         </div>
         {[

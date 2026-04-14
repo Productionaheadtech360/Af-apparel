@@ -13,6 +13,7 @@ export interface ProductFilters {
   page_size?: number;
   gender?: string;
   in_stock?: boolean;
+  product_code?: string;
 }
 
 export const productsService = {
@@ -32,7 +33,7 @@ export const productsService = {
     if (filters.page_size) params.set("page_size", String(filters.page_size));
     if (filters.gender) params.set("gender", filters.gender);
     if (filters.in_stock) params.set("in_stock", "true");
-
+    if (filters.product_code) params.set("product_code", filters.product_code);
 
     const query = params.toString();
     return apiClient.get<PaginatedResponse<ProductListItem>>(

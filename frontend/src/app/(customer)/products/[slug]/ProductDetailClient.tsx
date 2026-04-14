@@ -7,6 +7,7 @@ import type { ProductDetail, ProductVariant } from "@/types/product.types";
 import { useAuthStore } from "@/stores/auth.store";
 import { apiClient } from "@/lib/api-client";
 import { cartService } from "@/services/cart.service";
+import { FactoryIcon, ZapIcon, PackageIcon, PaletteIcon } from "@/components/ui/icons";
 
 interface ProductDetailClientProps {
   product: ProductDetail;
@@ -279,7 +280,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   <span style={{ background: "#E8242A", color: "#fff", fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Best Seller</span>
                 )}
                 <span style={{ background: "rgba(5,150,105,.1)", color: "#059669", fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <span style={{ fontSize: "7px" }}>●</span> In Stock
+                  <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="#059669"/></svg> In Stock
                 </span>
               </div>
               <button
@@ -591,13 +592,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {/* Trust badges */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "20px" }}>
               {[
-                { icon: "🏭", text: "Factory-Direct Pricing" },
-                { icon: "⚡", text: "Same-Day Shipping" },
-                { icon: "📦", text: "No Order Minimums" },
-                { icon: "🎨", text: "Print-Optimized Blanks" },
+                { icon: <FactoryIcon size={16} color="#2A2830" />, text: "Factory-Direct Pricing" },
+                { icon: <ZapIcon size={16} color="#2A2830" />, text: "Same-Day Shipping" },
+                { icon: <PackageIcon size={16} color="#2A2830" />, text: "No Order Minimums" },
+                { icon: <PaletteIcon size={16} color="#2A2830" />, text: "Print-Optimized Blanks" },
               ].map(item => (
                 <div key={item.text} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: "#F4F3EF", borderRadius: "6px", border: "1px solid #E2E0DA" }}>
-                  <span style={{ fontSize: "16px" }}>{item.icon}</span>
+                  {item.icon}
                   <span style={{ fontSize: "11px", fontWeight: 600, color: "#2A2830" }}>{item.text}</span>
                 </div>
               ))}

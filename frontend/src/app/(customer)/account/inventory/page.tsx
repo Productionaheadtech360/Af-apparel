@@ -4,6 +4,7 @@ import React from "react";
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth.store";
+import { PackageIcon } from "@/components/ui/icons";
 
 interface InventoryItem {
   variant_id: string;
@@ -228,7 +229,7 @@ export default function InventoryListingPage() {
       {/* Empty state — before generate */}
       {!generated && (
         <div className="text-center py-12 bg-white border border-gray-200 rounded-lg text-gray-400">
-          <p className="text-3xl mb-2">📦</p>
+          <div className="mb-2 flex justify-center"><PackageIcon size={32} color="#9CA3AF" /></div>
           <p className="text-sm">Select filters and click Generate Report</p>
         </div>
       )}

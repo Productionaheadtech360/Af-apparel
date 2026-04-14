@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminService } from "@/services/admin.service";
+import { UsersIcon, CheckCircleIcon, BarChartIcon, DollarSignIcon, DownloadIcon } from "@/components/ui/icons";
 
 interface CompanyRow {
   id: string;
@@ -108,8 +109,8 @@ export default function AdminCustomersPage() {
           <p style={{ fontSize: "13px", color: "#7A7880", marginTop: "4px" }}>{total} companies · wholesale accounts</p>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
-          <button style={{ padding: "10px 18px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-            📥 Export CSV
+          <button style={{ padding: "10px 18px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <DownloadIcon size={14} color="#2A2830" /> Export CSV
           </button>
           <button style={{ background: "#1A5CFF", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}>
             + Add Customer
@@ -120,13 +121,13 @@ export default function AdminCustomersPage() {
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "12px", marginBottom: "20px" }}>
         {[
-          { label: "Total Customers", value: stats.total, icon: "👥", color: "#2A2830" },
-          { label: "Active Accounts", value: stats.active, icon: "✅", color: "#059669" },
-          { label: "Avg Order Value", value: `$${stats.avg_spend.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, icon: "📊", color: "#1A5CFF" },
-          { label: "Total Revenue", value: `$${stats.total_revenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, icon: "💰", color: "#D97706" },
+          { label: "Total Customers", value: stats.total, icon: <UsersIcon size={22} color="#2A2830" />, color: "#2A2830" },
+          { label: "Active Accounts", value: stats.active, icon: <CheckCircleIcon size={22} color="#059669" />, color: "#059669" },
+          { label: "Avg Order Value", value: `$${stats.avg_spend.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, icon: <BarChartIcon size={22} color="#1A5CFF" />, color: "#1A5CFF" },
+          { label: "Total Revenue", value: `$${stats.total_revenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, icon: <DollarSignIcon size={22} color="#D97706" />, color: "#D97706" },
         ].map(s => (
           <div key={s.label} style={{ background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px", padding: "16px 18px", display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ fontSize: "22px" }}>{s.icon}</span>
+            {s.icon}
             <div>
               <div style={{ fontFamily: "var(--font-bebas)", fontSize: "24px", color: s.color, lineHeight: 1 }}>{s.value}</div>
               <div style={{ fontSize: "10px", color: "#7A7880", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em" }}>{s.label}</div>

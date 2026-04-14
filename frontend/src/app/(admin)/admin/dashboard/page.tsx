@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import Link from "next/link";
+import { PackageIcon, ClipboardIcon, AlertTriangleIcon } from "@/components/ui/icons";
 
 interface RecentOrder {
   id: string;
@@ -83,7 +84,7 @@ function Sparkline({ counts }: { counts: number[] }) {
   );
 }
 
-function AlertCard({ icon, count, label, color, href }: { icon: string; count: number; label: string; color: string; href: string }) {
+function AlertCard({ icon, count, label, color, href }: { icon: React.ReactNode; count: number; label: string; color: string; href: string }) {
   return (
     <Link href={href} style={{ textDecoration: "none" }}>
       <div style={{ background: "#fff", border: `1.5px solid ${color}22`, borderRadius: "10px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "14px", minWidth: "200px", cursor: "pointer", transition: "box-shadow .2s" }}
@@ -280,9 +281,9 @@ export default function AdminDashboard() {
 
         {/* Alerts */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <AlertCard icon="📦" count={state.pendingOrders ?? 0} label="orders to fulfill" color="#E8242A" href="/admin/orders?status=pending" />
-          <AlertCard icon="📋" count={state.pendingApplications ?? 0} label="applications pending" color="#D97706" href="/admin/customers/applications" />
-          <AlertCard icon="⚠️" count={state.lowStockCount ?? 0} label="low stock SKUs" color="#6366F1" href="/admin/reports/inventory" />
+          <AlertCard icon={<PackageIcon size={20} color="#E8242A" />} count={state.pendingOrders ?? 0} label="orders to fulfill" color="#E8242A" href="/admin/orders?status=pending" />
+          <AlertCard icon={<ClipboardIcon size={20} color="#D97706" />} count={state.pendingApplications ?? 0} label="applications pending" color="#D97706" href="/admin/customers/applications" />
+          <AlertCard icon={<AlertTriangleIcon size={20} color="#6366F1" />} count={state.lowStockCount ?? 0} label="low stock SKUs" color="#6366F1" href="/admin/reports/inventory" />
         </div>
       </div>
 

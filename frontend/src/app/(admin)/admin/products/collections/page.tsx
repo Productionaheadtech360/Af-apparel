@@ -198,7 +198,10 @@ export default function CollectionsPage() {
                     background: col.is_active !== false ? "rgba(5,150,105,.1)" : "rgba(156,163,175,.15)",
                     color: col.is_active !== false ? "#059669" : "#9CA3AF",
                   }}>
-                    {col.is_active !== false ? "● Active" : "○ Hidden"}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill={col.is_active !== false ? "#059669" : "#9CA3AF"}/></svg>
+                      {col.is_active !== false ? "Active" : "Hidden"}
+                    </span>
                   </span>
                 </div>
               </div>

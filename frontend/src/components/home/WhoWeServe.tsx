@@ -1,9 +1,11 @@
+import { PrinterIcon, BuildingIcon, ShirtIcon, UsersIcon } from "@/components/ui/icons";
+
 export default function WhoWeServe() {
   const cards = [
-    { icon: "🖨️", h: "Printing Companies", p: "DTF, screen, embroidery, and sublimation shops. Fabrics tested for your specific decoration process." },
-    { icon: "🏪", h: "Retailers", p: "In-store and online retailers stocking private-label or branded apparel lines. Deep inventory always available." },
-    { icon: "🏢", h: "Corporate Buyers", p: "Uniforms, branded merch, event apparel at scale. NET 30 terms available for qualifying accounts." },
-    { icon: "👗", h: "Apparel Brands", p: "Building your own line? Private label starts at 2,500 units per style per color with full branding." },
+    { icon: <PrinterIcon size={32} color="#fff" />, h: "Printing Companies", p: "DTF, screen, embroidery, and sublimation shops. Fabrics tested for your specific decoration process." },
+    { icon: <UsersIcon size={32} color="#fff" />, h: "Retailers", p: "In-store and online retailers stocking private-label or branded apparel lines. Deep inventory always available." },
+    { icon: <BuildingIcon size={32} color="#fff" />, h: "Corporate Buyers", p: "Uniforms, branded merch, event apparel at scale. NET 30 terms available for qualifying accounts." },
+    { icon: <ShirtIcon size={32} color="#fff" />, h: "Apparel Brands", p: "Building your own line? Private label starts at 2,500 units per style per color with full branding." },
   ];
 
   return (
@@ -16,7 +18,7 @@ export default function WhoWeServe() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "12px" }} className="serve-grid-responsive">
           {cards.map(card => (
             <div key={card.h} style={{ background: "#1E1D24", border: "1px solid rgba(255,255,255,.06)", borderRadius: "10px", padding: "28px 22px", transition: "all .2s" }}>
-              <span style={{ fontSize: "32px", marginBottom: "14px", display: "block" }}>{card.icon}</span>
+              <div style={{ marginBottom: "14px" }}>{card.icon}</div>
               <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "17px", letterSpacing: ".04em", color: "#fff", marginBottom: "10px" }}>{card.h}</h4>
               <p style={{ fontSize: "13px", color: "#d3d0d0", lineHeight: 1.65 }}>{card.p}</p>
             </div>

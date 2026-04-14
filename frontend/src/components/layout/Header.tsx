@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { authService } from "@/services/auth.service";
 import { apiClient } from "@/lib/api-client";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
+import { ShoppingCartIcon } from "@/components/ui/icons";
 
 export function Header() {
   const { user, isAuthenticated, isAdmin, clearAuth, isLoading } = useAuthStore();
@@ -99,7 +100,7 @@ export function Header() {
             {/* Cart */}
             {isAuthenticated() && !isAdmin() && (
               <Link href="/cart" style={{ position: "relative", background: "transparent", border: "1.5px solid #2a2a2a", color: "#d3d0d0", padding: "9px 14px", borderRadius: "5px", cursor: "pointer", fontSize: "18px", transition: "all .2s", display: "flex", alignItems: "center" }}>
-                🛒
+                <ShoppingCartIcon size={18} color="#d3d0d0" />
                 {cartCount > 0 && (
                   <span style={{ position: "absolute", top: "-6px", right: "-6px", background: "#E8242A", color: "#fff", fontSize: "9px", fontWeight: 800, width: "18px", height: "18px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {cartCount > 9 ? "9+" : cartCount}

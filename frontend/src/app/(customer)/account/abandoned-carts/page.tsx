@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth.store";
+import { ShoppingCartIcon } from "@/components/ui/icons";
 
 interface CartItem {
   variant_id: string;
@@ -117,7 +118,7 @@ export default function AbandonedCartsPage() {
 
       {carts.length === 0 ? (
         <div className="text-center py-16 bg-white border border-gray-200 rounded-lg">
-          <p className="text-4xl mb-3">🛒</p>
+          <div className="mb-3 flex justify-center"><ShoppingCartIcon size={40} color="#9CA3AF" /></div>
           <p className="text-gray-500 font-medium">No abandoned carts</p>
           <p className="text-gray-400 text-sm mt-1">
             Carts left inactive for 24+ hours will appear here.

@@ -1,7 +1,7 @@
 "use client";
 
 const messages = [
-  "🇺🇸 Factory-Direct Wholesale Blanks",
+  "Factory-Direct Wholesale Blanks",
   "2,000+ American Businesses",
   "Same-Day Shipping — Dallas, TX",
   "No Minimums on In-Stock Items",

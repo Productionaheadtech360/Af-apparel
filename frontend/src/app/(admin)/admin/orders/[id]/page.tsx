@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminService } from "@/services/admin.service";
 import { apiClient } from "@/lib/api-client";
+import { TruckIcon, PackageIcon, CheckIcon } from "@/components/ui/icons";
 
 interface OrderItem {
   id: string;
@@ -66,11 +67,11 @@ interface CustomerStats {
 const STATUSES = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
 
 const COURIERS = [
-  { id: "fedex", name: "FedEx",  icon: "📦", services: ["Ground", "2-Day", "Overnight", "Express Saver"] },
-  { id: "ups",   name: "UPS",    icon: "🟤", services: ["Ground", "2-Day Air", "Next Day Air", "3-Day Select"] },
-  { id: "usps",  name: "USPS",   icon: "🦅", services: ["Priority Mail", "Priority Express", "First Class", "Parcel Select"] },
-  { id: "dhl",   name: "DHL",    icon: "🟡", services: ["Express", "Economy Select", "Expedited"] },
-  { id: "other", name: "Other",  icon: "🚚", services: ["Standard", "Express"] },
+  { id: "fedex", name: "FedEx",  icon: "FX",  services: ["Ground", "2-Day", "Overnight", "Express Saver"] },
+  { id: "ups",   name: "UPS",    icon: "UPS", services: ["Ground", "2-Day Air", "Next Day Air", "3-Day Select"] },
+  { id: "usps",  name: "USPS",   icon: "US",  services: ["Priority Mail", "Priority Express", "First Class", "Parcel Select"] },
+  { id: "dhl",   name: "DHL",    icon: "DHL", services: ["Express", "Economy Select", "Expedited"] },
+  { id: "other", name: "Other",  icon: "→",   services: ["Standard", "Express"] },
 ];
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
@@ -249,17 +250,18 @@ export default function AdminOrderDetailPage() {
 
   const timelineEvents = [
     order.shipped_at ? {
-      icon: "📦",
+      icon: <PackageIcon size={10} color="#fff" />,
       text: `Shipped via ${courierDisplayName ?? "courier"}${order.courier_service ? ` ${order.courier_service}` : ""}`,
       sub: order.tracking_number ? `Tracking: ${order.tracking_number}` : "",
       time: order.shipped_at, color: "#059669",
     } : null,
     {
-      icon: "✅", text: "Order placed",
+      icon: <CheckIcon size={10} color="#fff" />,
+      text: "Order placed",
       sub: `${order.company_name} · ${order.payment_status}`,
       time: order.created_at, color: "#1A5CFF",
     },
-  ].filter(Boolean) as { icon: string; text: string; sub: string; time: string; color: string }[];
+  ].filter(Boolean) as { icon: React.ReactNode; text: string; sub: string; time: string; color: string }[];
 
   const avatarInitial = order.customer_name?.[0]?.toUpperCase() ?? order.company_name?.[0]?.toUpperCase() ?? "C";
   const mapQuery = [addr?.address_line1, addr?.city, addr?.state].filter(Boolean).join(", ");
@@ -336,7 +338,7 @@ export default function AdminOrderDetailPage() {
               {COURIERS.map(courier => (
                 <div key={courier.id} onClick={() => handleCourierSelect(courier.id)}
                   style={{ border: selectedCourier === courier.id ? "2px solid #1A5CFF" : "1.5px solid #E2E0DA", borderRadius: "8px", padding: "12px 8px", textAlign: "center" as const, cursor: "pointer", background: selectedCourier === courier.id ? "rgba(26,92,255,.05)" : "#fff", transition: "all .15s" }}>
-                  <div style={{ fontSize: "24px", marginBottom: "4px" }}>{courier.icon}</div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: selectedCourier === courier.id ? "#1A5CFF" : "#7A7880", marginBottom: "4px", letterSpacing: ".04em" }}>{courier.icon}</div>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: selectedCourier === courier.id ? "#1A5CFF" : "#2A2830" }}>{courier.name}</div>
                 </div>
               ))}
@@ -457,7 +459,7 @@ export default function AdminOrderDetailPage() {
               {timelineEvents.map((event, i) => (
                 <div key={i} style={{ display: "flex", gap: "16px", marginBottom: "20px", position: "relative", alignItems: "flex-start" }}>
                   <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: event.color, border: "2px solid #fff", boxShadow: `0 0 0 2px ${event.color}`, flexShrink: 0, zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", marginLeft: "-14px", marginTop: "2px" }}>
-                    <span style={{ fontSize: "9px" }}>{event.icon}</span>
+                    {event.icon}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: "14px", color: "#2A2830" }}>{event.text}</div>

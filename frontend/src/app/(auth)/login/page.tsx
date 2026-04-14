@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/auth.store";
 import { authService } from "@/services/auth.service";
 import { ApiClientError, setAccessToken } from "@/lib/api-client";
+import { FactoryIcon, ZapIcon, CreditCardIcon } from "@/components/ui/icons";
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
   try {
@@ -204,12 +205,12 @@ export default function LoginPage() {
           {/* Benefits */}
           <div style={{ marginTop: "28px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
             {[
-              { icon: "🏭", text: "Factory-Direct" },
-              { icon: "⚡", text: "Same-Day Ship" },
-              { icon: "💳", text: "NET 30 Terms" },
+              { icon: <FactoryIcon size={20} color="#555" />, text: "Factory-Direct" },
+              { icon: <ZapIcon size={20} color="#555" />, text: "Same-Day Ship" },
+              { icon: <CreditCardIcon size={20} color="#555" />, text: "NET 30 Terms" },
             ].map((item) => (
               <div key={item.text} style={{ textAlign: "center", padding: "12px 8px", background: "#111016", border: "1px solid rgba(255,255,255,.06)", borderRadius: "8px" }}>
-                <div style={{ fontSize: "20px", marginBottom: "4px" }}>{item.icon}</div>
+                <div style={{ marginBottom: "4px", display: "flex", justifyContent: "center" }}>{item.icon}</div>
                 <div style={{ fontSize: "11px", fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>{item.text}</div>
               </div>
             ))}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
+import { PackageIcon, TruckIcon, CheckCircleIcon, TagIcon, DownloadIcon, PrinterIcon, FileTextIcon } from "@/components/ui/icons";
 
 interface ShippingLabel {
   id: string;
@@ -108,10 +109,10 @@ export default function ShippingLabelsPage() {
   ];
 
   const STAT_CARDS = [
-    { label: "Total Shipments", value: stats.total, icon: "📦", color: "#1A5CFF" },
-    { label: "In Transit", value: stats.in_transit, icon: "🚚", color: "#1A5CFF" },
-    { label: "Delivered", value: stats.delivered, icon: "✅", color: "#059669" },
-    { label: "Pending Label", value: stats.pending_label, icon: "🏷️", color: "#D97706" },
+    { label: "Total Shipments", value: stats.total, icon: <PackageIcon size={20} color="#1A5CFF" />, color: "#1A5CFF" },
+    { label: "In Transit", value: stats.in_transit, icon: <TruckIcon size={20} color="#1A5CFF" />, color: "#1A5CFF" },
+    { label: "Delivered", value: stats.delivered, icon: <CheckCircleIcon size={20} color="#059669" />, color: "#059669" },
+    { label: "Pending Label", value: stats.pending_label, icon: <TagIcon size={20} color="#D97706" />, color: "#D97706" },
   ];
 
   return (
@@ -126,8 +127,8 @@ export default function ShippingLabelsPage() {
           <button style={{ background: "#F4F3EF", color: "#2A2830", border: "1px solid #E2E0DA", padding: "10px 18px", borderRadius: "6px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
             ↓ Export CSV
           </button>
-          <button style={{ background: "#1A5CFF", color: "#fff", border: "none", padding: "10px 18px", borderRadius: "6px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
-            🖨 Print All
+          <button style={{ background: "#1A5CFF", color: "#fff", border: "none", padding: "10px 18px", borderRadius: "6px", fontWeight: 700, cursor: "pointer", fontSize: "13px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <PrinterIcon size={14} color="#fff" /> Print All
           </button>
         </div>
       </div>
@@ -175,7 +176,7 @@ export default function ShippingLabelsPage() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={10} style={{ padding: "56px", textAlign: "center" as const }}>
-                  <div style={{ fontSize: "32px", marginBottom: "10px" }}>🚚</div>
+                  <div style={{ marginBottom: "10px" }}><TruckIcon size={32} color="#aaa" /></div>
                   <div style={{ fontSize: "14px", color: "#aaa", fontWeight: 600 }}>No shipments found</div>
                   <div style={{ fontSize: "12px", color: "#bbb", marginTop: "4px" }}>Shipped orders will appear here</div>
                 </td>
@@ -254,16 +255,16 @@ export default function ShippingLabelsPage() {
                 <td style={{ padding: "12px 14px" }}>
                   <div style={{ display: "flex", gap: "5px", flexWrap: "nowrap" as const }}>
                     <button
-                      style={{ background: "rgba(26,92,255,.08)", color: "#1A5CFF", border: "none", padding: "5px 11px", borderRadius: "5px", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" as const }}
+                      style={{ background: "rgba(26,92,255,.08)", color: "#1A5CFF", border: "none", padding: "5px 11px", borderRadius: "5px", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" as const, display: "inline-flex", alignItems: "center", gap: "4px" }}
                       onClick={() => window.print()}
                     >
-                      🖨 Label
+                      <PrinterIcon size={11} color="#1A5CFF" /> Label
                     </button>
                     <button
-                      style={{ background: "#F4F3EF", color: "#2A2830", border: "1px solid #E2E0DA", padding: "5px 11px", borderRadius: "5px", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" as const }}
+                      style={{ background: "#F4F3EF", color: "#2A2830", border: "1px solid #E2E0DA", padding: "5px 11px", borderRadius: "5px", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" as const, display: "inline-flex", alignItems: "center", gap: "4px" }}
                       onClick={() => window.print()}
                     >
-                      📄 Slip
+                      <FileTextIcon size={11} color="#2A2830" /> Slip
                     </button>
                   </div>
                 </td>
