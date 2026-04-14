@@ -95,7 +95,7 @@ export function BestSellers() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={imageUrl(product.primary_image)!} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
-                    <span style={{ fontSize: "52px", opacity: 0.25 }}>👕</span>
+                    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#2A2830" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.25 }}><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg>
                   )}
                   {BADGES[i] && (
                     <div style={{ position: "absolute", top: "12px", left: "12px", background: BADGES[i]!.bg, color: "#fff", fontFamily: "var(--font-bebas)", fontSize: "11px", letterSpacing: ".08em", padding: "4px 10px", borderRadius: "4px" }}>

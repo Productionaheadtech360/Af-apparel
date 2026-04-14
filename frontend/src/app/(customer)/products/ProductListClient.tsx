@@ -7,6 +7,7 @@ import Image from "next/image";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth.store";
 import type { Category, ProductListItem } from "@/types/product.types";
+import { SearchIcon, ShirtIcon, LockIcon } from "@/components/ui/icons";
 
 interface ProductListClientProps {
   initialProducts: ProductListItem[];
@@ -73,7 +74,16 @@ export function ProductListClient({
   const currentSize = searchParams.get("size") ?? "";
   const currentColor = searchParams.get("color") ?? "";
   const currentGender = searchParams.get("gender") ?? "";
-  const currentInStock = searchParams.get("in_stock ") ?? "";
+  const currentInStock = searchParams.get("in_stock") ?? "";
+  const currentPriceMin = searchParams.get("price_min") ?? "";
+  const currentPriceMax = searchParams.get("price_max") ?? "";
+  const currentProductCode = searchParams.get("product_code") ?? "";
+
+  // Local slider/input state — applied on "Apply" click
+  const [localPriceMin, setLocalPriceMin] = useState(Number(currentPriceMin) || 0);
+  const [localPriceMax, setLocalPriceMax] = useState(Number(currentPriceMax) || 500);
+  const [localMinStock, setLocalMinStock] = useState(0);
+  const [localCode, setLocalCode] = useState(currentProductCode);
 
   function buildFilterUrl(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -110,7 +120,24 @@ export function ProductListClient({
   }
 
   function handleClearAll() {
+    setLocalPriceMin(0);
+    setLocalPriceMax(500);
+    setLocalMinStock(0);
+    setLocalCode("");
     router.push("/products");
+    setFilterOpen(false);
+  }
+
+  function applyPriceFilter() {
+    router.push(buildFilterUrl({
+      price_min: localPriceMin > 0 ? String(localPriceMin) : null,
+      price_max: localPriceMax < 500 ? String(localPriceMax) : null,
+    }));
+    setFilterOpen(false);
+  }
+
+  function applyCodeFilter() {
+    router.push(buildFilterUrl({ product_code: localCode.trim() || null }));
     setFilterOpen(false);
   }
 
@@ -127,7 +154,7 @@ export function ProductListClient({
   }
 
 
-  const hasFilters = currentCategory || currentSize || currentColor || currentGender || currentInStock;
+  const hasFilters = currentCategory || currentSize || currentColor || currentGender || currentInStock || currentPriceMin || currentPriceMax || currentProductCode;
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -272,6 +299,113 @@ export function ProductListClient({
         </div>
       )}
 
+      {/* Price Range */}
+      <div style={{ marginBottom: "24px" }}>
+        <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "11px", letterSpacing: ".14em", color: "#aaa", marginBottom: "12px", textTransform: "uppercase" }}>
+          Price Range
+        </h4>
+        <div style={{ padding: "0 2px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#2A2830", fontWeight: 700, marginBottom: "8px" }}>
+            <span>${localPriceMin}</span>
+            <span>${localPriceMax}</span>
+          </div>
+          <div style={{ marginBottom: "8px" }}>
+            <label style={{ fontSize: "11px", color: "#aaa", marginBottom: "4px", display: "block" }}>Min</label>
+            <input
+              type="range"
+              min={0}
+              max={500}
+              step={5}
+              value={localPriceMin}
+              onChange={e => setLocalPriceMin(Math.min(Number(e.target.value), localPriceMax - 5))}
+              style={{ width: "100%", accentColor: "#1A5CFF" }}
+            />
+          </div>
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ fontSize: "11px", color: "#aaa", marginBottom: "4px", display: "block" }}>Max</label>
+            <input
+              type="range"
+              min={0}
+              max={500}
+              step={5}
+              value={localPriceMax}
+              onChange={e => setLocalPriceMax(Math.max(Number(e.target.value), localPriceMin + 5))}
+              style={{ width: "100%", accentColor: "#1A5CFF" }}
+            />
+          </div>
+          <button
+            onClick={applyPriceFilter}
+            style={{ width: "100%", padding: "6px 0", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "5px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+          >
+            Apply Price
+          </button>
+          {(currentPriceMin || currentPriceMax) && (
+            <button
+              onClick={() => router.push(buildFilterUrl({ price_min: null, price_max: null }))}
+              style={{ width: "100%", marginTop: "4px", padding: "5px 0", background: "none", color: "#aaa", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+            >
+              Reset Price
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Inventory */}
+      <div style={{ marginBottom: "24px" }}>
+        <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "11px", letterSpacing: ".14em", color: "#aaa", marginBottom: "12px", textTransform: "uppercase" }}>
+          Min. Inventory
+        </h4>
+        <div style={{ padding: "0 2px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#2A2830", fontWeight: 700, marginBottom: "8px" }}>
+            <span>≥ {localMinStock} units</span>
+            <span style={{ fontSize: "10px", color: "#aaa", fontWeight: 500 }}>per product</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={200}
+            step={10}
+            value={localMinStock}
+            onChange={e => setLocalMinStock(Number(e.target.value))}
+            style={{ width: "100%", accentColor: "#1A5CFF" }}
+          />
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#bbb", marginTop: "4px" }}>
+            <span>0</span><span>200+</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Product Code */}
+      <div style={{ marginBottom: "24px" }}>
+        <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "11px", letterSpacing: ".14em", color: "#aaa", marginBottom: "12px", textTransform: "uppercase" }}>
+          Product Code
+        </h4>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <input
+            type="text"
+            placeholder="e.g. G5000"
+            value={localCode}
+            onChange={e => setLocalCode(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && applyCodeFilter()}
+            style={{ flex: 1, padding: "7px 10px", border: "1.5px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", color: "#2A2830", outline: "none" }}
+          />
+          <button
+            onClick={applyCodeFilter}
+            style={{ padding: "7px 10px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "5px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+          >
+            Go
+          </button>
+        </div>
+        {currentProductCode && (
+          <button
+            onClick={() => { setLocalCode(""); router.push(buildFilterUrl({ product_code: null })); }}
+            style={{ marginTop: "6px", fontSize: "11px", color: "#aaa", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          >
+            ✕ Clear code
+          </button>
+        )}
+      </div>
+
       {hasFilters && (
         <button
           onClick={handleClearAll}
@@ -282,6 +416,13 @@ export function ProductListClient({
       )}
     </div>
   );
+
+  const displayedProducts = localMinStock > 0
+    ? initialProducts.filter(p => {
+        const total = (p.variants ?? []).reduce((sum: number, v: any) => sum + (v.stock_quantity ?? 100), 0);
+        return total >= localMinStock;
+      })
+    : initialProducts;
 
   return (
     <div style={{ display: "flex", alignItems: "flex-start", minHeight: "600px" }}>
@@ -369,9 +510,9 @@ export function ProductListClient({
         )}
 
         {/* Product grid */}
-        {initialProducts.length === 0 ? (
+        {displayedProducts.length === 0 ? (
           <div style={{ textAlign: "center", padding: "80px 0", color: "#7A7880" }}>
-            <div style={{ fontSize: "40px", marginBottom: "12px", opacity: .4 }}>🔍</div>
+            <SearchIcon size={40} color="#7A7880" style={{ opacity: 0.4, marginBottom: "12px" }} />
             <p style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", letterSpacing: ".04em", marginBottom: "6px", color: "#2A2830" }}>No Products Found</p>
             <p style={{ fontSize: "14px" }}>Try adjusting your filters or search term.</p>
             {hasFilters && (
@@ -382,7 +523,7 @@ export function ProductListClient({
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px" }} className="prod-grid-responsive">
-            {initialProducts.map((product) => {
+            {displayedProducts.map((product) => {
               const primaryImage = product.primary_image;
               const primaryVariant = product.variants?.[0];
               const price = primaryVariant?.effective_price ?? primaryVariant?.retail_price;
@@ -417,7 +558,7 @@ export function ProductListClient({
                         />
                       ) : (
                         <>
-                          <div style={{ fontSize: "44px", opacity: .4, marginBottom: "6px" }}>👕</div>
+                          <ShirtIcon size={44} color="#bbb" style={{ opacity: 0.4, marginBottom: "6px" }} />
                           <span style={{ fontSize: "10px", letterSpacing: ".06em", textTransform: "uppercase" }}>No Image</span>
                         </>
                       )}
@@ -469,7 +610,7 @@ export function ProductListClient({
                         </div>
                       ) : (
                         <div style={{ fontSize: "12px", color: "#1A5CFF", fontWeight: 700, display: "flex", alignItems: "center", gap: "5px" }}>
-                          🔒 Login for pricing
+                          <LockIcon size={12} color="#1A5CFF" /> Login for pricing
                         </div>
                       )}
                     </div>
