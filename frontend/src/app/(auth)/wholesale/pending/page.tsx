@@ -44,8 +44,8 @@ export default function WholesalePendingPage() {
           <p className="font-medium mb-1">Questions?</p>
           <p>
             Contact us at{" "}
-            <a href="mailto:wholesale@afapparels.com" className="text-brand-600 hover:text-brand-700">
-              wholesale@afapparels.com
+            <a href="mailto:info@afblanks.com" className="text-brand-600 hover:text-brand-700">
+              info@afblanks.com
             </a>
           </p>
         </div>

@@ -503,7 +503,7 @@ export default function WholesaleRegisterPage() {
             <div style={{ fontSize: "12px", color: "#6B9FFF", fontWeight: 600, marginBottom: "4px" }}>Questions?</div>
             <div style={{ fontSize: "12px", color: "#555" }}>
               (214) 272-7213<br />
-              wholesale@afapparels.com
+              info@afblanks.com
             </div>
           </div>
         </div>

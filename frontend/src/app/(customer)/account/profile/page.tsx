@@ -46,6 +46,17 @@ interface ProfileData {
     ppac_number: string | null;
     ppai_number: string | null;
     asi_number: string | null;
+    // Registration fields
+    company_email: string | null;
+    address_line1: string | null;
+    address_line2: string | null;
+    city: string | null;
+    state_province: string | null;
+    postal_code: string | null;
+    country: string | null;
+    how_heard: string | null;
+    num_employees: string | null;
+    num_sales_reps: string | null;
   } | null;
 }
 
@@ -96,6 +107,17 @@ export default function AccountProfilePage() {
     ppac_number: "",
     ppai_number: "",
     asi_number: "",
+    // Registration fields
+    company_email: "",
+    address_line1: "",
+    address_line2: "",
+    city: "",
+    state_province: "",
+    postal_code: "",
+    country: "",
+    how_heard: "",
+    num_employees: "",
+    num_sales_reps: "",
   });
 
   useEffect(() => {
@@ -123,6 +145,17 @@ export default function AccountProfilePage() {
             ppac_number: d.company.ppac_number || "",
             ppai_number: d.company.ppai_number || "",
             asi_number: d.company.asi_number || "",
+            // Registration fields
+            company_email: d.company.company_email || "",
+            address_line1: d.company.address_line1 || "",
+            address_line2: d.company.address_line2 || "",
+            city: d.company.city || "",
+            state_province: d.company.state_province || "",
+            postal_code: d.company.postal_code || "",
+            country: d.company.country || "",
+            how_heard: d.company.how_heard || "",
+            num_employees: d.company.num_employees || "",
+            num_sales_reps: d.company.num_sales_reps || "",
           });
         }
       })
@@ -374,6 +407,112 @@ export default function AccountProfilePage() {
                 className={inputCls}
               />
             </Field>
+          </div>
+
+          {/* Address & Registration Info */}
+          <div className="border-t border-gray-100 pt-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Address &amp; Registration</h3>
+
+            <Field label="Company Email">
+              <input
+                type="email"
+                value={companyForm.company_email}
+                onChange={(e) => setCompanyForm((p) => ({ ...p, company_email: e.target.value }))}
+                className={inputCls}
+                placeholder="orders@yourcompany.com"
+              />
+            </Field>
+
+            <div className="mt-3">
+              <Field label="Address Line 1">
+                <input
+                  type="text"
+                  value={companyForm.address_line1}
+                  onChange={(e) => setCompanyForm((p) => ({ ...p, address_line1: e.target.value }))}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+
+            <div className="mt-3">
+              <Field label="Address Line 2">
+                <input
+                  type="text"
+                  value={companyForm.address_line2}
+                  onChange={(e) => setCompanyForm((p) => ({ ...p, address_line2: e.target.value }))}
+                  className={inputCls}
+                  placeholder="Suite, Unit, etc."
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <Field label="City">
+                <input
+                  type="text"
+                  value={companyForm.city}
+                  onChange={(e) => setCompanyForm((p) => ({ ...p, city: e.target.value }))}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="State / Province">
+                <input
+                  type="text"
+                  value={companyForm.state_province}
+                  onChange={(e) => setCompanyForm((p) => ({ ...p, state_province: e.target.value }))}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <Field label="Postal Code">
+                <input
+                  type="text"
+                  value={companyForm.postal_code}
+                  onChange={(e) => setCompanyForm((p) => ({ ...p, postal_code: e.target.value }))}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Country">
+                <input
+                  type="text"
+                  value={companyForm.country}
+                  onChange={(e) => setCompanyForm((p) => ({ ...p, country: e.target.value }))}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <Field label="Number of Employees">
+                <input
+                  type="text"
+                  value={companyForm.num_employees}
+                  onChange={(e) => setCompanyForm((p) => ({ ...p, num_employees: e.target.value }))}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Number of Sales Reps">
+                <input
+                  type="text"
+                  value={companyForm.num_sales_reps}
+                  onChange={(e) => setCompanyForm((p) => ({ ...p, num_sales_reps: e.target.value }))}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+
+            <div className="mt-3">
+              <Field label="How Did You Hear About Us">
+                <input
+                  type="text"
+                  value={companyForm.how_heard}
+                  onChange={(e) => setCompanyForm((p) => ({ ...p, how_heard: e.target.value }))}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
           </div>
 
           <div className="flex justify-end pt-1">

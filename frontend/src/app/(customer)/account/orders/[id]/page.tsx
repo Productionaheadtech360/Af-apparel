@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { accountService } from "@/services/account.service";
+import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth.store";
 
 interface OrderItem {
@@ -128,6 +129,17 @@ export default function OrderDetailPage() {
   const [sendingComment, setSendingComment] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [companyAddress, setCompanyAddress] = useState<{
+    name: string | null;
+    company_email: string | null;
+    address_line1: string | null;
+    address_line2: string | null;
+    city: string | null;
+    state_province: string | null;
+    postal_code: string | null;
+    country: string | null;
+    phone: string | null;
+  } | null>(null);
   const commentEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -146,6 +158,10 @@ export default function OrderDetailPage() {
       }
     }
     load();
+    // Fetch company address info (best-effort)
+    apiClient.get<{ company: { name: string | null; company_email: string | null; address_line1: string | null; address_line2: string | null; city: string | null; state_province: string | null; postal_code: string | null; country: string | null; phone: string | null } | null }>("/api/v1/account/profile/full")
+      .then((d) => { if (d.company) setCompanyAddress(d.company); })
+      .catch(() => {});
   }, [id, authLoading]);
 
   async function handleReorder() {
@@ -312,6 +328,24 @@ export default function OrderDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Company Address */}
+      {companyAddress && (companyAddress.address_line1 || companyAddress.company_email) && (
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Billing / Company Address</h2>
+          <div className="text-sm text-gray-600 space-y-0.5">
+            {companyAddress.name && <p className="font-medium text-gray-800">{companyAddress.name}</p>}
+            {companyAddress.address_line1 && <p>{companyAddress.address_line1}</p>}
+            {companyAddress.address_line2 && <p>{companyAddress.address_line2}</p>}
+            {(companyAddress.city || companyAddress.state_province || companyAddress.postal_code) && (
+              <p>{[companyAddress.city, companyAddress.state_province, companyAddress.postal_code].filter(Boolean).join(", ")}</p>
+            )}
+            {companyAddress.country && <p>{companyAddress.country}</p>}
+            {companyAddress.company_email && <p className="text-gray-500 mt-1">{companyAddress.company_email}</p>}
+            {companyAddress.phone && <p className="text-gray-500">{companyAddress.phone}</p>}
+          </div>
+        </div>
+      )}
 
       {/* Line items */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">

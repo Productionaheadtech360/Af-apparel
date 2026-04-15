@@ -12,9 +12,26 @@ interface Customer {
   name: string;
   status: string;
   phone: string | null;
+  fax: string | null;
   website: string | null;
   tax_id: string | null;
   business_type: string | null;
+  secondary_business: string | null;
+  estimated_annual_volume: string | null;
+  ppac_number: string | null;
+  ppai_number: string | null;
+  asi_number: string | null;
+  // Registration fields
+  company_email: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state_province: string | null;
+  postal_code: string | null;
+  country: string | null;
+  how_heard: string | null;
+  num_employees: string | null;
+  num_sales_reps: string | null;
   pricing_tier_id: string | null;
   shipping_tier_id: string | null;
   shipping_override_amount: string | null;
@@ -707,6 +724,90 @@ export default function CustomerDetailPage() {
               </button>
             </div>
           </div>
+
+          {/* Registration Info */}
+          {(customer.company_email || customer.address_line1 || customer.city || customer.how_heard || customer.num_employees || customer.secondary_business || customer.ppac_number || customer.ppai_number || customer.asi_number) && (
+            <div style={card}>
+              <div style={sectionTitle}>Registration Information</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {customer.company_email && (
+                  <div>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>Company Email</div>
+                    <div style={{ fontSize: "13px", color: "#2A2830" }}>{customer.company_email}</div>
+                  </div>
+                )}
+                {(customer.address_line1 || customer.city) && (
+                  <div>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>Address</div>
+                    <div style={{ fontSize: "13px", color: "#2A2830", lineHeight: 1.5 }}>
+                      {customer.address_line1 && <div>{customer.address_line1}</div>}
+                      {customer.address_line2 && <div>{customer.address_line2}</div>}
+                      {(customer.city || customer.state_province || customer.postal_code) && (
+                        <div>{[customer.city, customer.state_province, customer.postal_code].filter(Boolean).join(", ")}</div>
+                      )}
+                      {customer.country && <div>{customer.country}</div>}
+                    </div>
+                  </div>
+                )}
+                {customer.secondary_business && (
+                  <div>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>Secondary Business</div>
+                    <div style={{ fontSize: "13px", color: "#2A2830" }}>{customer.secondary_business}</div>
+                  </div>
+                )}
+                {customer.estimated_annual_volume && (
+                  <div>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>Est. Annual Volume</div>
+                    <div style={{ fontSize: "13px", color: "#2A2830" }}>{customer.estimated_annual_volume}</div>
+                  </div>
+                )}
+                {(customer.ppac_number || customer.ppai_number || customer.asi_number) && (
+                  <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                    {customer.ppac_number && (
+                      <div>
+                        <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>PPAC #</div>
+                        <div style={{ fontSize: "13px", color: "#2A2830" }}>{customer.ppac_number}</div>
+                      </div>
+                    )}
+                    {customer.ppai_number && (
+                      <div>
+                        <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>PPAI #</div>
+                        <div style={{ fontSize: "13px", color: "#2A2830" }}>{customer.ppai_number}</div>
+                      </div>
+                    )}
+                    {customer.asi_number && (
+                      <div>
+                        <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>ASI #</div>
+                        <div style={{ fontSize: "13px", color: "#2A2830" }}>{customer.asi_number}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {(customer.num_employees || customer.num_sales_reps) && (
+                  <div style={{ display: "flex", gap: "16px" }}>
+                    {customer.num_employees && (
+                      <div>
+                        <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>Employees</div>
+                        <div style={{ fontSize: "13px", color: "#2A2830" }}>{customer.num_employees}</div>
+                      </div>
+                    )}
+                    {customer.num_sales_reps && (
+                      <div>
+                        <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>Sales Reps</div>
+                        <div style={{ fontSize: "13px", color: "#2A2830" }}>{customer.num_sales_reps}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {customer.how_heard && (
+                  <div>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#7A7880", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "2px" }}>How Heard About Us</div>
+                    <div style={{ fontSize: "13px", color: "#2A2830" }}>{customer.how_heard}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div style={card}>

@@ -64,6 +64,25 @@ interface CustomerStats {
   created_at: string;
 }
 
+interface CompanyRegistration {
+  company_email: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state_province: string | null;
+  postal_code: string | null;
+  country: string | null;
+  how_heard: string | null;
+  num_employees: string | null;
+  num_sales_reps: string | null;
+  secondary_business: string | null;
+  estimated_annual_volume: string | null;
+  ppac_number: string | null;
+  ppai_number: string | null;
+  asi_number: string | null;
+  fax: string | null;
+}
+
 const STATUSES = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
 
 const COURIERS = [
@@ -124,6 +143,7 @@ export default function AdminOrderDetailPage() {
   const router = useRouter();
   const [order, setOrder] = useState<AdminOrder | null>(null);
   const [customerStats, setCustomerStats] = useState<CustomerStats | null>(null);
+  const [companyReg, setCompanyReg] = useState<CompanyRegistration | null>(null);
   const [status, setStatus] = useState("");
   const [tracking, setTracking] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -152,11 +172,15 @@ export default function AdminOrderDetailPage() {
       if (o.courier_service) setSelectedService(o.courier_service);
       if (o.tracking_number) setTrackingNumber(o.tracking_number);
 
-      // Fetch customer stats (best-effort)
+      // Fetch customer stats and company registration info (best-effort)
       try {
         const stats = await apiClient.get<CustomerStats>(`/api/v1/admin/customers/${o.company_id}/stats`);
         if (stats) setCustomerStats(stats);
       } catch { /* stats are optional */ }
+      try {
+        const co = await apiClient.get<CompanyRegistration>(`/api/v1/admin/customers/${o.company_id}`);
+        if (co) setCompanyReg(co);
+      } catch { /* company info optional */ }
     });
   }, [id]);
 
@@ -586,6 +610,48 @@ export default function AdminOrderDetailPage() {
               <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "#aaa", marginBottom: "8px" }}>Billing Address</div>
               <div style={{ fontSize: "13px", color: "#7A7880" }}>Same as shipping address</div>
             </div>
+
+            {/* Company Registration Info */}
+            {companyReg && (companyReg.company_email || companyReg.address_line1 || companyReg.city || companyReg.secondary_business || companyReg.ppac_number || companyReg.how_heard) && (
+              <div style={{ borderTop: "1px solid #F4F3EF", paddingTop: "14px", marginTop: "4px" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "#aaa", marginBottom: "10px" }}>Company Registration Info</div>
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: "6px", fontSize: "13px" }}>
+                  {companyReg.company_email && (
+                    <div><span style={{ color: "#7A7880", fontSize: "11px" }}>Company Email: </span><span style={{ color: "#2A2830", fontWeight: 600 }}>{companyReg.company_email}</span></div>
+                  )}
+                  {(companyReg.address_line1 || companyReg.city) && (
+                    <div>
+                      <span style={{ color: "#7A7880", fontSize: "11px" }}>Address: </span>
+                      <span style={{ color: "#2A2830" }}>
+                        {[companyReg.address_line1, companyReg.address_line2, companyReg.city, companyReg.state_province, companyReg.postal_code, companyReg.country].filter(Boolean).join(", ")}
+                      </span>
+                    </div>
+                  )}
+                  {companyReg.secondary_business && (
+                    <div><span style={{ color: "#7A7880", fontSize: "11px" }}>Secondary Business: </span><span style={{ color: "#2A2830" }}>{companyReg.secondary_business}</span></div>
+                  )}
+                  {companyReg.estimated_annual_volume && (
+                    <div><span style={{ color: "#7A7880", fontSize: "11px" }}>Est. Annual Volume: </span><span style={{ color: "#2A2830" }}>{companyReg.estimated_annual_volume}</span></div>
+                  )}
+                  {(companyReg.ppac_number || companyReg.ppai_number || companyReg.asi_number) && (
+                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" as const }}>
+                      {companyReg.ppac_number && <span><span style={{ color: "#7A7880", fontSize: "11px" }}>PPAC: </span><span style={{ color: "#2A2830" }}>{companyReg.ppac_number}</span></span>}
+                      {companyReg.ppai_number && <span><span style={{ color: "#7A7880", fontSize: "11px" }}>PPAI: </span><span style={{ color: "#2A2830" }}>{companyReg.ppai_number}</span></span>}
+                      {companyReg.asi_number && <span><span style={{ color: "#7A7880", fontSize: "11px" }}>ASI: </span><span style={{ color: "#2A2830" }}>{companyReg.asi_number}</span></span>}
+                    </div>
+                  )}
+                  {(companyReg.num_employees || companyReg.num_sales_reps) && (
+                    <div style={{ display: "flex", gap: "16px" }}>
+                      {companyReg.num_employees && <span><span style={{ color: "#7A7880", fontSize: "11px" }}>Employees: </span><span style={{ color: "#2A2830" }}>{companyReg.num_employees}</span></span>}
+                      {companyReg.num_sales_reps && <span><span style={{ color: "#7A7880", fontSize: "11px" }}>Sales Reps: </span><span style={{ color: "#2A2830" }}>{companyReg.num_sales_reps}</span></span>}
+                    </div>
+                  )}
+                  {companyReg.how_heard && (
+                    <div><span style={{ color: "#7A7880", fontSize: "11px" }}>How heard: </span><span style={{ color: "#2A2830" }}>{companyReg.how_heard}</span></div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── SECTION 3: CONVERSION SUMMARY ── */}
