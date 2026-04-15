@@ -7,14 +7,11 @@ export function Footer() {
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "52px 32px 40px", display: "grid", gridTemplateColumns: "1.8fr 1fr 1fr 1fr 1fr", gap: "32px" }} className="footer-grid-responsive">
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <span style={{ fontFamily: "var(--font-bebas)", fontSize: "36px", color: "#1A5CFF", lineHeight: 1 }}>A</span>
-              <span style={{ fontFamily: "var(--font-bebas)", fontSize: "36px", color: "#E8242A", lineHeight: 1 }}>F</span>
-            </div>
-            <div>
-              <span style={{ fontFamily: "var(--font-bebas)", fontSize: "13px", color: "#fff", letterSpacing: ".18em", lineHeight: 1, display: "block" }}>APPARELS</span>
-              <span style={{ fontSize: "9px", color: "#444", letterSpacing: ".15em", fontWeight: 600, textTransform: "uppercase" }}>Wholesale B2B Platform</span>
-            </div>
+            <img
+              src="/Af-apparel logo.jpeg"
+              alt="AF Apparels Logo"
+              style={{ height: "55px", width: "auto", objectFit: "contain" }}
+            />
           </div>
           <p style={{ fontSize: "13px", color: "#666", lineHeight: 1.75, marginTop: "14px" }}>
             Factory-direct wholesale blank apparel. Serving 2,000+ businesses across the US from our Dallas, TX warehouse.<br /><br />

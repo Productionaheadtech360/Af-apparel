@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
 import { authService } from "@/services/auth.service";
@@ -13,7 +13,19 @@ export function Header() {
   const { user, isAuthenticated, isAdmin, clearAuth, isLoading } = useAuthStore();
   const [cartCount, setCartCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const resourcesRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (resourcesRef.current && !resourcesRef.current.contains(e.target as Node)) {
+        setResourcesOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (isLoading || !user || user.is_admin) return;
@@ -60,9 +72,10 @@ export function Header() {
             {/* Shop nav — always visible */}
             {([
               { href: "/products", label: "Shop All" },
-              { href: "/products?category=mens", label: "men-s" },
-              { href: "/products?category=womens", label: "women-s" },
-              { href: "/products?category=youth", label: "youth" },
+              { href: "/products?category=t-shirts", label: "T-Shirts" },
+              { href: "/products?category=joggers", label: "Joggers" },
+              { href: "/products?category=hoodies", label: "Hoodies" },
+              { href: "/products?category=new", label: "New" },
             ] as { href: string; label: string }[]).map(({ href, label }) => (
               <Link key={href} href={href} style={{ color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,.06)"; }}
@@ -70,6 +83,26 @@ export function Header() {
                 {label}
               </Link>
             ))}
+
+            {/* Resources dropdown */}
+            <div ref={resourcesRef} style={{ position: "relative" }}>
+              <button
+                onClick={() => setResourcesOpen(o => !o)}
+                style={{ color: "#d3d0d0", fontSize: "13px", fontWeight: 600, background: resourcesOpen ? "rgba(255,255,255,.06)" : "transparent", border: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#fff"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.06)"; }}
+                onMouseLeave={e => { if (!resourcesOpen) { (e.currentTarget as HTMLButtonElement).style.color = "#d3d0d0"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; } }}
+              >
+                Resources
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ marginTop: "1px", opacity: 0.7, transform: resourcesOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
+                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {resourcesOpen && (
+                <div style={{ position: "absolute", top: "100%", left: 0, marginTop: "6px", background: "#1a1a1f", border: "1px solid rgba(255,255,255,.1)", borderRadius: "8px", padding: "8px", minWidth: "180px", boxShadow: "0 8px 24px rgba(0,0,0,.4)", zIndex: 100 }}>
+                  <p style={{ fontSize: "11px", color: "#555", padding: "8px 10px", textTransform: "uppercase", letterSpacing: ".08em" }}>Coming soon</p>
+                </div>
+              )}
+            </div>
             {/* Admin link */}
             {isAdmin() && (
               <Link href="/admin/dashboard" style={{ color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", letterSpacing: ".04em", padding: "8px 14px", borderRadius: "4px", transition: "all .2s", textTransform: "uppercase" }}
@@ -159,9 +192,11 @@ export function Header() {
             {/* Shop links — always visible */}
             {[
               { href: "/products", label: "Shop All" },
-              { href: "/products?category=mens", label: "Men's" },
-              { href: "/products?category=womens", label: "Women's" },
-              { href: "/products?category=youth", label: "Youth" },
+              { href: "/products?category=t-shirts", label: "T-Shirts" },
+              { href: "/products?category=joggers", label: "Joggers" },
+              { href: "/products?category=hoodies", label: "Hoodies" },
+              { href: "/products?category=new", label: "New" },
+              { href: "#", label: "Resources" },
             ].map(({ href, label }) => (
               <Link key={href} href={href} onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
                 {label}

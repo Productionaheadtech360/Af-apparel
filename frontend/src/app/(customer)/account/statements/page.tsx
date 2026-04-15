@@ -144,13 +144,7 @@ export default function StatementsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Statements</h1>
         <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={handleSyncQB}
-            disabled={syncing}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          >
-            {syncing ? "Syncing…" : "Sync QB Payments"}
-          </button>
+          {/* Sync QB hidden */}
           <button
             onClick={handleEmailStatement}
             className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"

@@ -72,10 +72,8 @@ export default function LoginPage() {
     <div style={{ minHeight: "100vh", background: "#080808", fontFamily: "var(--font-jakarta)", display: "flex", flexDirection: "column" }}>
       {/* Top bar */}
       <div style={{ padding: "24px 32px", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
-        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
-          <span style={{ fontFamily: "var(--font-bebas)", fontSize: "28px", color: "#1A5CFF", lineHeight: 1 }}>A</span>
-          <span style={{ fontFamily: "var(--font-bebas)", fontSize: "28px", color: "#E8242A", lineHeight: 1 }}>F</span>
-          <span style={{ fontFamily: "var(--font-bebas)", fontSize: "11px", color: "#fff", letterSpacing: ".18em" }}>APPARELS</span>
+        <Link href="/" style={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
+          <img src="/Af-apparel logo.jpeg" alt="AF Apparels Logo" style={{ height: "50px", width: "auto", objectFit: "contain" }} />
         </Link>
       </div>
 

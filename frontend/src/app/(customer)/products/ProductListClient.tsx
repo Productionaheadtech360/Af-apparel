@@ -65,6 +65,9 @@ export function ProductListClient({
   // Filter drawer state (mobile)
   const [filterOpen, setFilterOpen] = useState(false);
 
+  // Sort state
+  const [sortBy, setSortBy] = useState("featured");
+
   // Bulk download state
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDownloading, setBulkDownloading] = useState(false);
@@ -417,12 +420,28 @@ export function ProductListClient({
     </div>
   );
 
-  const displayedProducts = localMinStock > 0
+  const filteredByStock = localMinStock > 0
     ? initialProducts.filter(p => {
         const total = (p.variants ?? []).reduce((sum: number, v: any) => sum + (v.stock_quantity ?? 100), 0);
         return total >= localMinStock;
       })
     : initialProducts;
+
+  const displayedProducts = [...filteredByStock].sort((a, b) => {
+    if (sortBy === "price_asc") {
+      const aPrice = (a.variants?.[0] as any)?.retail_price ?? 0;
+      const bPrice = (b.variants?.[0] as any)?.retail_price ?? 0;
+      return aPrice - bPrice;
+    }
+    if (sortBy === "price_desc") {
+      const aPrice = (a.variants?.[0] as any)?.retail_price ?? 0;
+      const bPrice = (b.variants?.[0] as any)?.retail_price ?? 0;
+      return bPrice - aPrice;
+    }
+    if (sortBy === "name_asc") return a.name.localeCompare(b.name);
+    if (sortBy === "name_desc") return b.name.localeCompare(a.name);
+    return 0; // featured — keep server order
+  });
 
   return (
     <div style={{ display: "flex", alignItems: "flex-start", minHeight: "600px" }}>
@@ -466,7 +485,7 @@ export function ProductListClient({
       {/* ── Main content ── */}
       <div className="prod-content-pad" style={{ flex: 1, padding: "24px 28px", minWidth: 0 }}>
 
-        {/* Top bar: count + mobile filter button */}
+        {/* Top bar: count + sort + mobile filter button */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             {/* Mobile filter button */}
@@ -485,6 +504,24 @@ export function ProductListClient({
             </span>
           </div>
 
+          {/* Right side: Sort By + Bulk download */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            {/* Sort By */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#7A7880", whiteSpace: "nowrap" }}>Sort By:</span>
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value)}
+                style={{ padding: "7px 10px", border: "1.5px solid #E2E0DA", borderRadius: "6px", fontSize: "12px", color: "#2A2830", background: "#fff", outline: "none", cursor: "pointer" }}
+              >
+                <option value="featured">Featured</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="name_asc">Name: A – Z</option>
+                <option value="name_desc">Name: Z – A</option>
+              </select>
+            </div>
+
           {/* Bulk download toolbar */}
           {selected.size > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -501,6 +538,7 @@ export function ProductListClient({
               </button>
             </div>
           )}
+          </div>
         </div>
 
         {bulkMessage && (

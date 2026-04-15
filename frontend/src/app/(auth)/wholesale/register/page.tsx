@@ -3,26 +3,48 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { authService, type RegisterWholesalePayload } from "@/services/auth.service";
+import { authService } from "@/services/auth.service";
 import { ApiClientError } from "@/lib/api-client";
+import { FactoryIcon, PackageIcon, ZapIcon, PaletteIcon, CreditCardIcon, UsersIcon } from "@/components/ui/icons";
 
-const BUSINESS_TYPES = [
+const PRIMARY_BUSINESS_OPTIONS = [
+  "Screen Printer",
+  "Embroiderer",
+  "Promotional Products Distributor",
   "Retailer",
-  "Distributor",
-  "Reseller",
-  "Online Store",
-  "Brick & Mortar",
+  "Online Retailer",
+  "Corporate Buyer",
+  "Athletic Team Dealer",
   "Boutique",
-  "Department Store",
+  "Decorator",
   "Other",
 ];
 
-const VOLUME_OPTIONS = [
-  "Less than $5,000/month",
-  "$5,000 - $15,000/month",
-  "$15,000 - $50,000/month",
-  "$50,000 - $100,000/month",
-  "Over $100,000/month",
+const HEAR_ABOUT_OPTIONS = [
+  "Google Search",
+  "Social Media",
+  "Trade Show",
+  "Referral from Another Business",
+  "Email Campaign",
+  "Industry Publication",
+  "Other",
+];
+
+const EMPLOYEE_OPTIONS = [
+  "1 – 5",
+  "6 – 10",
+  "11 – 25",
+  "26 – 50",
+  "51 – 100",
+  "100+",
+];
+
+const SALES_REP_OPTIONS = [
+  "0",
+  "1 – 2",
+  "3 – 5",
+  "6 – 10",
+  "10+",
 ];
 
 const inputStyle: React.CSSProperties = {
@@ -48,35 +70,103 @@ const labelStyle: React.CSSProperties = {
   marginBottom: "6px",
 };
 
+const sectionHeadStyle: React.CSSProperties = {
+  fontFamily: "var(--font-bebas)",
+  fontSize: "16px",
+  letterSpacing: ".06em",
+  color: "#2A2830",
+  marginBottom: "20px",
+  paddingBottom: "10px",
+  borderBottom: "1px solid #E2E0DA",
+};
+
+const gridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "16px",
+};
+
+const req = <span style={{ color: "#E8242A" }}>*</span>;
+
 export default function WholesaleRegisterPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [form, setForm] = useState<RegisterWholesalePayload>({
+  const [form, setForm] = useState({
+    // Company Information
     company_name: "",
-    tax_id: "",
-    business_type: "",
     website: "",
-    expected_monthly_volume: "",
+    company_email: "",
+    address1: "",
+    address2: "",
+    postal_code: "",
+    country: "",
+    city: "",
+    state: "",
+    resale_number: "",
+    ppai_number: "",
+    asi_number: "",
+    phone: "",
+    fax: "",
+    // Contact Information
     first_name: "",
     last_name: "",
+    title: "",
     email: "",
-    phone: "",
+    // Business Information
+    primary_business: "",
+    secondary_business: "",
+    how_heard: "",
+    num_employees: "",
+    num_sales_reps: "",
+    // Web Account Information
     password: "",
+    confirm_password: "",
+    password_hint: "",
+    // Communication
+    promo_emails: false,
+    // Terms
+    terms_accepted: false,
+    captcha_checked: false,
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setIsSubmitting(true);
 
+    if (form.password !== form.confirm_password) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (!form.terms_accepted) {
+      setError("You must accept the terms and conditions.");
+      return;
+    }
+    if (!form.captcha_checked) {
+      setError("Please confirm you are not a robot.");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      await authService.registerWholesale(form);
+      await authService.registerWholesale({
+        company_name: form.company_name,
+        business_type: form.primary_business,
+        tax_id: form.resale_number,
+        website: form.website,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+      });
       router.push("/wholesale/pending");
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -97,10 +187,8 @@ export default function WholesaleRegisterPage() {
     <div style={{ minHeight: "100vh", background: "#F4F3EF", fontFamily: "var(--font-jakarta)" }}>
       {/* Page header */}
       <div style={{ background: "#080808", padding: "32px", textAlign: "center", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
-        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "10px", textDecoration: "none", marginBottom: "16px" }}>
-          <span style={{ fontFamily: "var(--font-bebas)", fontSize: "30px", color: "#1A5CFF", lineHeight: 1 }}>A</span>
-          <span style={{ fontFamily: "var(--font-bebas)", fontSize: "30px", color: "#E8242A", lineHeight: 1 }}>F</span>
-          <span style={{ fontFamily: "var(--font-bebas)", fontSize: "12px", color: "#fff", letterSpacing: ".18em" }}>APPARELS</span>
+        <Link href="/" style={{ display: "inline-flex", alignItems: "center", textDecoration: "none", marginBottom: "16px" }}>
+          <img src="/Af-apparel logo.jpeg" alt="AF Apparels Logo" style={{ height: "55px", width: "auto", objectFit: "contain" }} />
         </Link>
         <h1 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(28px,3vw,42px)", color: "#fff", letterSpacing: ".02em", lineHeight: 1, marginBottom: "8px" }}>
           Apply for Wholesale Access
@@ -122,176 +210,234 @@ export default function WholesaleRegisterPage() {
               </div>
             )}
 
-            {/* Business Information */}
+            {/* ── Company Information ── */}
             <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ fontFamily: "var(--font-bebas)", fontSize: "16px", letterSpacing: ".06em", color: "#2A2830", marginBottom: "20px", paddingBottom: "10px", borderBottom: "1px solid #E2E0DA" }}>
-                Business Information
-              </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <h3 style={sectionHeadStyle}>Company Information</h3>
+              <div style={gridStyle}>
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <label htmlFor="company_name" style={labelStyle}>
-                    Company Name <span style={{ color: "#E8242A" }}>*</span>
-                  </label>
-                  <input
-                    id="company_name"
-                    name="company_name"
-                    type="text"
-                    required
-                    value={form.company_name}
-                    onChange={handleChange}
-                    style={inputStyle}
-                    placeholder="Your Company LLC"
-                  />
+                  <label htmlFor="company_name" style={labelStyle}>Company Name {req}</label>
+                  <input id="company_name" name="company_name" type="text" required value={form.company_name} onChange={handleChange} style={inputStyle} placeholder="Your Company LLC" />
                 </div>
 
                 <div>
-                  <label htmlFor="business_type" style={labelStyle}>
-                    Business Type <span style={{ color: "#E8242A" }}>*</span>
-                  </label>
-                  <select
-                    id="business_type"
-                    name="business_type"
-                    required
-                    value={form.business_type}
-                    onChange={handleChange}
-                    style={inputStyle}
-                  >
-                    <option value="">Select type…</option>
-                    {BUSINESS_TYPES.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                  <label htmlFor="website" style={labelStyle}>Website <span style={{ color: "#aaa", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <input id="website" name="website" type="url" value={form.website} onChange={handleChange} placeholder="https://" style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="company_email" style={labelStyle}>Company Email {req}</label>
+                  <input id="company_email" name="company_email" type="email" required value={form.company_email} onChange={handleChange} placeholder="info@yourcompany.com" style={inputStyle} />
+                </div>
+
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label htmlFor="address1" style={labelStyle}>Address 1 {req}</label>
+                  <input id="address1" name="address1" type="text" required value={form.address1} onChange={handleChange} placeholder="Street address" style={inputStyle} />
+                </div>
+
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label htmlFor="address2" style={labelStyle}>Address 2 <span style={{ color: "#aaa", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <input id="address2" name="address2" type="text" value={form.address2} onChange={handleChange} placeholder="Suite, unit, building…" style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="postal_code" style={labelStyle}>Postal / Zip Code {req}</label>
+                  <input id="postal_code" name="postal_code" type="text" required value={form.postal_code} onChange={handleChange} placeholder="75001" style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="country" style={labelStyle}>Country {req}</label>
+                  <input id="country" name="country" type="text" required value={form.country} onChange={handleChange} placeholder="United States" style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="city" style={labelStyle}>City {req}</label>
+                  <input id="city" name="city" type="text" required value={form.city} onChange={handleChange} style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="state" style={labelStyle}>Province / State {req}</label>
+                  <input id="state" name="state" type="text" required value={form.state} onChange={handleChange} placeholder="TX" style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="resale_number" style={labelStyle}>RESALE # {req}</label>
+                  <input id="resale_number" name="resale_number" type="text" required value={form.resale_number} onChange={handleChange} style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="ppai_number" style={labelStyle}>PPAI # <span style={{ color: "#aaa", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <input id="ppai_number" name="ppai_number" type="text" value={form.ppai_number} onChange={handleChange} style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="asi_number" style={labelStyle}>ASI # <span style={{ color: "#aaa", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <input id="asi_number" name="asi_number" type="text" value={form.asi_number} onChange={handleChange} style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="phone" style={labelStyle}>Phone {req}</label>
+                  <input id="phone" name="phone" type="tel" required value={form.phone} onChange={handleChange} placeholder="(214) 000-0000" style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="fax" style={labelStyle}>Fax <span style={{ color: "#aaa", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <input id="fax" name="fax" type="tel" value={form.fax} onChange={handleChange} placeholder="(214) 000-0000" style={inputStyle} />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Contact Information ── */}
+            <div style={{ marginBottom: "32px" }}>
+              <h3 style={sectionHeadStyle}>Contact Information</h3>
+              <div style={gridStyle}>
+                <div>
+                  <label htmlFor="first_name" style={labelStyle}>First Name {req}</label>
+                  <input id="first_name" name="first_name" type="text" required value={form.first_name} onChange={handleChange} style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="last_name" style={labelStyle}>Last Name {req}</label>
+                  <input id="last_name" name="last_name" type="text" required value={form.last_name} onChange={handleChange} style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="title" style={labelStyle}>Title <span style={{ color: "#aaa", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <input id="title" name="title" type="text" value={form.title} onChange={handleChange} placeholder="e.g. Owner, Manager" style={inputStyle} />
+                </div>
+
+                <div>
+                  <label htmlFor="email" style={labelStyle}>Direct Email Address {req}</label>
+                  <input id="email" name="email" type="email" required value={form.email} onChange={handleChange} placeholder="you@company.com" style={inputStyle} />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Business Information ── */}
+            <div style={{ marginBottom: "32px" }}>
+              <h3 style={sectionHeadStyle}>Business Information</h3>
+              <div style={gridStyle}>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label htmlFor="primary_business" style={labelStyle}>What is your primary business activity? {req}</label>
+                  <select id="primary_business" name="primary_business" required value={form.primary_business} onChange={handleChange} style={inputStyle}>
+                    <option value="">Select…</option>
+                    {PRIMARY_BUSINESS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label htmlFor="secondary_business" style={labelStyle}>What is your secondary business activity?</label>
+                  <select id="secondary_business" name="secondary_business" value={form.secondary_business} onChange={handleChange} style={inputStyle}>
+                    <option value="">Select…</option>
+                    {PRIMARY_BUSINESS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label htmlFor="how_heard" style={labelStyle}>How did you hear about us?</label>
+                  <select id="how_heard" name="how_heard" value={form.how_heard} onChange={handleChange} style={inputStyle}>
+                    <option value="">Select…</option>
+                    {HEAR_ABOUT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label htmlFor="tax_id" style={labelStyle}>Tax ID / EIN</label>
-                  <input
-                    id="tax_id"
-                    name="tax_id"
-                    type="text"
-                    value={form.tax_id}
-                    onChange={handleChange}
-                    style={inputStyle}
-                    placeholder="XX-XXXXXXX"
-                  />
+                  <label htmlFor="num_employees" style={labelStyle}>Number of employees in your location:</label>
+                  <select id="num_employees" name="num_employees" value={form.num_employees} onChange={handleChange} style={inputStyle}>
+                    <option value="">Select…</option>
+                    {EMPLOYEE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
                 </div>
 
                 <div>
-                  <label htmlFor="website" style={labelStyle}>Website</label>
-                  <input
-                    id="website"
-                    name="website"
-                    type="url"
-                    value={form.website}
-                    onChange={handleChange}
-                    placeholder="https://"
-                    style={inputStyle}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="expected_monthly_volume" style={labelStyle}>
-                    Expected Monthly Volume
-                  </label>
-                  <select
-                    id="expected_monthly_volume"
-                    name="expected_monthly_volume"
-                    value={form.expected_monthly_volume}
-                    onChange={handleChange}
-                    style={inputStyle}
-                  >
-                    <option value="">Select range…</option>
-                    {VOLUME_OPTIONS.map((v) => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
+                  <label htmlFor="num_sales_reps" style={labelStyle}>Number of outside sales reps:</label>
+                  <select id="num_sales_reps" name="num_sales_reps" value={form.num_sales_reps} onChange={handleChange} style={inputStyle}>
+                    <option value="">Select…</option>
+                    {SALES_REP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
               </div>
             </div>
 
-            {/* Contact Information */}
+            {/* ── Web Account Information ── */}
             <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ fontFamily: "var(--font-bebas)", fontSize: "16px", letterSpacing: ".06em", color: "#2A2830", marginBottom: "20px", paddingBottom: "10px", borderBottom: "1px solid #E2E0DA" }}>
-                Contact Information
-              </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <h3 style={sectionHeadStyle}>Web Account Information</h3>
+              <div style={gridStyle}>
                 <div>
-                  <label htmlFor="first_name" style={labelStyle}>
-                    First Name <span style={{ color: "#E8242A" }}>*</span>
-                  </label>
-                  <input
-                    id="first_name"
-                    name="first_name"
-                    type="text"
-                    required
-                    value={form.first_name}
-                    onChange={handleChange}
-                    style={inputStyle}
-                  />
+                  <label htmlFor="password" style={labelStyle}>Password {req}</label>
+                  <input id="password" name="password" type="password" required minLength={8} value={form.password} onChange={handleChange} placeholder="Min. 8 characters" style={inputStyle} />
                 </div>
 
                 <div>
-                  <label htmlFor="last_name" style={labelStyle}>
-                    Last Name <span style={{ color: "#E8242A" }}>*</span>
-                  </label>
-                  <input
-                    id="last_name"
-                    name="last_name"
-                    type="text"
-                    required
-                    value={form.last_name}
-                    onChange={handleChange}
-                    style={inputStyle}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" style={labelStyle}>
-                    Email Address <span style={{ color: "#E8242A" }}>*</span>
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    value={form.email}
-                    onChange={handleChange}
-                    style={inputStyle}
-                    placeholder="you@company.com"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="phone" style={labelStyle}>Phone Number</label>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={form.phone}
-                    onChange={handleChange}
-                    style={inputStyle}
-                    placeholder="(214) 000-0000"
-                  />
+                  <label htmlFor="confirm_password" style={labelStyle}>Confirm Password {req}</label>
+                  <input id="confirm_password" name="confirm_password" type="password" required minLength={8} value={form.confirm_password} onChange={handleChange} placeholder="Re-enter password" style={inputStyle} />
                 </div>
 
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <label htmlFor="password" style={labelStyle}>
-                    Password <span style={{ color: "#E8242A" }}>*</span>
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    minLength={8}
-                    value={form.password}
-                    onChange={handleChange}
-                    style={inputStyle}
-                    placeholder="Min. 8 characters"
-                  />
-                  <p style={{ marginTop: "5px", fontSize: "12px", color: "#7A7880" }}>Minimum 8 characters</p>
+                  <label htmlFor="password_hint" style={labelStyle}>Password Hint <span style={{ color: "#aaa", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <input id="password_hint" name="password_hint" type="text" value={form.password_hint} onChange={handleChange} placeholder="A hint to help you remember your password" style={inputStyle} />
                 </div>
               </div>
+            </div>
+
+            {/* ── Communication Preferences ── */}
+            <div style={{ marginBottom: "32px" }}>
+              <h3 style={sectionHeadStyle}>Communication Preferences</h3>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  name="promo_emails"
+                  checked={form.promo_emails}
+                  onChange={handleChange}
+                  style={{ marginTop: "2px", accentColor: "#1A5CFF", width: "16px", height: "16px", flexShrink: 0 }}
+                />
+                <span style={{ fontSize: "14px", color: "#2A2830", lineHeight: 1.5 }}>
+                  I would like to receive promotional emails, product updates, and exclusive offers from AF Apparels.
+                </span>
+              </label>
+            </div>
+
+            {/* ── Terms and Conditions ── */}
+            <div style={{ marginBottom: "32px" }}>
+              <h3 style={sectionHeadStyle}>Terms and Conditions</h3>
+              <p style={{ fontSize: "13px", color: "#4A4850", lineHeight: 1.65, marginBottom: "14px" }}>
+                By proceeding I acknowledge that I have read and agree to the following terms and conditions:
+              </p>
+              <div style={{ background: "#F9F8F5", border: "1px solid #E2E0DA", borderRadius: "8px", padding: "14px 16px", fontSize: "12px", color: "#7A7880", lineHeight: 1.7, marginBottom: "18px", maxHeight: "110px", overflowY: "auto" }}>
+                AF Apparels wholesale accounts are strictly for business-to-business transactions. By submitting this application you confirm that your business holds a valid resale certificate or equivalent tax exemption document. All pricing, product availability, and terms are subject to change. Accounts may be suspended for misuse. We reserve the right to approve or deny any application at our sole discretion.
+              </div>
+
+              {/* Simulated reCAPTCHA */}
+              <div style={{ border: "1px solid #D3D3D3", borderRadius: "4px", background: "#F9F9F9", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", maxWidth: "300px" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", margin: 0 }}>
+                  <input
+                    type="checkbox"
+                    name="captcha_checked"
+                    checked={form.captcha_checked}
+                    onChange={handleChange}
+                    style={{ width: "20px", height: "20px", accentColor: "#4CAF50", flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: "14px", color: "#2A2830", fontWeight: 500 }}>I&apos;m not a robot</span>
+                </label>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "8px", color: "#999", lineHeight: 1.4 }}>
+                    reCAPTCHA<br />
+                    <span style={{ fontSize: "7px" }}>Privacy - Terms</span>
+                  </div>
+                </div>
+              </div>
+
+              <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  name="terms_accepted"
+                  checked={form.terms_accepted}
+                  onChange={handleChange}
+                  style={{ marginTop: "2px", accentColor: "#1A5CFF", width: "16px", height: "16px", flexShrink: 0 }}
+                />
+                <span style={{ fontSize: "13px", color: "#2A2830", lineHeight: 1.5 }}>
+                  I have read and agree to the terms and conditions above. {req}
+                </span>
+              </label>
             </div>
 
             <button
@@ -330,15 +476,15 @@ export default function WholesaleRegisterPage() {
             Why Apply?
           </h3>
           {[
-            { icon: "🏭", h: "Factory-Direct Pricing", p: "No distributors. Pay factory price — better margins on every order." },
-            { icon: "📦", h: "No Minimums", p: "Order 1 unit or 10,000. In-stock items ship same day from Dallas." },
-            { icon: "⚡", h: "Same-Day Shipping", p: "Orders before 2 PM CT ship the same day. Dallas, TX warehouse." },
-            { icon: "🎨", h: "Print-Optimized Blanks", p: "Every fabric tested for DTF, screen printing, and embroidery." },
-            { icon: "💳", h: "NET 30 Terms Available", p: "Qualifying accounts can access NET 30 payment terms." },
-            { icon: "🤝", h: "Dedicated Support", p: "Real account manager — not a ticket queue. Phone + email." },
+            { icon: <FactoryIcon size={20} color="#aaa" />, h: "Factory-Direct Pricing", p: "No distributors. Pay factory price — better margins on every order." },
+            { icon: <PackageIcon size={20} color="#aaa" />, h: "No Minimums", p: "Order 1 unit or 10,000. In-stock items ship same day from Dallas." },
+            { icon: <ZapIcon size={20} color="#aaa" />, h: "Same-Day Shipping", p: "Orders before 2 PM CT ship the same day. Dallas, TX warehouse." },
+            { icon: <PaletteIcon size={20} color="#aaa" />, h: "Print-Optimized Blanks", p: "Every fabric tested for DTF, screen printing, and embroidery." },
+            { icon: <CreditCardIcon size={20} color="#aaa" />, h: "NET 30 Terms Available", p: "Qualifying accounts can access NET 30 payment terms." },
+            { icon: <UsersIcon size={20} color="#aaa" />, h: "Dedicated Support", p: "Real account manager — not a ticket queue. Phone + email." },
           ].map(item => (
             <div key={item.h} style={{ display: "flex", gap: "12px", marginBottom: "18px", alignItems: "flex-start" }}>
-              <span style={{ fontSize: "20px", minWidth: "28px" }}>{item.icon}</span>
+              <div style={{ minWidth: "28px", display: "flex", paddingTop: "1px" }}>{item.icon}</div>
               <div>
                 <div style={{ fontFamily: "var(--font-bebas)", fontSize: "13px", letterSpacing: ".04em", color: "#ccc", marginBottom: "3px" }}>{item.h}</div>
                 <div style={{ fontSize: "12px", color: "#444", lineHeight: 1.55 }}>{item.p}</div>
@@ -356,8 +502,8 @@ export default function WholesaleRegisterPage() {
           <div style={{ marginTop: "20px", background: "rgba(26,92,255,.08)", border: "1px solid rgba(26,92,255,.15)", borderRadius: "8px", padding: "14px" }}>
             <div style={{ fontSize: "12px", color: "#6B9FFF", fontWeight: 600, marginBottom: "4px" }}>Questions?</div>
             <div style={{ fontSize: "12px", color: "#555" }}>
-              📞 (214) 272-7213<br />
-              ✉️ wholesale@afapparels.com
+              (214) 272-7213<br />
+              wholesale@afapparels.com
             </div>
           </div>
         </div>
