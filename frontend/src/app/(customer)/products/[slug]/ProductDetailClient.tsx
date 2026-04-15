@@ -668,6 +668,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                       { label: "Sizes Available", value: uniqueSizes.join(", ") || "—" },
                       { label: "Min Order Qty", value: `${product.moq} units` },
                       { label: "Variants", value: `${product.variants?.length ?? 0} options` },
+                      ...(((product as any).fabric) ? [{ label: "Fabric", value: (product as any).fabric }] : []),
+                      ...(((product as any).weight) ? [{ label: "Weight", value: (product as any).weight }] : []),
+                      ...(((product as any).product_code) ? [{ label: "Product Code", value: (product as any).product_code }] : []),
                     ].map(row => (
                       <tr key={row.label} style={{ borderBottom: "1px solid #F4F3EF" }}>
                         <td style={{ padding: "12px 0", color: "#7A7880", fontWeight: 600, width: "40%" }}>{row.label}</td>
@@ -676,47 +679,78 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     ))}
                   </tbody>
                 </table>
+                {(product as any).care_instructions && (
+                  <div style={{ marginTop: "20px", padding: "16px", background: "#F4F3EF", borderRadius: "8px", border: "1px solid #E2E0DA" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#7A7880", marginBottom: "8px" }}>Care Instructions</div>
+                    <p style={{ fontSize: "14px", color: "#2A2830", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>{(product as any).care_instructions}</p>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === "Print Guide" && (
               <div style={{ maxWidth: "720px" }}>
-                <div style={{ background: "#F4F3EF", border: "1px solid #E2E0DA", borderRadius: "10px", padding: "24px" }}>
-                  <h3 style={{ fontFamily: "var(--font-bebas)", fontSize: "18px", letterSpacing: ".04em", color: "#2A2830", marginBottom: "12px" }}>Print Compatibility</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "12px" }}>
-                    {["DTF (Direct to Film)", "Screen Printing", "Embroidery", "DTG (Direct to Garment)", "Heat Transfer", "Sublimation"].map(method => (
-                      <div key={method} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#2A2830" }}>
-                        <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#E8242A", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                        </span>
-                        {method}
+                {(() => {
+                  const methods: string[] = ((product as any).print_guide as any)?.methods ?? [];
+                  if (methods.length === 0) {
+                    return (
+                      <div style={{ background: "#F4F3EF", border: "1px solid #E2E0DA", borderRadius: "10px", padding: "32px", textAlign: "center", color: "#aaa", fontSize: "14px" }}>
+                        Print compatibility information coming soon.
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    );
+                  }
+                  return (
+                    <div style={{ background: "#F4F3EF", border: "1px solid #E2E0DA", borderRadius: "10px", padding: "24px" }}>
+                      <h3 style={{ fontFamily: "var(--font-bebas)", fontSize: "18px", letterSpacing: ".04em", color: "#2A2830", marginBottom: "16px" }}>Print Compatibility</h3>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "12px" }}>
+                        {methods.map(method => (
+                          <div key={method} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#2A2830" }}>
+                            <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#E8242A", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            </span>
+                            {method}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
             {activeTab === "Size Chart" && (
               <div style={{ overflowX: "auto" }}>
-                <table style={{ borderCollapse: "collapse", fontSize: "13px", minWidth: "500px" }}>
-                  <thead>
-                    <tr style={{ background: "#111016" }}>
-                      {["Size", "Chest (in)", "Length (in)", "Sleeve (in)"].map(h => (
-                        <th key={h} style={{ padding: "10px 16px", textAlign: "left", color: "#fff", fontFamily: "var(--font-bebas)", letterSpacing: ".06em", fontSize: "13px" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[["XS", "32–34", "27", "16"], ["S", "35–37", "28", "17"], ["M", "38–40", "29", "18"], ["L", "41–43", "30", "19"], ["XL", "44–46", "31", "20"], ["2XL", "47–49", "32", "21"], ["3XL", "50–52", "33", "22"]].map((row, i) => (
-                      <tr key={row[0]} style={{ background: i % 2 === 0 ? "#F4F3EF" : "#fff", borderBottom: "1px solid #E2E0DA" }}>
-                        {row.map((cell, j) => (
-                          <td key={j} style={{ padding: "10px 16px", color: "#2A2830", fontWeight: j === 0 ? 700 : 400 }}>{cell}</td>
+                {(() => {
+                  const rows: any[] = ((product as any).size_chart_data as any[]) ?? [];
+                  if (rows.length === 0) {
+                    return (
+                      <div style={{ padding: "32px", textAlign: "center", background: "#F4F3EF", borderRadius: "10px", border: "1px solid #E2E0DA", color: "#aaa", fontSize: "14px" }}>
+                        Size chart coming soon.
+                      </div>
+                    );
+                  }
+                  return (
+                    <table style={{ borderCollapse: "collapse", fontSize: "13px", minWidth: "500px" }}>
+                      <thead>
+                        <tr style={{ background: "#111016" }}>
+                          {["Size", "Chest (in)", "Length (in)", "Sleeve (in)"].map(h => (
+                            <th key={h} style={{ padding: "10px 16px", textAlign: "left", color: "#fff", fontFamily: "var(--font-bebas)", letterSpacing: ".06em", fontSize: "13px" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row: any, i: number) => (
+                          <tr key={i} style={{ background: i % 2 === 0 ? "#F4F3EF" : "#fff", borderBottom: "1px solid #E2E0DA" }}>
+                            <td style={{ padding: "10px 16px", color: "#2A2830", fontWeight: 700 }}>{row.size ?? "—"}</td>
+                            <td style={{ padding: "10px 16px", color: "#2A2830" }}>{row.chest ?? "—"}</td>
+                            <td style={{ padding: "10px 16px", color: "#2A2830" }}>{row.length ?? "—"}</td>
+                            <td style={{ padding: "10px 16px", color: "#2A2830" }}>{row.sleeve ?? "—"}</td>
+                          </tr>
                         ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                      </tbody>
+                    </table>
+                  );
+                })()}
               </div>
             )}
 

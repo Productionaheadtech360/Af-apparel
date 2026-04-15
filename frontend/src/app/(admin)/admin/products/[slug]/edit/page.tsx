@@ -252,6 +252,9 @@ export default function AdminProductEditPage() {
         product_code: (product as any).product_code,
         weight: (product as any).weight,
         gender: (product as any).gender,
+        care_instructions: (product as any).care_instructions ?? null,
+        print_guide: (product as any).print_guide ?? null,
+        size_chart_data: (product as any).size_chart_data ?? null,
       });
       await Promise.all([...variantSaves, productSave]);
       setVariantEdits({});
@@ -702,6 +705,120 @@ export default function AdminProductEditPage() {
                 />
               </div>
               <div style={{ fontSize: "11px", color: "#aaa", marginTop: "4px" }}>Press Enter or comma to add</div>
+            </div>
+          </div>
+
+          {/* Product Tabs Content */}
+          <div style={sectionCard}>
+            <span style={sectionTitle}>PRODUCT TABS CONTENT</span>
+            <p style={{ fontSize: "12px", color: "#7A7880", marginBottom: "20px", marginTop: "-8px" }}>
+              This content appears in the Description, Print Guide, and Size Chart tabs on the product page.
+            </p>
+
+            {/* Care Instructions */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={labelStyle}>Care Instructions</label>
+              <textarea
+                rows={4}
+                value={(product as any).care_instructions ?? ""}
+                onChange={e => setProduct(p => p ? { ...p, care_instructions: e.target.value } as any : p)}
+                placeholder="e.g. Machine wash cold, tumble dry low, do not bleach…"
+                style={{ ...inputStyle, resize: "vertical" }}
+              />
+              <div style={{ fontSize: "11px", color: "#aaa", marginTop: "3px" }}>Appears in the Specifications tab.</div>
+            </div>
+
+            {/* Print Guide */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={labelStyle}>Print Guide — Supported Methods</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                {["DTF (Direct to Film)", "Screen Printing", "Embroidery", "DTG (Direct to Garment)", "Heat Transfer", "Sublimation", "Vinyl / HTV", "Laser Engraving"].map(method => {
+                  const methods: string[] = ((product as any).print_guide as any)?.methods ?? [];
+                  const checked = methods.includes(method);
+                  return (
+                    <label key={method} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#2A2830", cursor: "pointer", padding: "6px 10px", border: `1.5px solid ${checked ? "#1A5CFF" : "#E2E0DA"}`, borderRadius: "7px", background: checked ? "rgba(26,92,255,.05)" : "#fff", transition: "all .15s" }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={e => {
+                          const cur: string[] = ((product as any).print_guide as any)?.methods ?? [];
+                          const next = e.target.checked ? [...cur, method] : cur.filter(m => m !== method);
+                          setProduct(p => p ? { ...p, print_guide: { ...((p as any).print_guide ?? {}), methods: next } } as any : p);
+                        }}
+                        style={{ accentColor: "#1A5CFF" }}
+                      />
+                      {method}
+                    </label>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: "11px", color: "#aaa", marginTop: "6px" }}>Checked methods appear as green ticks in the Print Guide tab.</div>
+            </div>
+
+            {/* Size Chart */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Size Chart</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const rows: any[] = ((product as any).size_chart_data as any) ?? [];
+                    setProduct(p => p ? { ...p, size_chart_data: [...rows, { size: "", chest: "", length: "", sleeve: "" }] } as any : p);
+                  }}
+                  style={{ fontSize: "12px", color: "#1A5CFF", fontWeight: 700, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                >
+                  + Add Row
+                </button>
+              </div>
+
+              {(((product as any).size_chart_data as any[]) ?? []).length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px", border: "1.5px dashed #E2E0DA", borderRadius: "8px", color: "#aaa", fontSize: "13px" }}>
+                  No size chart rows yet. Click + Add Row to build one.
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                    <thead>
+                      <tr style={{ background: "#F4F3EF" }}>
+                        {["Size", "Chest (in)", "Length (in)", "Sleeve (in)", ""].map(h => (
+                          <th key={h} style={{ padding: "8px 10px", textAlign: "left", fontSize: "10px", textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(((product as any).size_chart_data as any[]) ?? []).map((row: any, i: number) => (
+                        <tr key={i} style={{ borderBottom: "1px solid #F4F3EF" }}>
+                          {(["size", "chest", "length", "sleeve"] as const).map(field => (
+                            <td key={field} style={{ padding: "4px 6px" }}>
+                              <input
+                                value={row[field] ?? ""}
+                                onChange={e => {
+                                  const rows = [...(((product as any).size_chart_data as any[]) ?? [])];
+                                  rows[i] = { ...rows[i], [field]: e.target.value };
+                                  setProduct(p => p ? { ...p, size_chart_data: rows } as any : p);
+                                }}
+                                placeholder={field === "size" ? "XL" : "—"}
+                                style={{ width: "100%", padding: "5px 8px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", fontFamily: "var(--font-jakarta)", outline: "none" }}
+                              />
+                            </td>
+                          ))}
+                          <td style={{ padding: "4px 6px" }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const rows = (((product as any).size_chart_data as any[]) ?? []).filter((_: any, idx: number) => idx !== i);
+                                setProduct(p => p ? { ...p, size_chart_data: rows } as any : p);
+                              }}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "16px", lineHeight: 1, padding: "0 4px" }}
+                            >×</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div style={{ fontSize: "11px", color: "#aaa", marginTop: "6px" }}>This table appears in the Size Chart tab on the product page.</div>
             </div>
           </div>
 

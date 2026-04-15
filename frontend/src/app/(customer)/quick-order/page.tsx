@@ -9,11 +9,11 @@ import { cartService } from "@/services/cart.service";
 import type { ProductListItem, ProductDetail, ProductVariant } from "@/types/product.types";
 
 // ─── Size ordering ────────────────────────────────────────────────────────────
-const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
+const SIZE_ORDER = ["XXS", "XS", "S", "S/M", "M", "M/L", "L", "XL", "2XL", "3XL", "4XL", "5XL", "6XL", "ONE SIZE"];
 function sortSizes(sizes: string[]): string[] {
   return [...sizes].sort((a, b) => {
-    const ia = SIZE_ORDER.indexOf(a);
-    const ib = SIZE_ORDER.indexOf(b);
+    const ia = SIZE_ORDER.indexOf(a.toUpperCase());
+    const ib = SIZE_ORDER.indexOf(b.toUpperCase());
     if (ia === -1 && ib === -1) return a.localeCompare(b);
     if (ia === -1) return 1;
     if (ib === -1) return -1;
@@ -27,14 +27,23 @@ const COLOR_MAP: Record<string, string> = {
   Blue: "#1A5CFF", Royal: "#2251CC", "Royal Blue": "#2251CC",
   Grey: "#9ca3af", Gray: "#9ca3af", "Dark Grey": "#4b5563", "Dark Gray": "#4b5563",
   "Light Grey": "#d1d5db", "Light Gray": "#d1d5db", Charcoal: "#374151",
-  Heather: "#b0b7c3", Sand: "#e2c89a", Natural: "#f5f0e8", Tan: "#c9a96e",
-  Brown: "#78350f", Maroon: "#7f1d1d", Burgundy: "#881337", Green: "#166534",
-  "Forest Green": "#14532d", "Kelly Green": "#15803d", Lime: "#65a30d",
-  Yellow: "#eab308", Gold: "#C9A84C", Orange: "#ea580c", Purple: "#7c3aed",
-  Pink: "#ec4899", "Hot Pink": "#db2777", Coral: "#f87171", Teal: "#0d9488",
-  Turquoise: "#06b6d4", Mint: "#6ee7b7", Olive: "#4d7c0f", Cream: "#fef3c7",
-  Ivory: "#fffff0", "Sky Blue": "#38bdf8", Lavender: "#a78bfa",
+  Heather: "#b0b7c3", "Sport Grey": "#9ca3af", Sand: "#e2c89a",
+  Natural: "#f5f0e8", Tan: "#c9a96e", Brown: "#78350f", Maroon: "#7f1d1d",
+  Burgundy: "#881337", Green: "#166534", "Forest Green": "#14532d",
+  "Kelly Green": "#15803d", Lime: "#65a30d", Yellow: "#eab308",
+  Gold: "#C9A84C", Orange: "#ea580c", Purple: "#7c3aed", Pink: "#ec4899",
+  "Hot Pink": "#db2777", Coral: "#f87171", Teal: "#0d9488",
+  Turquoise: "#06b6d4", Mint: "#6ee7b7", Olive: "#4d7c0f",
+  Cream: "#fef3c7", Ivory: "#fffff0", "Sky Blue": "#38bdf8", Lavender: "#a78bfa",
 };
+
+function getColorHex(color: string): string {
+  return COLOR_MAP[color] ?? "#888888";
+}
+
+function isLight(hex: string): boolean {
+  return ["#FFFFFF", "#fffff0", "#fef3c7", "#f5f0e8", "#fef9c3", "#d1d5db", "#e2c89a", "#fef3c7"].includes(hex);
+}
 
 // ─── Row state ────────────────────────────────────────────────────────────────
 interface QuickOrderRow {
@@ -195,12 +204,13 @@ export default function QuickOrderPage() {
       if (idx === -1) return prev;
       const src = prev[idx]!;
       const copy: QuickOrderRow = {
-        searchQuery: src.searchQuery, selectedProduct: src.selectedProduct,
-        productDetail: src.productDetail, showDropdown: false,
-        searchResults: src.searchResults, selectedColor: src.selectedColor,
-        isSearching: false, isLoadingDetail: false,
+        ...src,
         id: Math.random().toString(36).slice(2),
-        quantities: { ...src.quantities }, checked: false,
+        showDropdown: false,
+        isSearching: false,
+        isLoadingDetail: false,
+        quantities: { ...src.quantities },
+        checked: false,
       };
       return [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)];
     });
@@ -223,65 +233,78 @@ export default function QuickOrderPage() {
       onClick={() => setRows((prev) => prev.map((r) => ({ ...r, showDropdown: false })))}
     >
       {/* ══ PAGE HEADER ══════════════════════════════════════════════════ */}
-      <div style={{ background: "#080808", padding: "40px 32px", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".12em", color: "#444", marginBottom: "6px" }}>
-              Wholesale
-            </div>
-            <h1 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(32px,4vw,52px)", color: "#fff", letterSpacing: ".02em", lineHeight: 1, marginBottom: "6px" }}>
-              Quick Order
-            </h1>
-            <p style={{ fontSize: "13px", color: "#555", lineHeight: 1.5 }}>
-              Search by style name or SKU · select color · enter quantities by size
-            </p>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-            {grandTotals.units > 0 && (
-              <div style={{ padding: "8px 14px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "6px", fontSize: "13px", color: "#aaa", whiteSpace: "nowrap" }}>
-                <span style={{ fontWeight: 700, color: "#fff" }}>{grandTotals.units}</span>
-                {" units · "}
-                <span style={{ fontWeight: 700, color: "#C9A84C" }}>{formatCurrency(grandTotals.price)}</span>
+      <div style={{ background: "#080808", padding: "32px 32px 28px", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "24px", flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".14em", color: "#555", marginBottom: "6px" }}>Wholesale</div>
+              <h1 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(28px,4vw,48px)", color: "#fff", letterSpacing: ".02em", lineHeight: 1, marginBottom: "10px" }}>
+                Quick Order
+              </h1>
+              {/* How it works strip */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                {[
+                  { n: "1", label: "Search product" },
+                  { n: "2", label: "Pick a color" },
+                  { n: "3", label: "Enter quantities" },
+                  { n: "4", label: "Add to cart" },
+                ].map((step, i, arr) => (
+                  <div key={step.n} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#1A5CFF", color: "#fff", fontSize: "10px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{step.n}</span>
+                      <span style={{ fontSize: "12px", color: "#888", fontWeight: 500 }}>{step.label}</span>
+                    </div>
+                    {i < arr.length - 1 && <span style={{ color: "#333", fontSize: "12px", marginLeft: "2px" }}>→</span>}
+                  </div>
+                ))}
               </div>
-            )}
-            <button
-              onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
-              disabled={isAddingToCart || grandTotals.units === 0}
-              style={{
-                background: grandTotals.units === 0 ? "#222" : "#1A5CFF",
-                color: grandTotals.units === 0 ? "#555" : "#fff",
-                padding: "12px 24px", fontSize: "13px", fontWeight: 700,
-                borderRadius: "6px", border: "none",
-                cursor: grandTotals.units === 0 ? "not-allowed" : "pointer",
-                textTransform: "uppercase", letterSpacing: ".06em", whiteSpace: "nowrap",
-                transition: "background .2s",
-              }}
-            >
-              {isAddingToCart ? "Adding…" : "Add to Shopping Box"}
-            </button>
+            </div>
+
+            {/* Header CTA */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0, paddingTop: "4px" }}>
+              {grandTotals.units > 0 && (
+                <div style={{ padding: "8px 14px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", borderRadius: "7px", fontSize: "13px", color: "#aaa", whiteSpace: "nowrap", textAlign: "center" }}>
+                  <div style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", color: "#C9A84C", lineHeight: 1 }}>{formatCurrency(grandTotals.price)}</div>
+                  <div style={{ fontSize: "11px", color: "#666" }}>{grandTotals.units} unit{grandTotals.units !== 1 ? "s" : ""}</div>
+                </div>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
+                disabled={isAddingToCart || grandTotals.units === 0}
+                style={{
+                  background: grandTotals.units === 0 ? "#1a1a1a" : "#1A5CFF",
+                  color: grandTotals.units === 0 ? "#444" : "#fff",
+                  padding: "13px 28px", fontSize: "13px", fontWeight: 700,
+                  borderRadius: "7px", border: "none",
+                  cursor: grandTotals.units === 0 ? "not-allowed" : "pointer",
+                  textTransform: "uppercase", letterSpacing: ".08em", whiteSpace: "nowrap",
+                  transition: "background .2s",
+                }}
+              >
+                {isAddingToCart ? "Adding…" : grandTotals.units > 0 ? `Add ${grandTotals.units} to Cart` : "Add to Cart"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ══ TOOLBAR ══════════════════════════════════════════════════════ */}
-      <div style={{ background: "#F4F3EF", borderBottom: "1px solid #E2E0DA", padding: "10px 32px" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", alignItems: "center", gap: "12px" }}>
+      <div style={{ background: "#fff", borderBottom: "1px solid #E2E0DA", padding: "0 32px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", height: "44px", display: "flex", alignItems: "center", gap: "16px" }}>
           <span style={{ fontSize: "12px", fontWeight: 600, color: "#7A7880" }}>
-            {rows.length} style{rows.length !== 1 ? "s" : ""}
+            {rows.length} line{rows.length !== 1 ? "s" : ""}
           </span>
           {checkedCount > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); deleteChecked(); }}
-              style={{ padding: "5px 12px", fontSize: "12px", fontWeight: 700, color: "#dc2626", background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: "4px", cursor: "pointer" }}
+              style={{ padding: "4px 12px", fontSize: "12px", fontWeight: 700, color: "#dc2626", background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: "5px", cursor: "pointer" }}
             >
               Remove {checkedCount} selected
             </button>
           )}
-
-          {/* Cart message inline in toolbar */}
           {cartMsg && (
             <div style={{
-              padding: "6px 12px", borderRadius: "5px", fontSize: "12px", fontWeight: 600,
+              padding: "5px 12px", borderRadius: "5px", fontSize: "12px", fontWeight: 600,
               display: "flex", alignItems: "center", gap: "8px",
               background: cartMsg.type === "success" ? "rgba(22,163,74,.1)" : "rgba(220,38,38,.1)",
               border: `1px solid ${cartMsg.type === "success" ? "rgba(22,163,74,.3)" : "rgba(220,38,38,.3)"}`,
@@ -289,27 +312,40 @@ export default function QuickOrderPage() {
             }}>
               {cartMsg.type === "success" ? "✓" : "✕"} {cartMsg.text}
               {cartMsg.type === "success" && (
-                <Link href="/cart" style={{ color: "#1A5CFF", textDecoration: "none", fontWeight: 700, marginLeft: "4px" }}>View Cart →</Link>
+                <Link href="/cart" style={{ color: "#1A5CFF", textDecoration: "none", fontWeight: 700 }}>View Cart →</Link>
               )}
             </div>
           )}
-
-          <div style={{ marginLeft: "auto", display: "flex", gap: "20px", alignItems: "center" }}>
-            <Link href="/products" style={{ fontSize: "12px", fontWeight: 600, color: "#1A5CFF", textDecoration: "none" }}>Browse Catalog →</Link>
+          <div style={{ marginLeft: "auto", display: "flex", gap: "20px" }}>
+            <Link href="/products" style={{ fontSize: "12px", fontWeight: 600, color: "#7A7880", textDecoration: "none" }}>Browse Catalog</Link>
             <Link href="/cart" style={{ fontSize: "12px", fontWeight: 600, color: "#1A5CFF", textDecoration: "none" }}>View Cart</Link>
           </div>
         </div>
       </div>
 
+      {/* ══ COLUMN HEADERS ═══════════════════════════════════════════════ */}
+      <div style={{ background: "#F4F3EF", padding: "0 32px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "28px 28px 1fr 220px 40px", gap: "0", padding: "8px 12px 6px", alignItems: "center" }}>
+            <div />
+            <div />
+            <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#bbb" }}>Product</div>
+            <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#bbb" }}>Color</div>
+            <div />
+          </div>
+        </div>
+      </div>
+
       {/* ══ ROWS ═════════════════════════════════════════════════════════ */}
-      <div style={{ flex: 1, maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "16px 32px 120px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      <div style={{ flex: 1, maxWidth: "1200px", width: "100%", margin: "0 auto", padding: "8px 32px 120px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {rows.map((row, rowIdx) => {
             const colors = getRowColors(row);
             const sizes = getRowSizes(row);
             const { units, price } = getRowTotals(row);
-            const colorHex = COLOR_MAP[row.selectedColor] ?? "#888";
-            const isLightColor = ["#FFFFFF", "#fffff0", "#fef3c7", "#f5f0e8", "#fef9c3"].includes(colorHex);
+            const hasProduct = !!row.selectedProduct;
+            const hasColor = !!row.selectedColor;
+            const hasQty = units > 0;
 
             return (
               <div
@@ -317,35 +353,32 @@ export default function QuickOrderPage() {
                 onClick={(e) => e.stopPropagation()}
                 style={{
                   background: "#fff",
-                  border: `1px solid ${row.checked ? "#1A5CFF" : "#E2E0DA"}`,
+                  border: `1.5px solid ${row.checked ? "#1A5CFF" : hasQty ? "rgba(26,92,255,.25)" : "#E2E0DA"}`,
                   borderRadius: "10px",
                   overflow: "visible",
-                  boxShadow: row.checked ? "0 0 0 3px rgba(26,92,255,.08)" : "0 1px 3px rgba(0,0,0,.04)",
+                  boxShadow: hasQty ? "0 2px 8px rgba(26,92,255,.07)" : "0 1px 3px rgba(0,0,0,.04)",
                   transition: "border-color .15s, box-shadow .15s",
                 }}
               >
-                {/* ── TOP BAR ── */}
-                <div style={{
-                  display: "flex", alignItems: "center", gap: "0",
-                  height: "52px", borderBottom: (row.selectedProduct || sizes.length > 0) ? "1px solid #E2E0DA" : "none",
-                  paddingLeft: "12px", paddingRight: "12px",
-                }}>
+                {/* ── ROW TOP: checkbox + # + search + color + actions ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "28px 28px 1fr 220px 40px", gap: "0", alignItems: "center", minHeight: "52px", padding: "0 12px", borderBottom: hasProduct ? "1px solid #F4F3EF" : "none" }}>
+
                   {/* Checkbox */}
                   <input
                     type="checkbox"
                     checked={row.checked}
                     onChange={(e) => updateRow(row.id, { checked: e.target.checked })}
-                    style={{ width: "14px", height: "14px", cursor: "pointer", accentColor: "#1A5CFF", flexShrink: 0, marginRight: "10px" }}
+                    style={{ width: "14px", height: "14px", cursor: "pointer", accentColor: "#1A5CFF" }}
                   />
 
-                  {/* Row number */}
-                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#ccc", width: "20px", flexShrink: 0, userSelect: "none" }}>
+                  {/* Row # */}
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#ccc", userSelect: "none", textAlign: "center" }}>
                     {rowIdx + 1}
                   </span>
 
-                  {/* Search input — flex:1, borderless except bottom */}
-                  <div style={{ position: "relative", flex: 1, height: "100%", display: "flex", alignItems: "center" }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={row.isSearching ? "#1A5CFF" : "#bbb"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: "10px", pointerEvents: "none", flexShrink: 0 }}>
+                  {/* Search */}
+                  <div style={{ position: "relative", height: "52px", display: "flex", alignItems: "center", borderRight: "1px solid #F4F3EF" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={row.isSearching ? "#1A5CFF" : "#bbb"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: "10px", pointerEvents: "none", flexShrink: 0, transition: "stroke .2s" }}>
                       <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
                     <input
@@ -359,60 +392,61 @@ export default function QuickOrderPage() {
                       style={{
                         width: "100%", height: "100%",
                         border: "none", outline: "none",
-                        paddingLeft: "30px", paddingRight: "10px",
+                        paddingLeft: "32px", paddingRight: "12px",
                         fontSize: "13px", color: "#2A2830",
                         background: "transparent",
                         fontFamily: "var(--font-jakarta)",
                       }}
                     />
+                    {row.searchQuery && !row.selectedProduct && (
+                      <button
+                        onClick={() => updateRow(row.id, { searchQuery: "", searchResults: [], showDropdown: false })}
+                        style={{ position: "absolute", right: "12px", background: "none", border: "none", cursor: "pointer", color: "#bbb", fontSize: "16px", lineHeight: 1, padding: 0 }}
+                      >×</button>
+                    )}
+
                     {/* Autocomplete dropdown */}
                     {row.showDropdown && (
                       <div style={{
                         position: "absolute", top: "calc(100% + 2px)", left: 0, right: 0,
-                        background: "#fff", border: "1px solid #E2E0DA", borderRadius: "8px",
-                        boxShadow: "0 8px 28px rgba(0,0,0,.12)", zIndex: 300,
-                        overflow: "hidden", maxHeight: "320px", overflowY: "auto",
+                        background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px",
+                        boxShadow: "0 8px 32px rgba(0,0,0,.14)", zIndex: 300,
+                        overflow: "hidden", maxHeight: "300px", overflowY: "auto",
                       }}>
-                        {row.searchResults.length > 0 ? (
-                          row.searchResults.map((product) => {
-                            const img = product.primary_image;
-                            const unitPrice = product.variants[0]?.effective_price ?? product.variants[0]?.retail_price;
-                            return (
-                              <button
-                                key={product.id}
-                                onMouseDown={(e) => { e.preventDefault(); handleSelectProduct(row.id, product); }}
-                                style={{
-                                  width: "100%", display: "flex", alignItems: "center", gap: "10px",
-                                  padding: "10px 14px", background: "none", border: "none",
-                                  borderBottom: "1px solid #F4F3EF", cursor: "pointer", textAlign: "left",
-                                }}
-                                onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#F8F7F5")}
-                                onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "none")}
-                              >
-                                <div style={{ width: "38px", height: "38px", flexShrink: 0, borderRadius: "5px", overflow: "hidden", background: "#F4F3EF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  {img ? (
-                                    <Image src={img.url_thumbnail_webp ?? img.url_thumbnail} alt={img.alt_text ?? product.name} width={38} height={38} style={{ objectFit: "cover" }} />
-                                  ) : (
-                                    <span style={{ fontSize: "16px" }}>👕</span>
-                                  )}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#2A2830", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{product.name}</div>
-                                  <div style={{ fontSize: "11px", color: "#7A7880" }}>
-                                    {product.variants[0]?.sku ?? product.slug}
-                                    {product.categories[0] && <span style={{ marginLeft: "6px" }}>· {product.categories[0].name}</span>}
-                                  </div>
-                                </div>
-                                {unitPrice && (
-                                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#E8242A", flexShrink: 0 }}>
-                                    {formatCurrency(parseFloat(unitPrice))}
-                                  </div>
+                        {row.searchResults.length > 0 ? row.searchResults.map((product) => {
+                          const img = product.primary_image;
+                          const unitPrice = product.variants[0]?.effective_price ?? product.variants[0]?.retail_price;
+                          return (
+                            <button
+                              key={product.id}
+                              onMouseDown={(e) => { e.preventDefault(); handleSelectProduct(row.id, product); }}
+                              style={{ width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #F4F3EF", cursor: "pointer", textAlign: "left" }}
+                              onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#F8F7F5")}
+                              onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "none")}
+                            >
+                              <div style={{ width: "36px", height: "36px", flexShrink: 0, borderRadius: "6px", overflow: "hidden", background: "#F4F3EF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                {img ? (
+                                  <Image src={img.url_thumbnail_webp ?? img.url_thumbnail} alt={img.alt_text ?? product.name} width={36} height={36} style={{ objectFit: "cover" }} />
+                                ) : (
+                                  <span style={{ fontSize: "16px" }}>👕</span>
                                 )}
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div style={{ padding: "16px 14px", fontSize: "13px", color: "#7A7880", textAlign: "center" }}>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: "13px", fontWeight: 700, color: "#2A2830", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{product.name}</div>
+                                <div style={{ fontSize: "11px", color: "#7A7880" }}>
+                                  {product.variants[0]?.sku ?? product.slug}
+                                  {product.categories[0] && <span style={{ marginLeft: "6px" }}>· {product.categories[0].name}</span>}
+                                </div>
+                              </div>
+                              {unitPrice && (
+                                <div style={{ fontSize: "13px", fontWeight: 700, color: "#1A5CFF", flexShrink: 0 }}>
+                                  {formatCurrency(parseFloat(unitPrice))}
+                                </div>
+                              )}
+                            </button>
+                          );
+                        }) : (
+                          <div style={{ padding: "18px 14px", fontSize: "13px", color: "#7A7880", textAlign: "center" }}>
                             No products found for &quot;{row.searchQuery}&quot;
                           </div>
                         )}
@@ -420,51 +454,60 @@ export default function QuickOrderPage() {
                     )}
                   </div>
 
-                  {/* Divider */}
-                  {colors.length > 0 && <div style={{ width: "1px", height: "28px", background: "#E2E0DA", flexShrink: 0, margin: "0 4px" }} />}
-
-                  {/* Color selector with dot */}
-                  {colors.length > 0 && (
-                    <div style={{ position: "relative", flexShrink: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "0 10px", height: "36px", cursor: "pointer" }}>
-                        <div style={{
-                          width: "14px", height: "14px", borderRadius: "50%", flexShrink: 0,
-                          background: colorHex,
-                          border: isLightColor ? "1px solid #E2E0DA" : "1px solid rgba(0,0,0,.12)",
-                        }} />
-                        <select
-                          value={row.selectedColor}
-                          onChange={(e) => updateRow(row.id, { selectedColor: e.target.value, quantities: {} })}
-                          style={{
-                            appearance: "none", WebkitAppearance: "none",
-                            border: "none", outline: "none", background: "transparent",
-                            fontSize: "13px", fontWeight: 600, color: "#2A2830",
-                            cursor: "pointer", paddingRight: "16px",
-                            fontFamily: "var(--font-jakarta)",
-                          }}
-                        >
-                          {colors.map((c) => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        {/* chevron */}
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#7A7880" strokeWidth={2.5} strokeLinecap="round" style={{ position: "absolute", right: "2px", pointerEvents: "none" }}>
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
+                  {/* Color column */}
+                  <div style={{ padding: "0 12px", borderRight: "1px solid #F4F3EF", height: "52px", display: "flex", alignItems: "center" }}>
+                    {row.isLoadingDetail ? (
+                      <span style={{ fontSize: "12px", color: "#bbb" }}>Loading…</span>
+                    ) : colors.length > 0 ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                        {colors.slice(0, 8).map((c) => {
+                          const hex = getColorHex(c);
+                          const light = isLight(hex);
+                          const active = row.selectedColor === c;
+                          return (
+                            <button
+                              key={c}
+                              title={c}
+                              onClick={() => updateRow(row.id, { selectedColor: c, quantities: {} })}
+                              style={{
+                                width: "22px", height: "22px", borderRadius: "50%",
+                                background: hex,
+                                border: active
+                                  ? "2px solid #1A5CFF"
+                                  : light ? "1.5px solid #E2E0DA" : "1.5px solid rgba(0,0,0,.15)",
+                                cursor: "pointer", padding: 0, flexShrink: 0,
+                                boxShadow: active ? "0 0 0 2px rgba(26,92,255,.2)" : "none",
+                                transition: "all .15s",
+                              }}
+                            />
+                          );
+                        })}
+                        {colors.length > 8 && (
+                          <select
+                            value={row.selectedColor}
+                            onChange={(e) => updateRow(row.id, { selectedColor: e.target.value, quantities: {} })}
+                            style={{ fontSize: "11px", border: "1px solid #E2E0DA", borderRadius: "4px", padding: "2px 4px", background: "#fff", color: "#2A2830", cursor: "pointer", fontFamily: "var(--font-jakarta)" }}
+                          >
+                            {colors.map((c) => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        )}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Divider */}
-                  <div style={{ width: "1px", height: "28px", background: "#E2E0DA", flexShrink: 0, margin: "0 4px" }} />
+                    ) : hasProduct ? (
+                      <span style={{ fontSize: "12px", color: "#bbb" }}>No colors</span>
+                    ) : (
+                      <span style={{ fontSize: "12px", color: "#ddd" }}>—</span>
+                    )}
+                  </div>
 
                   {/* Actions */}
-                  <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
                     <IconBtn title="Duplicate row" onClick={() => copyRow(row.id)}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                       </svg>
                     </IconBtn>
                     <IconBtn title="Remove row" danger onClick={() => deleteRow(row.id)}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
                         <path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
                       </svg>
@@ -472,34 +515,33 @@ export default function QuickOrderPage() {
                   </div>
                 </div>
 
-                {/* ── CARD BODY ── */}
-                {(row.selectedProduct || row.isLoadingDetail) && (
-                  <div style={{ padding: "16px 20px 20px" }}>
+                {/* ── ROW BODY: product info + size grid ── */}
+                {hasProduct && (
+                  <div style={{ padding: "14px 68px 16px 68px" }}>
                     {row.isLoadingDetail ? (
-                      <div style={{ fontSize: "13px", color: "#7A7880", padding: "8px 0" }}>Loading product details…</div>
+                      <div style={{ fontSize: "13px", color: "#bbb", padding: "4px 0" }}>Loading product details…</div>
                     ) : (
                       <>
-                        {/* Product info row */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", paddingBottom: "14px", borderBottom: "1px solid #F4F3EF" }}>
-                          {/* Thumbnail */}
-                          <div style={{ width: "44px", height: "44px", flexShrink: 0, borderRadius: "6px", overflow: "hidden", background: "#F4F3EF", border: "1px solid #E2E0DA" }}>
+                        {/* Product summary bar */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: hasColor && sizes.length > 0 ? "16px" : "0" }}>
+                          <div style={{ width: "36px", height: "36px", flexShrink: 0, borderRadius: "6px", overflow: "hidden", background: "#F4F3EF", border: "1px solid #E2E0DA" }}>
                             {row.selectedProduct?.primary_image ? (
                               <Image
                                 src={row.selectedProduct.primary_image.url_thumbnail_webp ?? row.selectedProduct.primary_image.url_thumbnail}
                                 alt={row.selectedProduct.name}
-                                width={44} height={44}
+                                width={36} height={36}
                                 style={{ objectFit: "cover", width: "100%", height: "100%" }}
                               />
                             ) : (
-                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" }}>👕</div>
+                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>👕</div>
                             )}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: "14px", fontWeight: 700, color: "#2A2830", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <div style={{ fontSize: "13px", fontWeight: 700, color: "#2A2830", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {row.selectedProduct?.name}
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
-                              <span style={{ fontSize: "11px", color: "#7A7880", fontFamily: "monospace" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px", flexWrap: "wrap" }}>
+                              <span style={{ fontSize: "11px", color: "#aaa", fontFamily: "monospace" }}>
                                 {row.selectedProduct?.variants[0]?.sku ?? row.selectedProduct?.slug}
                               </span>
                               {row.selectedProduct && row.selectedProduct.moq > 1 && (
@@ -507,31 +549,42 @@ export default function QuickOrderPage() {
                                   Min {row.selectedProduct.moq} units
                                 </span>
                               )}
-                              {row.selectedProduct?.categories[0] && (
-                                <span style={{ fontSize: "11px", color: "#bbb" }}>{row.selectedProduct.categories[0].name}</span>
+                              {row.selectedColor && (
+                                <span style={{ fontSize: "11px", color: "#7A7880", display: "flex", alignItems: "center", gap: "4px" }}>
+                                  <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: getColorHex(row.selectedColor), border: isLight(getColorHex(row.selectedColor)) ? "1px solid #ddd" : "none", display: "inline-block", flexShrink: 0 }} />
+                                  {row.selectedColor}
+                                </span>
                               )}
                             </div>
                           </div>
-                          {/* Color preview */}
-                          {row.selectedColor && (
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", background: "#F4F3EF", borderRadius: "5px", border: "1px solid #E2E0DA", flexShrink: 0 }}>
-                              <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: colorHex, border: isLightColor ? "1px solid #E2E0DA" : "1px solid rgba(0,0,0,.1)", flexShrink: 0 }} />
-                              <span style={{ fontSize: "12px", fontWeight: 600, color: "#2A2830" }}>{row.selectedColor}</span>
+                          {/* Row subtotal */}
+                          {hasQty && (
+                            <div style={{ flexShrink: 0, textAlign: "right" }}>
+                              <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#1A5CFF", lineHeight: 1 }}>{formatCurrency(price)}</div>
+                              <div style={{ fontSize: "11px", color: "#7A7880" }}>{units} unit{units !== 1 ? "s" : ""}</div>
                             </div>
                           )}
                         </div>
 
-                        {/* Size grid */}
-                        {sizes.length > 0 ? (
+                        {/* Step 2 prompt: no color yet */}
+                        {!hasColor && colors.length > 0 && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", background: "#F4F3EF", borderRadius: "8px", fontSize: "13px", color: "#7A7880" }}>
+                            <span style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#E8242A", color: "#fff", fontSize: "10px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</span>
+                            Pick a color above to see sizes
+                          </div>
+                        )}
+
+                        {/* Size / quantity grid */}
+                        {hasColor && sizes.length > 0 && (
                           <div style={{ overflowX: "auto" }}>
-                            <table style={{ borderCollapse: "separate", borderSpacing: "6px 0", fontSize: "13px" }}>
+                            <table style={{ borderCollapse: "separate", borderSpacing: "5px 0", fontSize: "13px" }}>
                               <thead>
                                 <tr>
                                   {sizes.map((size) => {
                                     const v = getVariant(row, size);
                                     const unitPrice = v?.effective_price ?? v?.retail_price;
                                     return (
-                                      <th key={size} style={{ padding: "0 0 8px", textAlign: "center", minWidth: "64px" }}>
+                                      <th key={size} style={{ padding: "0 0 8px", textAlign: "center", minWidth: "60px" }}>
                                         <div style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", letterSpacing: ".06em", color: "#2A2830" }}>{size}</div>
                                         {unitPrice && (
                                           <div style={{ fontSize: "10px", color: "#7A7880", fontWeight: 400, fontFamily: "var(--font-jakarta)" }}>
@@ -541,9 +594,8 @@ export default function QuickOrderPage() {
                                       </th>
                                     );
                                   })}
-                                  {/* Total header */}
-                                  <th style={{ padding: "0 0 8px 16px", textAlign: "right", minWidth: "90px", borderLeft: "1px solid #E2E0DA" }}>
-                                    <div style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", letterSpacing: ".06em", color: "#2A2830" }}>Total</div>
+                                  <th style={{ padding: "0 0 8px 14px", textAlign: "right", minWidth: "80px", borderLeft: "1px solid #E2E0DA" }}>
+                                    <div style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", color: "#2A2830" }}>Total</div>
                                   </th>
                                 </tr>
                               </thead>
@@ -560,25 +612,26 @@ export default function QuickOrderPage() {
                                           onChange={(e) => handleQtyChange(row.id, size, e.target.value)}
                                           placeholder="0"
                                           style={{
-                                            width: "64px", height: "44px",
-                                            textAlign: "center", fontSize: "16px", fontWeight: 700,
-                                            border: qty > 0 ? "1.5px solid #1A5CFF" : "1.5px solid #E2E0DA",
+                                            width: "60px", height: "42px",
+                                            textAlign: "center", fontSize: "15px", fontWeight: 700,
+                                            border: qty > 0 ? "2px solid #1A5CFF" : "1.5px solid #E2E0DA",
                                             borderRadius: "6px", outline: "none",
                                             background: qty > 0 ? "rgba(26,92,255,.04)" : "#fff",
-                                            color: "#2A2830", transition: "border-color .15s, background .15s",
+                                            color: "#2A2830", transition: "border-color .12s, background .12s",
                                             fontFamily: "var(--font-jakarta)",
                                             MozAppearance: "textfield",
                                           }}
+                                          onFocus={(e) => { if (!e.currentTarget.value) e.currentTarget.placeholder = ""; }}
+                                          onBlur={(e) => { e.currentTarget.placeholder = "0"; }}
                                         />
                                       </td>
                                     );
                                   })}
-                                  {/* Total cell */}
-                                  <td style={{ padding: "0 0 0 16px", textAlign: "right", verticalAlign: "middle", borderLeft: "1px solid #E2E0DA" }}>
+                                  <td style={{ padding: "0 0 0 14px", textAlign: "right", verticalAlign: "middle", borderLeft: "1px solid #E2E0DA" }}>
                                     {units > 0 ? (
                                       <div>
-                                        <div style={{ fontSize: "11px", color: "#7A7880", marginBottom: "2px" }}>{units} units</div>
-                                        <div style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", letterSpacing: ".02em", color: "#1A5CFF", lineHeight: 1 }}>
+                                        <div style={{ fontSize: "11px", color: "#7A7880", marginBottom: "1px" }}>{units} units</div>
+                                        <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#1A5CFF", lineHeight: 1 }}>
                                           {formatCurrency(price)}
                                         </div>
                                       </div>
@@ -590,20 +643,21 @@ export default function QuickOrderPage() {
                               </tbody>
                             </table>
                           </div>
-                        ) : (
-                          <div style={{ fontSize: "13px", color: "#7A7880", fontStyle: "italic" }}>
-                            Select a color to see available sizes
-                          </div>
                         )}
                       </>
                     )}
                   </div>
                 )}
 
-                {/* Empty state */}
-                {!row.selectedProduct && !row.isLoadingDetail && (
-                  <div style={{ padding: "14px 20px 16px 46px", fontSize: "12px", color: "#ccc", fontStyle: "italic" }}>
-                    Search for a style above
+                {/* ── EMPTY STATE ── */}
+                {!hasProduct && !row.isLoadingDetail && (
+                  <div style={{ padding: "12px 68px 14px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ddd" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <span style={{ fontSize: "12px", color: "#ccc" }}>
+                      Type a product name or style number to search
+                    </span>
                   </div>
                 )}
               </div>
@@ -615,67 +669,55 @@ export default function QuickOrderPage() {
       {/* ══ STICKY BOTTOM BAR ════════════════════════════════════════════ */}
       <div style={{
         position: "sticky", bottom: 0, background: "#fff",
-        borderTop: "1px solid #E2E0DA", padding: "14px 32px",
+        borderTop: "1px solid #E2E0DA", padding: "12px 32px",
         display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap",
-        zIndex: 50, boxShadow: "0 -4px 16px rgba(0,0,0,.06)",
+        zIndex: 50, boxShadow: "0 -4px 20px rgba(0,0,0,.07)",
       }}>
-        {/* + Add Style */}
         <button
           onClick={() => setRows((prev) => [...prev, makeRow()])}
           style={{
             display: "flex", alignItems: "center", gap: "6px",
-            padding: "10px 18px", background: "#fff",
+            padding: "10px 16px", background: "#fff",
             border: "1.5px dashed #E2E0DA", borderRadius: "7px",
-            fontSize: "13px", fontWeight: 700, color: "#7A7880",
-            cursor: "pointer", textTransform: "uppercase", letterSpacing: ".05em",
+            fontSize: "12px", fontWeight: 700, color: "#7A7880",
+            cursor: "pointer", textTransform: "uppercase", letterSpacing: ".06em",
             transition: "all .2s",
           }}
           onMouseEnter={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#1A5CFF"; b.style.color = "#1A5CFF"; }}
           onMouseLeave={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#E2E0DA"; b.style.color = "#7A7880"; }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          Add Style
+          Add Line
         </button>
 
         {grandTotals.units > 0 && (
           <>
             <div style={{ flex: 1 }} />
-            <div style={{ fontSize: "14px", fontWeight: 600, color: "#2A2830" }}>
-              <span style={{ color: "#7A7880", fontWeight: 400 }}>
-                {grandTotals.units} unit{grandTotals.units !== 1 ? "s" : ""}
-              </span>
-              {"  ·  "}
-              <span style={{ color: "#E8242A", fontWeight: 700 }}>{formatCurrency(grandTotals.price)}</span>
+            <div style={{ fontSize: "13px", color: "#7A7880" }}>
+              {grandTotals.units} unit{grandTotals.units !== 1 ? "s" : ""}
+              <span style={{ margin: "0 8px", color: "#E2E0DA" }}>·</span>
+              <span style={{ fontWeight: 700, color: "#2A2830", fontSize: "15px" }}>{formatCurrency(grandTotals.price)}</span>
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
               disabled={isAddingToCart}
               style={{
                 background: "#1A5CFF", color: "#fff",
-                padding: "12px 28px", fontSize: "13px", fontWeight: 700,
-                borderRadius: "6px", border: "none",
+                padding: "11px 28px", fontSize: "13px", fontWeight: 700,
+                borderRadius: "7px", border: "none",
                 cursor: isAddingToCart ? "not-allowed" : "pointer",
-                textTransform: "uppercase", letterSpacing: ".06em",
+                textTransform: "uppercase", letterSpacing: ".07em",
+                transition: "background .2s",
               }}
+              onMouseEnter={(e) => { if (!isAddingToCart) (e.currentTarget as HTMLButtonElement).style.background = "#1348d4"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#1A5CFF"; }}
             >
-              {isAddingToCart ? "Adding…" : "Add to Shopping Box"}
+              {isAddingToCart ? "Adding…" : `Add ${grandTotals.units} Unit${grandTotals.units !== 1 ? "s" : ""} to Cart`}
             </button>
           </>
         )}
-      </div>
-
-      {/* ══ TIP BAR ══════════════════════════════════════════════════════ */}
-      <div style={{ background: "#F4F3EF", borderTop: "1px solid #E2E0DA", padding: "12px 32px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-        <p style={{ fontSize: "12px", color: "#7A7880", margin: 0, flex: 1 }}>
-          <strong style={{ color: "#2A2830" }}>Tip:</strong> Type min. 2 characters to search. Select a color then enter per-size quantities. All rows are added when you click "Add to Shopping Box".
-        </p>
-        <div style={{ display: "flex", gap: "20px", flexShrink: 0 }}>
-          {[{ label: "Browse Catalog", href: "/products" }, { label: "Order History", href: "/account/orders" }, { label: "Addresses", href: "/account/addresses" }].map((l) => (
-            <Link key={l.href} href={l.href} style={{ fontSize: "12px", fontWeight: 600, color: "#1A5CFF", textDecoration: "none" }}>{l.label}</Link>
-          ))}
-        </div>
       </div>
 
       <style>{`
@@ -699,7 +741,7 @@ function IconBtn({ children, title, onClick, danger = false }: {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        width: "30px", height: "30px", display: "flex", alignItems: "center", justifyContent: "center",
+        width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center",
         background: hov ? (danger ? "rgba(220,38,38,.07)" : "#F4F3EF") : "transparent",
         border: `1px solid ${hov ? (danger ? "rgba(220,38,38,.25)" : "#ddd") : "transparent"}`,
         borderRadius: "5px", cursor: "pointer",
