@@ -7,13 +7,15 @@ import Link from "next/link";
 const STEPS = [
   { label: "Shipping", href: "/checkout/address", step: 1 },
   { label: "Payment", href: "/checkout/payment", step: 2 },
-  { label: "Confirmed", href: "/checkout/review", step: 3 },
+  { label: "Review", href: "/checkout/review", step: 3 },
+  { label: "Confirmed", href: "/checkout/confirmed", step: 4 },
 ];
 
 function getActiveStep(pathname: string): number {
+  if (pathname.includes("/checkout/confirmed")) return 4;
   if (pathname.includes("/checkout/review")) return 3;
   if (pathname.includes("/checkout/payment")) return 2;
-  return 1; // address or details both count as step 1
+  return 1;
 }
 
 interface CheckoutLayoutProps {
@@ -44,7 +46,7 @@ export default function CheckoutLayout({ children }: CheckoutLayoutProps) {
             const isDone = activeStep > step.step;
             return (
               <div key={step.href} style={{ display: "flex", alignItems: "center", flex: i < STEPS.length - 1 ? 1 : undefined }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "14px 0", whiteSpace: "nowrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "14px 0", whiteSpace: "nowrap" }}>
                   {/* Bubble */}
                   <div style={{
                     width: "24px", height: "24px", borderRadius: "50%", flexShrink: 0,
@@ -65,7 +67,7 @@ export default function CheckoutLayout({ children }: CheckoutLayoutProps) {
                 </div>
                 {/* Connector */}
                 {i < STEPS.length - 1 && (
-                  <div style={{ flex: 1, height: "1.5px", background: isDone ? "#059669" : "#E2E0DA", margin: "0 12px" }} />
+                  <div style={{ flex: 1, height: "1.5px", background: isDone ? "#059669" : "#E2E0DA", margin: "0 6px" }} />
                 )}
               </div>
             );

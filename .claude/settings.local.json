@@ -136,7 +136,8 @@
       "Bash(rm migrations/versions/a1b2c3d4e5f6_add_category_image_url.py)",
       "Bash(grep -rh \"revision\" \"C:/Users/RT/Desktop/AF Apparel/backend/migrations/versions/\"*.py)",
       "Bash(grep -h \"^revision\\\\|^revision:\\\\|^down_revision\\\\|^down_revision:\" \"C:/Users/RT/Desktop/AF Apparel/backend/migrations/versions/\"*.py)",
-      "Bash(sort -t'\"' -k2)"
+      "Bash(sort -t'\"' -k2)",
+      "Bash(python \"C:/Users/RT/Desktop/AF Apparel/frontend/src/app/\\(customer\\)/checkout/payment/page.tsx\")"
     ]
   }
 }

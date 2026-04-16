@@ -5,16 +5,32 @@ import { apiClient } from "@/lib/api-client";
 import type { AuthTokens, UserProfile } from "@/types/user.types";
 
 export interface RegisterWholesalePayload {
+  // Required
   company_name: string;
-  tax_id?: string;
   business_type: string;
-  website?: string;
-  expected_monthly_volume?: string;
   first_name: string;
   last_name: string;
   email: string;
-  phone?: string;
   password: string;
+  // Optional company info
+  tax_id?: string;
+  website?: string;
+  phone?: string;
+  fax?: string;
+  company_email?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state_province?: string;
+  postal_code?: string;
+  country?: string;
+  ppai_number?: string;
+  asi_number?: string;
+  secondary_business?: string;
+  how_heard?: string;
+  num_employees?: string;
+  num_sales_reps?: string;
+  expected_monthly_volume?: string;
 }
 
 export interface LoginPayload {

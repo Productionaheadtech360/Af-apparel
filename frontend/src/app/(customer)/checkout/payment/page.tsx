@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import { QBPaymentForm } from "@/components/checkout/QBPaymentForm";
 import { useCheckoutStore } from "@/stores/checkout.store";
 import { useAuthStore } from "@/stores/auth.store";
-import { useCartStore } from "@/stores/cart.store";
 import { apiClient } from "@/lib/api-client";
 import { cartService } from "@/services/cart.service";
-import { ordersService } from "@/services/orders.service";
 import { formatCurrency } from "@/lib/utils";
 import type { Cart } from "@/types/order.types";
 
@@ -41,13 +39,7 @@ const sectionTitle: React.CSSProperties = {
 
 export default function CheckoutPaymentPage() {
   const router = useRouter();
-  const {
-    addressId, shippingAddress, companyName, contactName, shippingPhone,
-    shippingMethod, poNumber, orderNotes,
-    qbToken, setQbToken, savedCardId, setSavedCardId,
-    setConfirmedOrder, reset,
-  } = useCheckoutStore();
-  const clearCart = useCartStore((s) => s.clearCart);
+  const { shippingAddress, setSavedCardId, setQbToken } = useCheckoutStore();
   const { isAuthenticated, isLoading } = useAuthStore();
 
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
@@ -55,8 +47,13 @@ export default function CheckoutPaymentPage() {
   const [showNewCardForm, setShowNewCardForm] = useState(false);
   const [loadingCards, setLoadingCards] = useState(true);
   const [cart, setCart] = useState<Cart | null>(null);
-  const [isPlacing, setIsPlacing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // Guard: must have shipping address
+  useEffect(() => {
+    if (!shippingAddress) {
+      router.replace("/checkout/address");
+    }
+  }, [shippingAddress, router]);
 
   // Load saved cards
   useEffect(() => {
@@ -84,82 +81,15 @@ export default function CheckoutPaymentPage() {
     cartService.getCart().then(setCart).catch(() => {});
   }, []);
 
-  // Build color summary from cart for the confirmation page
-  function buildColorSummary(c: Cart): string {
-    const colorMap = new Map<string, number>();
-    for (const item of c.items) {
-      const col = item.color ?? "Default";
-      colorMap.set(col, (colorMap.get(col) ?? 0) + item.quantity);
-    }
-    return Array.from(colorMap.entries())
-      .map(([color, units]) => `${color} × ${units} units`)
-      .join(" + ");
-  }
-
-  async function handlePlaceOrder(tokenOrCardId: { type: "token"; token: string } | { type: "savedCard"; cardId: string }) {
-    setIsPlacing(true);
-    setError(null);
-
-    // Build shipping address payload
-    const fullAddress = shippingAddress
-      ? {
-          label: companyName || "Shipping",
-          full_name: contactName || undefined,
-          line1: shippingAddress.line1,
-          line2: shippingAddress.line2,
-          city: shippingAddress.city,
-          state: shippingAddress.state,
-          postal_code: shippingAddress.postal_code,
-          country: shippingAddress.country || "US",
-          phone: shippingPhone || undefined,
-        }
-      : undefined;
-
-    try {
-      const order = await ordersService.confirmOrder({
-        qb_token: tokenOrCardId.type === "token" ? tokenOrCardId.token : undefined,
-        saved_card_id: tokenOrCardId.type === "savedCard" ? tokenOrCardId.cardId : undefined,
-        address_id: addressId ? (addressId as string) : undefined,
-        shipping_address: fullAddress,
-        po_number: poNumber || undefined,
-        order_notes: orderNotes || undefined,
-      });
-
-      // Store confirmed order data for Step 3
-      const productName = cart?.items[0]?.product_name ?? "Your Order";
-      const colorSummary = cart ? buildColorSummary(cart) : "";
-      const subtotal = Number(cart?.subtotal ?? 0);
-      const shipping = Number(cart?.validation?.estimated_shipping ?? 0);
-      const total = subtotal + shipping;
-
-      setConfirmedOrder({
-        id: order.id,
-        number: order.order_number,
-        total,
-        units: cart?.total_units ?? 0,
-        colorSummary,
-        productName,
-        shippingMethod,
-      });
-
-      clearCart();
-      reset();
-      router.push("/checkout/review");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to place order. Please try again.");
-      setIsPlacing(false);
-    }
+  function handleContinueWithSavedCard() {
+    if (!selectedCardId) return;
+    setSavedCardId(selectedCardId);
+    router.push("/checkout/review");
   }
 
   function handleNewCardToken(token: string) {
     setQbToken(token);
-    handlePlaceOrder({ type: "token", token });
-  }
-
-  function handleUseSavedCard() {
-    if (!selectedCardId) return;
-    setSavedCardId(selectedCardId);
-    handlePlaceOrder({ type: "savedCard", cardId: selectedCardId });
+    router.push("/checkout/review");
   }
 
   if (loadingCards) {
@@ -278,6 +208,12 @@ export default function CheckoutPaymentPage() {
               <span>Subtotal ({cart.total_units} units)</span>
               <span style={{ fontWeight: 600, color: "#2A2830" }}>{formatCurrency(subtotal)}</span>
             </div>
+            {Number(cart.discount_percent) > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#059669" }}>
+                <span style={{ fontWeight: 600 }}>Tier Discount ({cart.discount_percent}% applied)</span>
+                <span style={{ fontWeight: 700 }}>&#10003; Included</span>
+              </div>
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#7A7880" }}>
               <span>Shipping</span>
               <span>{shipping > 0 ? formatCurrency(shipping) : "Calculated"}</span>
@@ -290,14 +226,7 @@ export default function CheckoutPaymentPage() {
         </div>
       )}
 
-      {/* ── Error ── */}
-      {error && (
-        <div style={{ padding: "12px 16px", borderRadius: "8px", background: "rgba(232,36,42,.07)", border: "1.5px solid rgba(232,36,42,.25)", color: "#E8242A", fontSize: "13px", fontWeight: 600, marginBottom: "14px" }}>
-          {error}
-        </div>
-      )}
-
-      {/* ── Place Order (saved card) ── */}
+      {/* ── Continue to Review (saved card) ── */}
       {!showNewCardForm && selectedCardId && (
         <div style={{ display: "flex", gap: "10px" }}>
           <button
@@ -305,32 +234,31 @@ export default function CheckoutPaymentPage() {
             onClick={() => router.push("/checkout/address")}
             style={{ flex: 1, padding: "14px", border: "1.5px solid #E2E0DA", borderRadius: "8px", background: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", color: "#7A7880" }}
           >
-            ← Back
+            &#8592; Back
           </button>
           <button
             type="button"
-            onClick={handleUseSavedCard}
-            disabled={isPlacing}
+            onClick={handleContinueWithSavedCard}
             style={{
-              flex: 2, padding: "14px", background: isPlacing ? "#E2E0DA" : "#E8242A",
-              color: isPlacing ? "#aaa" : "#fff", border: "none", borderRadius: "8px",
+              flex: 2, padding: "14px", background: "#E8242A",
+              color: "#fff", border: "none", borderRadius: "8px",
               fontFamily: "var(--font-bebas)", fontSize: "17px", letterSpacing: ".08em",
-              cursor: isPlacing ? "not-allowed" : "pointer", transition: "background .2s",
+              cursor: "pointer", transition: "background .2s",
             }}
           >
-            {isPlacing ? "Placing Order…" : "Place Order"}
+            Continue to Review &#8594;
           </button>
         </div>
       )}
 
-      {/* Back button when new card form is shown and no saved cards */}
-      {showNewCardForm && savedCards.length === 0 && !isPlacing && (
+      {/* Back button when new card form shown and no saved cards */}
+      {showNewCardForm && savedCards.length === 0 && (
         <button
           type="button"
           onClick={() => router.push("/checkout/address")}
           style={{ marginTop: "10px", padding: "12px 20px", border: "1.5px solid #E2E0DA", borderRadius: "8px", background: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", color: "#7A7880" }}
         >
-          ← Back to Shipping
+          &#8592; Back to Shipping
         </button>
       )}
     </div>

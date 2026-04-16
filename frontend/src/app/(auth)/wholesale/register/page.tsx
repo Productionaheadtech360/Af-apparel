@@ -159,13 +159,27 @@ export default function WholesaleRegisterPage() {
       await authService.registerWholesale({
         company_name: form.company_name,
         business_type: form.primary_business,
-        tax_id: form.resale_number,
-        website: form.website,
+        tax_id: form.resale_number || undefined,
+        website: form.website || undefined,
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
-        phone: form.phone,
+        phone: form.phone || undefined,
         password: form.password,
+        fax: form.fax || undefined,
+        company_email: form.company_email || undefined,
+        address_line1: form.address1 || undefined,
+        address_line2: form.address2 || undefined,
+        city: form.city || undefined,
+        state_province: form.state || undefined,
+        postal_code: form.postal_code || undefined,
+        country: form.country || undefined,
+        ppai_number: form.ppai_number || undefined,
+        asi_number: form.asi_number || undefined,
+        secondary_business: form.secondary_business || undefined,
+        how_heard: form.how_heard || undefined,
+        num_employees: form.num_employees || undefined,
+        num_sales_reps: form.num_sales_reps || undefined,
       });
       router.push("/wholesale/pending");
     } catch (err) {
@@ -221,7 +235,7 @@ export default function WholesaleRegisterPage() {
 
                 <div>
                   <label htmlFor="website" style={labelStyle}>Website <span style={{ color: "#aaa", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
-                  <input id="website" name="website" type="url" value={form.website} onChange={handleChange} placeholder="https://" style={inputStyle} />
+                  <input id="website" name="website" type="text" value={form.website} onChange={handleChange} placeholder="https://yourcompany.com" style={inputStyle} />
                 </div>
 
                 <div>

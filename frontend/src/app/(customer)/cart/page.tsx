@@ -151,6 +151,7 @@ export default function CartPage() {
   const isCheckoutEnabled = !disabledReason;
   const groups = cart ? groupByProduct(cart.items) : [];
   const subtotal = Number(cart?.subtotal ?? 0);
+  const discountPercent = Number(cart?.discount_percent ?? 0);
 
   return (
     <div style={{ minHeight: "100vh", background: "#F4F3EF", fontFamily: "var(--font-jakarta)", paddingBottom: "60px" }}>
@@ -308,6 +309,7 @@ export default function CartPage() {
               <OrderSummary
                 subtotal={subtotal}
                 estimatedShipping={Number(cart?.validation?.estimated_shipping ?? 0)}
+                discountPercent={discountPercent}
                 isValid={isCheckoutEnabled}
                 disabledReason={disabledReason}
                 onCheckout={() => router.push("/checkout/address")}
@@ -353,10 +355,11 @@ export default function CartPage() {
 
 // ── Order Summary sidebar component ──────────────────────────────────────────
 function OrderSummary({
-  subtotal, estimatedShipping, isValid, disabledReason, onCheckout,
+  subtotal, estimatedShipping, discountPercent, isValid, disabledReason, onCheckout,
 }: {
   subtotal: number;
   estimatedShipping: number;
+  discountPercent: number;
   isValid: boolean;
   disabledReason?: string;
   onCheckout: () => void;
@@ -384,6 +387,12 @@ function OrderSummary({
           <span>Subtotal</span>
           <span style={{ fontWeight: 600, color: "#2A2830" }}>{formatCurrency(subtotal)}</span>
         </div>
+        {discountPercent > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#059669" }}>
+            <span style={{ fontWeight: 600 }}>Tier Discount ({discountPercent}% applied)</span>
+            <span style={{ fontWeight: 700 }}>✓ Included</span>
+          </div>
+        )}
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#7A7880" }}>
           <span>Shipping</span>
           <span style={{ color: "#7A7880" }}>

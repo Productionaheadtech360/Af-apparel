@@ -34,6 +34,7 @@ export interface Cart {
   item_count: number;
   total_units: number;
   validation: CartValidation;
+  discount_percent: string;
 }
 
 /** Matrix add request (variant_id → quantity). */
