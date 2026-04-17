@@ -45,7 +45,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
             <Link key={cat.id} href={`/products?category=${cat.slug}`}
               style={{ background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px", overflow: "hidden", cursor: "pointer", transition: "all .25s", textDecoration: "none", display: "block" }}
               className="cat-card-hover">
-              <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#f0ede8 0%,#e8e4df 100%)", position: "relative" }}>
+              <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", background: "white", position: "relative" }}>
                 {(cat as any).image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
