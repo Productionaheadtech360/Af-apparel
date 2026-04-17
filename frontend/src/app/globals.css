@@ -29,6 +29,8 @@
     background: #FAFAFA;
     color: var(--af-text);
     -webkit-font-smoothing: antialiased;
+    font-weight: 500;
+    font-size: 15px;
   }
 
   ::-webkit-scrollbar { width: 4px; height: 4px; }

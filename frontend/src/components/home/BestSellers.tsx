@@ -2,12 +2,22 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { useAuthStore } from "@/stores/auth.store";
 import { productsService } from "@/services/products.service";
+import { LockIcon } from "@/components/ui/icons";
+
+interface ProductVariant {
+  color?: string | null;
+  retail_price?: number | string;
+  effective_price?: number | string;
+}
 
 interface ProductImageOut {
   url_thumbnail: string;
   url_medium: string;
   url_medium_webp?: string | null;
+  alt_text?: string | null;
 }
 
 interface ProductItem {
@@ -18,17 +28,20 @@ interface ProductItem {
   primary_image?: ProductImageOut | string | null;
   moq?: number;
   categories?: { name: string }[];
-  variants?: { retail_price: number | string }[];
+  variants?: ProductVariant[];
   fabric?: string | null;
   product_code?: string | null;
   weight?: string | null;
 }
 
-function imageUrl(img: ProductImageOut | string | null | undefined): string | null {
-  if (!img) return null;
-  if (typeof img === "string") return img;
-  return img.url_medium_webp ?? img.url_medium ?? null;
-}
+const COLOR_MAP: Record<string, string> = {
+  White: "#FFFFFF", Black: "#111111", Grey: "#9CA3AF", "Sport Grey": "#9CA3AF",
+  Charcoal: "#555555", Navy: "#1e3a5f", Red: "#E8242A", Blue: "#1A5CFF",
+  "Royal Blue": "#1A5CFF", "Light Blue": "#7DD3FC", Forest: "#1B4332",
+  Burgundy: "#722F37", Purple: "#7C3AED", Pink: "#F9A8D4", Sand: "#E8D5B7",
+  Gold: "#C9A84C", Mustard: "#D4A843", Orange: "#F97316", Yellow: "#FDE047",
+};
+const swatchColor = (name: string) => COLOR_MAP[name] ?? "#ccc";
 
 const FALLBACK: ProductItem[] = [
   { id: "1", name: "Classic White T-Shirt", slug: "classic-white-t-shirt", base_price: 8.99, categories: [{ name: "T-Shirts" }] },
@@ -44,6 +57,7 @@ const BADGES: Record<number, { label: string; bg: string }> = {
 
 export function BestSellers() {
   const [products, setProducts] = useState<ProductItem[]>([]);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
 
   useEffect(() => {
     productsService
@@ -65,79 +79,117 @@ export function BestSellers() {
             <h2 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(32px,3.5vw,48px)", color: "#2A2830", letterSpacing: ".01em", lineHeight: 1, marginBottom: "8px" }}>
               Best Sellers
             </h2>
-            <p style={{ fontSize: "14px", color: "#7A7880", margin: 0 }}>
+            <p style={{ fontSize: "15px", color: "#7A7880", margin: 0, fontWeight: 500 }}>
               Most ordered styles by our wholesale customers
             </p>
           </div>
-          <Link href="/products" style={{ fontSize: "13px", fontWeight: 700, color: "#1A5CFF", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}>
+          <Link href="/products" style={{ fontSize: "15px", fontWeight: 700, color: "#1A5CFF", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}>
             View All Products →
           </Link>
         </div>
 
-        {/* Grid */}
+        {/* Grid — same 4-col as collection page */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px" }} className="best-sellers-grid">
-          {products.map((product, i) => (
-            <Link key={product.id} href={`/products/${product.slug}`} style={{ textDecoration: "none", display: "block" }}>
-              <div
-                style={{ background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px", overflow: "hidden", transition: "all .25s" }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 30px rgba(0,0,0,.1)";
-                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
-                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-                }}
+          {products.map((product, i) => {
+            const primaryImage = product.primary_image;
+            const imgSrc = typeof primaryImage === "string"
+              ? primaryImage
+              : (primaryImage as ProductImageOut | null)?.url_medium_webp
+                ?? (primaryImage as ProductImageOut | null)?.url_medium
+                ?? null;
+            const imgAlt = (primaryImage as ProductImageOut | null)?.alt_text ?? product.name;
+            const variantColors = [...new Set((product.variants ?? []).map(v => v.color).filter(Boolean) as string[])];
+            const extraColors = variantColors.length > 5 ? variantColors.length - 5 : 0;
+            const primaryVariant = product.variants?.[0];
+            const price = primaryVariant?.effective_price ?? primaryVariant?.retail_price ?? product.base_price;
+
+            return (
+              <Link
+                key={product.id}
+                href={`/products/${product.slug}`}
+                style={{ display: "block", background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px", overflow: "hidden", textDecoration: "none", transition: "all .25s" }}
+                className="prod-card-hover"
               >
-                {/* Image */}
-                <div style={{ height: "220px", background: "linear-gradient(135deg,#f0ede8 0%,#e8e4df 100%)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-                  {imageUrl(product.primary_image) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imageUrl(product.primary_image)!} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {/* Image area — matches collection card */}
+                <div style={{ background: "linear-gradient(135deg,#ede9e3 0%,#e3dfd8 100%)", height: "220px", position: "relative", overflow: "hidden" }}>
+                  {imgSrc ? (
+                    <Image
+                      src={imgSrc}
+                      alt={imgAlt}
+                      fill
+                      sizes="(max-width: 640px) 50vw, 25vw"
+                      style={{ objectFit: "contain" }}
+                    />
                   ) : (
-                    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#2A2830" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.25 }}><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg>
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#2A2830" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.2 }}><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg>
+                    </div>
                   )}
+                  {/* Badge */}
                   {BADGES[i] && (
-                    <div style={{ position: "absolute", top: "12px", left: "12px", background: BADGES[i]!.bg, color: "#fff", fontFamily: "var(--font-bebas)", fontSize: "11px", letterSpacing: ".08em", padding: "4px 10px", borderRadius: "4px" }}>
+                    <div style={{ position: "absolute", top: "12px", left: "12px", background: BADGES[i]!.bg, color: "#fff", fontFamily: "var(--font-bebas)", fontSize: "11px", letterSpacing: ".08em", padding: "4px 10px", borderRadius: "4px", zIndex: 1 }}>
                       {BADGES[i]!.label}
                     </div>
                   )}
+                  {/* In Stock badge */}
+                  <div style={{ position: "absolute", top: "12px", right: "12px", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 700, color: "#059669", zIndex: 1 }}>
+                    <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="#059669"/></svg> In Stock
+                  </div>
                 </div>
 
-                {/* Info */}
-                <div style={{ padding: "16px 18px" }}>
-                  <div style={{ fontSize: "11px", color: "#7A7880", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: "5px", fontWeight: 600 }}>
-                    {[
-                      (product as any).fabric,
-                      (product as any).product_code,
-                      (product as any).weight,
-                    ].filter(Boolean).join(" · ") || product.categories?.[0]?.name || "Apparel"}
+                {/* Body */}
+                <div style={{ padding: "14px 16px" }}>
+                  {/* Category/fabric label */}
+                  <div style={{ fontSize: "11px", color: "#aaa", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: "4px", fontWeight: 600 }}>
+                    {[product.fabric, product.product_code, product.weight].filter(Boolean).join(" · ") || product.categories?.[0]?.name || "Apparel"}
                   </div>
-                  <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "17px", letterSpacing: ".03em", marginBottom: "8px", color: "#2A2830", lineHeight: 1.2 }}>
+
+                  {/* Product name */}
+                  <div style={{ fontFamily: "var(--font-bebas)", fontSize: "17px", letterSpacing: ".02em", marginBottom: "10px", color: "#2A2830", lineHeight: 1.2 }}>
                     {product.name}
-                  </h4>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      {(() => {
-                        const price = Number(product.base_price) || Number(product.variants?.[0]?.retail_price) || 0;
-                        return price > 0 ? (
-                          <>
-                            <span style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#1A5CFF" }}>${price.toFixed(2)}</span>
-                            <span style={{ fontSize: "11px", color: "#aaa", marginLeft: "4px" }}>/ unit</span>
-                          </>
-                        ) : (
-                          <span style={{ fontSize: "12px", color: "#7A7880", fontWeight: 600 }}>Login for pricing</span>
-                        );
-                      })()}
+                  </div>
+
+                  {/* Color swatches */}
+                  {variantColors.length > 0 && (
+                    <div style={{ display: "flex", gap: "4px", alignItems: "center", marginBottom: "10px", flexWrap: "wrap" }}>
+                      {variantColors.slice(0, 5).map((c) => (
+                        <div
+                          key={c}
+                          title={c}
+                          style={{
+                            width: "14px", height: "14px", borderRadius: "50%",
+                            background: swatchColor(c),
+                            border: "1.5px solid rgba(0,0,0,.12)",
+                            flexShrink: 0,
+                          }}
+                        />
+                      ))}
+                      {extraColors > 0 && (
+                        <span style={{ fontSize: "11px", color: "#aaa", fontWeight: 600 }}>+{extraColors}</span>
+                      )}
                     </div>
+                  )}
+
+                  {/* Price */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    {isAuthenticated && price ? (
+                      <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#2A2830", lineHeight: 1 }}>
+                        ${Number(price).toFixed(2)}
+                        <span style={{ fontSize: "13px", color: "#aaa", marginLeft: "4px", fontFamily: "var(--font-jakarta)", fontWeight: 500 }}>/ unit</span>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "13px", color: "#1A5CFF", fontWeight: 700, display: "flex", alignItems: "center", gap: "5px" }}>
+                        <LockIcon size={12} color="#1A5CFF" /> Login for pricing
+                      </div>
+                    )}
                     <div style={{ fontSize: "11px", color: "#7A7880", fontWeight: 600 }}>
                       MOQ: {product.moq ?? 6}
                     </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

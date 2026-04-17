@@ -16,11 +16,11 @@ export default function FaqSection() {
         <div style={{ maxWidth: "780px", margin: "0 auto" }}>
           {faqs.map((faq, i) => (
             <details key={i} style={{ border: "1px solid #E2E0DA", borderRadius: "8px", marginBottom: "8px", background: "#fff", overflow: "hidden" }}>
-              <summary style={{ padding: "18px 22px", fontSize: "14px", fontWeight: 600, cursor: "pointer", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#2A2830" }}>
+              <summary style={{ padding: "18px 22px", fontSize: "15px", fontWeight: 600, cursor: "pointer", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#2A2830" }}>
                 {faq.q}
                 <span style={{ fontSize: "18px", color: "#aaa", fontWeight: 300, marginLeft: "16px", flexShrink: 0 }}>＋</span>
               </summary>
-              <div style={{ padding: "14px 22px 18px", fontSize: "14px", color: "#7A7880", lineHeight: 1.75, borderTop: "1px solid #E2E0DA" }}>
+              <div style={{ padding: "14px 22px 18px", fontSize: "15px", color: "#7A7880", lineHeight: 1.75, borderTop: "1px solid #E2E0DA", fontWeight: 500 }}>
                 {faq.a}
               </div>
             </details>

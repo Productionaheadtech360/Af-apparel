@@ -16,7 +16,7 @@ export default function WhyChooseUs() {
           <div>
             <div style={{ marginBottom: "44px" }}>
               <h2 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(32px,3.5vw,48px)", color: "#2A2830", letterSpacing: ".01em", lineHeight: 1, marginBottom: "10px" }}>Why Choose AF Blanks</h2>
-              <p style={{ fontSize: "14px", color: "#7A7880" }}>Five reasons 2,000+ businesses source direct from us</p>
+              <p style={{ fontSize: "15px", color: "#7A7880", fontWeight: 500 }}>Five reasons 2,000+ businesses source direct from us</p>
             </div>
             {rows.map(({ Icon, h, p }) => (
               <div key={h} style={{ display: "flex", gap: "16px", marginBottom: "22px", alignItems: "flex-start" }}>
@@ -25,7 +25,7 @@ export default function WhyChooseUs() {
                 </div>
                 <div>
                   <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", letterSpacing: ".04em", marginBottom: "4px", color: "#2A2830" }}>{h}</h4>
-                  <p style={{ fontSize: "13px", color: "#7A7880", lineHeight: 1.6 }}>{p}</p>
+                  <p style={{ fontSize: "15px", color: "#7A7880", lineHeight: 1.6, fontWeight: 500 }}>{p}</p>
                 </div>
               </div>
             ))}

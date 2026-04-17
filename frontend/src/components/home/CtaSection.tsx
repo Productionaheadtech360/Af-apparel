@@ -7,14 +7,14 @@ export default function CtaSection() {
       <h2 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(40px,3vw,68px)", color: "#fff", lineHeight: 1, marginBottom: "14px", letterSpacing: ".01em", position: "relative" }}>
         READY TO STOCK PREMIUM BLANKS?
       </h2>
-      <p style={{ fontSize: "15px", color: "#d3d0d0", marginBottom: "36px", maxWidth: "440px", marginLeft: "auto", marginRight: "auto", position: "relative" }}>
+      <p style={{ fontSize: "17px", color: "#d3d0d0", marginBottom: "36px", maxWidth: "440px", marginLeft: "auto", marginRight: "auto", position: "relative", fontWeight: 500 }}>
         Join 2,000+ printing companies, retailers, and brands sourcing direct from American Fashion. Apply free — approved in 24 hours.
       </p>
       <div style={{ display: "flex", gap: "14px", justifyContent: "center", flexWrap: "wrap", position: "relative", marginBottom: "18px" }}>
-        <Link href="/wholesale/register" style={{ background: "#E8242A", color: "#fff", padding: "15px 36px", fontSize: "15px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
+        <Link href="/wholesale/register" style={{ background: "#E8242A", color: "#fff", padding: "15px 36px", fontSize: "17px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
           Apply for Wholesale Access →
         </Link>
-        <Link href="/products" style={{ background: "transparent", color: "#888", padding: "15px 36px", fontSize: "15px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", border: "1.5px solid #2a2a2a", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
+        <Link href="/products" style={{ background: "transparent", color: "#d3d0d0", padding: "15px 36px", fontSize: "17px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", border: "1.5px solid #444", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
           Browse Catalog
         </Link>
       </div>

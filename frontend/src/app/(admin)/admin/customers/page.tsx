@@ -373,7 +373,8 @@ export default function AdminCustomersPage() {
                   <td style={{ padding: "13px 14px" }}>
                     {co.contact_name && <div style={{ fontSize: "13px", color: "#2A2830", fontWeight: 600 }}>{co.contact_name}</div>}
                     {co.email && <div style={{ fontSize: "12px", color: "#7A7880" }}>{co.email}</div>}
-                    {!co.contact_name && !co.email && <span style={{ color: "#bbb", fontSize: "13px" }}>—</span>}
+                    {co.phone && <div style={{ fontSize: "12px", color: "#7A7880" }}>📞 {co.phone}</div>}
+                    {!co.contact_name && !co.email && !co.phone && <span style={{ color: "#bbb", fontSize: "13px" }}>—</span>}
                   </td>
                   <td style={{ padding: "13px 14px", textAlign: "right", fontWeight: 700, fontSize: "14px", color: "#2A2830" }}>{co.order_count}</td>
                   <td style={{ padding: "13px 14px", textAlign: "right", fontFamily: "var(--font-bebas)", fontSize: "18px", color: "#2A2830" }}>

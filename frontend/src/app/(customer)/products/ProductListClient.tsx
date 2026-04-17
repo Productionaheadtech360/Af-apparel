@@ -592,7 +592,7 @@ export function ProductListClient({
                           alt={primaryImage.alt_text ?? product.name}
                           fill
                           sizes="(max-width: 640px) 50vw, 33vw"
-                          style={{ objectFit: "cover" }}
+                          style={{ objectFit: "contain" }}
                         />
                       ) : (
                         <>

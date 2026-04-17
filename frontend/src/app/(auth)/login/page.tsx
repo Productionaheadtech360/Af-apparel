@@ -88,7 +88,7 @@ export default function LoginPage() {
             <h1 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(28px,4vw,40px)", color: "#fff", letterSpacing: ".02em", lineHeight: 1, marginBottom: "8px" }}>
               Sign In
             </h1>
-            <p style={{ fontSize: "14px", color: "#555" }}>
+            <p style={{ fontSize: "15px", color: "#d3d0d0", fontWeight: 500 }}>
               Access your wholesale account
             </p>
           </div>

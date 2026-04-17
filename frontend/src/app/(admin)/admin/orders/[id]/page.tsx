@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminService } from "@/services/admin.service";
 import { apiClient } from "@/lib/api-client";
@@ -161,6 +161,15 @@ export default function AdminOrderDetailPage() {
   const [editingNote, setEditingNote] = useState(false);
   const [noteText, setNoteText] = useState("");
 
+  // Add item state
+  const [itemSearch, setItemSearch] = useState("");
+  const [itemResults, setItemResults] = useState<{ variant_id: string; sku: string; product_name: string; color: string | null; size: string | null; price: number }[]>([]);
+  const [addingItem, setAddingItem] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<{ variant_id: string; sku: string; product_name: string; color: string | null; size: string | null; price: number } | null>(null);
+  const [addQty, setAddQty] = useState(1);
+  const [addItemMsg, setAddItemMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     adminService.getOrder(id).then(async (d) => {
       const o = d as AdminOrder;
@@ -256,6 +265,73 @@ export default function AdminOrderDetailPage() {
       setMsg({ text: "Note saved.", ok: true });
     } catch {
       setMsg({ text: "Failed to save note.", ok: false });
+    }
+  }
+
+  function handleItemSearchChange(val: string) {
+    setItemSearch(val);
+    setSelectedVariant(null);
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    if (!val.trim()) { setItemResults([]); return; }
+    searchDebounce.current = setTimeout(async () => {
+      try {
+        const data = await apiClient.get<{ items: { id: string; name: string; variants: { id: string; sku: string; color: string | null; size: string | null; retail_price: number }[] }[] }>(
+          `/api/v1/admin/products?q=${encodeURIComponent(val)}&page_size=20`
+        );
+        const results: typeof itemResults = [];
+        for (const p of data.items ?? []) {
+          for (const v of p.variants ?? []) {
+            results.push({ variant_id: v.id, sku: v.sku, product_name: p.name, color: v.color, size: v.size, price: Number(v.retail_price || 0) });
+          }
+        }
+        setItemResults(results.slice(0, 30));
+      } catch { /* ignore */ }
+    }, 350);
+  }
+
+  async function handleAddItem() {
+    if (!selectedVariant || addQty < 1) return;
+    setAddingItem(true); setAddItemMsg(null);
+    try {
+      const result = await apiClient.post<{ subtotal: number; total: number }>(
+        `/api/v1/admin/orders/${id}/items`,
+        { variant_id: selectedVariant.variant_id, quantity: addQty, unit_price: selectedVariant.price }
+      );
+      setOrder(prev => prev ? {
+        ...prev,
+        subtotal: String(result.subtotal),
+        total: String(result.total),
+        items: [...prev.items, {
+          id: crypto.randomUUID(),
+          sku: selectedVariant.sku,
+          product_name: selectedVariant.product_name,
+          color: selectedVariant.color,
+          size: selectedVariant.size,
+          quantity: addQty,
+          unit_price: String(selectedVariant.price),
+          line_total: String(selectedVariant.price * addQty),
+        }],
+      } : prev);
+      setAddItemMsg({ text: `Added ${addQty}x ${selectedVariant.product_name}`, ok: true });
+      setSelectedVariant(null); setItemSearch(""); setItemResults([]); setAddQty(1);
+    } catch (err: unknown) {
+      setAddItemMsg({ text: err instanceof Error ? err.message : "Failed to add item", ok: false });
+    } finally {
+      setAddingItem(false);
+    }
+  }
+
+  async function handleRemoveItem(itemId: string, lineTotal: string) {
+    try {
+      await apiClient.delete(`/api/v1/admin/orders/${id}/items/${itemId}`);
+      setOrder(prev => prev ? {
+        ...prev,
+        items: prev.items.filter(i => i.id !== itemId),
+        subtotal: String(Math.max(0, Number(prev.subtotal) - Number(lineTotal))),
+        total: String(Math.max(0, Number(prev.total) - Number(lineTotal))),
+      } : prev);
+    } catch {
+      setMsg({ text: "Failed to remove item.", ok: false });
     }
   }
 
@@ -420,11 +496,73 @@ export default function AdminOrderDetailPage() {
 
           {/* ORDER ITEMS */}
           <div style={{ ...CardStyle, padding: "24px" }}>
-            <h3 style={{ ...SectionHead, fontSize: "18px", letterSpacing: ".05em", marginBottom: "16px" }}>ORDER ITEMS</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ ...SectionHead, fontSize: "18px", letterSpacing: ".05em" }}>ORDER ITEMS</h3>
+            </div>
+
+            {/* Add Items — only for pending/draft orders */}
+            {(order.status === "pending" || order.status === "confirmed") && (
+              <div style={{ background: "#F4F3EF", borderRadius: "8px", padding: "16px", marginBottom: "20px" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A7880", marginBottom: "10px" }}>Add Product</div>
+                <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+                  <div style={{ flex: 1, position: "relative" }}>
+                    <input
+                      value={itemSearch}
+                      onChange={e => handleItemSearchChange(e.target.value)}
+                      placeholder="Search product by name or SKU…"
+                      style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #E2E0DA", borderRadius: "6px", fontSize: "13px", fontFamily: "var(--font-jakarta)", outline: "none", boxSizing: "border-box" as const, background: "#fff" }}
+                    />
+                    {itemResults.length > 0 && !selectedVariant && (
+                      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #E2E0DA", borderRadius: "6px", boxShadow: "0 8px 24px rgba(0,0,0,.12)", zIndex: 50, maxHeight: "200px", overflowY: "auto" as const }}>
+                        {itemResults.map(v => (
+                          <div
+                            key={v.variant_id}
+                            onClick={() => { setSelectedVariant(v); setItemSearch(`${v.product_name} — ${[v.color, v.size].filter(Boolean).join(" / ")}`); setItemResults([]); }}
+                            style={{ padding: "9px 12px", fontSize: "13px", cursor: "pointer", borderBottom: "1px solid #F4F3EF" }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#F4F3EF")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+                          >
+                            <span style={{ fontWeight: 600, color: "#2A2830" }}>{v.product_name}</span>
+                            <span style={{ color: "#7A7880", marginLeft: "8px" }}>
+                              {[v.color, v.size].filter(Boolean).join(" / ")}
+                            </span>
+                            <span style={{ color: "#1A5CFF", marginLeft: "8px", fontFamily: "monospace", fontSize: "11px" }}>{v.sku}</span>
+                            <span style={{ color: "#059669", marginLeft: "8px", fontWeight: 700 }}>${v.price.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="number"
+                    min={1}
+                    value={addQty}
+                    onChange={e => setAddQty(Math.max(1, Number(e.target.value)))}
+                    placeholder="Qty"
+                    style={{ width: "72px", padding: "9px 8px", border: "1.5px solid #E2E0DA", borderRadius: "6px", fontSize: "13px", textAlign: "center" as const, background: "#fff" }}
+                  />
+                  <button
+                    onClick={handleAddItem}
+                    disabled={!selectedVariant || addingItem}
+                    style={{ background: selectedVariant && !addingItem ? "#059669" : "#E2E0DA", color: selectedVariant && !addingItem ? "#fff" : "#aaa", border: "none", padding: "9px 18px", borderRadius: "6px", fontSize: "13px", fontWeight: 700, cursor: selectedVariant && !addingItem ? "pointer" : "not-allowed", whiteSpace: "nowrap" as const }}>
+                    {addingItem ? "Adding…" : "+ Add"}
+                  </button>
+                </div>
+                {selectedVariant && (
+                  <div style={{ fontSize: "12px", color: "#059669", fontWeight: 600 }}>
+                    Selected: {selectedVariant.product_name} — {[selectedVariant.color, selectedVariant.size].filter(Boolean).join(" / ")} @ ${selectedVariant.price.toFixed(2)}/unit
+                    <button onClick={() => { setSelectedVariant(null); setItemSearch(""); }} style={{ marginLeft: "8px", fontSize: "11px", color: "#E8242A", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+                  </div>
+                )}
+                {addItemMsg && (
+                  <div style={{ marginTop: "8px", fontSize: "12px", fontWeight: 600, color: addItemMsg.ok ? "#059669" : "#E8242A" }}>{addItemMsg.text}</div>
+                )}
+              </div>
+            )}
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: "2px solid #E2E0DA" }}>
-                  {["Product", "SKU", "Color / Size", "Qty", "Unit Price", "Total"].map(h => (
+                  {["Product", "SKU", "Color / Size", "Qty", "Unit Price", "Total", ""].map(h => (
                     <th key={h} style={{ textAlign: (h === "Qty" || h === "Unit Price" || h === "Total") ? "right" as const : "left" as const, padding: "10px 12px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".06em", color: "#7A7880" }}>{h}</th>
                   ))}
                 </tr>
@@ -442,6 +580,16 @@ export default function AdminOrderDetailPage() {
                     <td style={{ padding: "14px 12px", textAlign: "right" as const, fontWeight: 700, color: "#2A2830" }}>{item.quantity}</td>
                     <td style={{ padding: "14px 12px", textAlign: "right" as const, color: "#7A7880" }}>${Number(item.unit_price).toFixed(2)}</td>
                     <td style={{ padding: "14px 12px", textAlign: "right" as const, fontWeight: 700, fontFamily: "var(--font-bebas)", fontSize: "16px", color: "#2A2830" }}>${Number(item.line_total).toFixed(2)}</td>
+                    <td style={{ padding: "14px 12px", textAlign: "right" as const }}>
+                      {(order.status === "pending" || order.status === "confirmed") && (
+                        <button
+                          onClick={() => handleRemoveItem(item.id, item.line_total)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "14px", fontWeight: 700, padding: "2px 6px" }}
+                          title="Remove item">
+                          ✕
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

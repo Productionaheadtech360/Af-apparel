@@ -38,7 +38,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px" }}>
         <div style={{ marginBottom: "44px" }}>
           <h2 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(32px,3.5vw,48px)", color: "#2A2830", letterSpacing: ".01em", lineHeight: 1, marginBottom: "10px" }}>Shop by Category</h2>
-          <p style={{ fontSize: "14px", color: "#7A7880" }}>Browse our full range of print-ready blank apparel</p>
+          <p style={{ fontSize: "15px", color: "#7A7880", fontWeight: 500 }}>Browse our full range of print-ready blank apparel</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "16px" }} className="cat-grid-responsive">
           {items.map((cat) => (
@@ -51,7 +51,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                   <img
                     src={(cat as any).image_url}
                     alt={cat.name}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", position: "absolute", inset: 0 }}
                   />
                 ) : (
                   <ShirtIcon size={52} color="#2A2830" style={{ opacity: 0.2 }} />
@@ -59,8 +59,8 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
               </div>
               <div style={{ padding: "20px 22px" }}>
                 <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "18px", letterSpacing: ".03em", marginBottom: "5px", color: "#2A2830" }}>{cat.name}</h4>
-                <p style={{ fontSize: "13px", color: "#7A7880", marginBottom: "12px", lineHeight: 1.5 }}>{categoryDescriptions[cat.slug] ?? "Premium print-ready blanks."}</p>
-                <div style={{ fontSize: "13px", fontWeight: 700, color: "#1A5CFF", display: "flex", alignItems: "center", gap: "6px" }}>Shop {cat.name} →</div>
+                <p style={{ fontSize: "15px", color: "#7A7880", marginBottom: "12px", lineHeight: 1.5, fontWeight: 500 }}>{categoryDescriptions[cat.slug] ?? "Premium print-ready blanks."}</p>
+                <div style={{ fontSize: "15px", fontWeight: 700, color: "#1A5CFF", display: "flex", alignItems: "center", gap: "6px" }}>Shop {cat.name} →</div>
               </div>
             </Link>
           ))}
