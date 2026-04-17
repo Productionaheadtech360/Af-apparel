@@ -192,7 +192,7 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,.06)", textAlign: "center", fontSize: "13px", color: "#555" }}>
+            <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,.06)", textAlign: "center", fontSize: "13px", color: "#aaa" }}>
               {"Don't have an account? "}
               <Link
                 href="/wholesale/register"
@@ -206,13 +206,13 @@ export default function LoginPage() {
           {/* Benefits */}
           <div style={{ marginTop: "28px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
             {[
-              { icon: <FactoryIcon size={20} color="#555" />, text: "Factory-Direct" },
-              { icon: <ZapIcon size={20} color="#555" />, text: "Same-Day Ship" },
-              { icon: <CreditCardIcon size={20} color="#555" />, text: "NET 30 Terms" },
+              { icon: <FactoryIcon size={20} color="#aaa" />, text: "Factory-Direct" },
+              { icon: <ZapIcon size={20} color="#aaa" />, text: "Same-Day Ship" },
+              { icon: <CreditCardIcon size={20} color="#aaa" />, text: "NET 30 Terms" },
             ].map((item) => (
               <div key={item.text} style={{ textAlign: "center", padding: "12px 8px", background: "#111016", border: "1px solid rgba(255,255,255,.06)", borderRadius: "8px" }}>
                 <div style={{ marginBottom: "4px", display: "flex", justifyContent: "center" }}>{item.icon}</div>
-                <div style={{ fontSize: "11px", fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>{item.text}</div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: ".06em" }}>{item.text}</div>
               </div>
             ))}
           </div>
@@ -220,9 +220,9 @@ export default function LoginPage() {
       </div>
 
       {/* Footer */}
-      <div style={{ padding: "20px 32px", borderTop: "1px solid rgba(255,255,255,.06)", textAlign: "center", fontSize: "12px", color: "#333" }}>
+      <div style={{ padding: "20px 32px", borderTop: "1px solid rgba(255,255,255,.06)", textAlign: "center", fontSize: "12px", color: "#888" }}>
         © {new Date().getFullYear()} AF Apparels · Dallas, TX ·{" "}
-        <a href="tel:+12142727213" style={{ color: "#555", textDecoration: "none" }}>(214) 272-7213</a>
+        <a href="tel:+12142727213" style={{ color: "#aaa", textDecoration: "none" }}>(214) 272-7213</a>
       </div>
     </div>
   );

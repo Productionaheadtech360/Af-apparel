@@ -207,7 +207,7 @@ export default function WholesaleRegisterPage() {
         <h1 style={{ fontFamily: "var(--font-bebas)", fontSize: "clamp(28px,3vw,42px)", color: "#fff", letterSpacing: ".02em", lineHeight: 1, marginBottom: "8px" }}>
           Apply for Wholesale Access
         </h1>
-        <p style={{ fontSize: "14px", color: "#555", maxWidth: "460px", margin: "0 auto" }}>
+        <p style={{ fontSize: "14px", color: "#d3d0d0", maxWidth: "460px", margin: "0 auto" }}>
           Free to apply. Approved within 24 hours. No commitment required.
         </p>
       </div>
@@ -501,21 +501,21 @@ export default function WholesaleRegisterPage() {
               <div style={{ minWidth: "28px", display: "flex", paddingTop: "1px" }}>{item.icon}</div>
               <div>
                 <div style={{ fontFamily: "var(--font-bebas)", fontSize: "13px", letterSpacing: ".04em", color: "#ccc", marginBottom: "3px" }}>{item.h}</div>
-                <div style={{ fontSize: "12px", color: "#444", lineHeight: 1.55 }}>{item.p}</div>
+                <div style={{ fontSize: "12px", color: "#aaa", lineHeight: 1.55 }}>{item.p}</div>
               </div>
             </div>
           ))}
 
           <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,.06)" }}>
-            <div style={{ fontSize: "11px", color: "#333", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700, marginBottom: "10px" }}>Trusted by 2,000+ Businesses</div>
-            <div style={{ fontSize: "12px", color: "#444", lineHeight: 1.6 }}>
+            <div style={{ fontSize: "11px", color: "#aaa", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700, marginBottom: "10px" }}>Trusted by 2,000+ Businesses</div>
+            <div style={{ fontSize: "12px", color: "#aaa", lineHeight: 1.6 }}>
               Printing companies, retailers, corporate buyers, and apparel brands across the US source direct from AF Apparels.
             </div>
           </div>
 
           <div style={{ marginTop: "20px", background: "rgba(26,92,255,.08)", border: "1px solid rgba(26,92,255,.15)", borderRadius: "8px", padding: "14px" }}>
             <div style={{ fontSize: "12px", color: "#6B9FFF", fontWeight: 600, marginBottom: "4px" }}>Questions?</div>
-            <div style={{ fontSize: "12px", color: "#555" }}>
+            <div style={{ fontSize: "12px", color: "#aaa" }}>
               (214) 272-7213<br />
               info@afblanks.com
             </div>

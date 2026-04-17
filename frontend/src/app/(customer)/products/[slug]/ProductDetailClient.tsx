@@ -41,7 +41,7 @@ type Tab = (typeof TABS)[number];
 interface ReviewData {
   id: string; rating: number; title: string | null; body: string;
   reviewer_name: string; reviewer_company: string | null;
-  is_verified: boolean; created_at: string;
+  is_verified: boolean; image_url?: string | null; created_at: string;
 }
 
 function StarRow({ rating, size = 14 }: { rating: number; size?: number }) {
@@ -65,6 +65,8 @@ function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthe
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [form, setForm] = useState({ rating: 5, title: "", body: "", reviewer_name: "", reviewer_company: "" });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   async function fetchReviews() {
     setLoading(true);
@@ -81,21 +83,49 @@ function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthe
 
   useEffect(() => { fetchReviews(); }, [productId]); // eslint-disable-line
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setImageFile(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = ev => setImagePreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setImagePreview(null);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.reviewer_name.trim() || !form.body.trim()) return;
     setSubmitting(true);
     setSubmitMsg(null);
     try {
+      let image_url: string | null = null;
+
+      if (imageFile) {
+        const fd = new FormData();
+        fd.append("file", imageFile);
+        try {
+          const uploadRes = await apiClient.postForm<{ url: string }>("/api/v1/reviews/upload-image", fd);
+          image_url = uploadRes.url;
+        } catch {
+          // Image upload failed — submit review without image
+        }
+      }
+
       await apiClient.post(`/api/v1/products/${productId}/reviews`, {
         rating: form.rating,
         title: form.title || null,
         body: form.body,
         reviewer_name: form.reviewer_name,
         reviewer_company: form.reviewer_company || null,
+        image_url,
       });
       setSubmitMsg({ type: "success", text: "Review submitted! Thank you." });
       setForm({ rating: 5, title: "", body: "", reviewer_name: "", reviewer_company: "" });
+      setImageFile(null);
+      setImagePreview(null);
       setShowForm(false);
       await fetchReviews();
     } catch (err) {
@@ -135,12 +165,12 @@ function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthe
         </div>
       )}
 
-      {/* Write review button */}
+      {/* Header row */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <div style={{ fontSize: "15px", fontWeight: 700, color: "#2A2830" }}>
           {loading ? "Loading reviews…" : total === 0 ? "No reviews yet" : `${total} Review${total !== 1 ? "s" : ""}`}
         </div>
-        {!showForm && (
+        {isAuthenticated && !showForm && (
           <button
             onClick={() => setShowForm(true)}
             style={{ padding: "9px 18px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
@@ -150,8 +180,8 @@ function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthe
         )}
       </div>
 
-      {/* Submit form */}
-      {showForm && (
+      {/* Submit form — only shown when logged in */}
+      {isAuthenticated && showForm && (
         <form onSubmit={handleSubmit} style={{ background: "#F4F3EF", border: "1px solid #E2E0DA", borderRadius: "10px", padding: "20px 22px", marginBottom: "24px" }}>
           <div style={{ fontFamily: "var(--font-bebas)", fontSize: "18px", letterSpacing: ".04em", color: "#2A2830", marginBottom: "16px" }}>YOUR REVIEW</div>
 
@@ -185,9 +215,25 @@ function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthe
             <input style={inp} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Great quality blanks" />
           </div>
 
-          <div style={{ marginBottom: "16px" }}>
+          <div style={{ marginBottom: "12px" }}>
             <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "4px" }}>Review *</div>
             <textarea style={{ ...inp, minHeight: "100px", resize: "vertical" }} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="Share your experience with this product…" required minLength={10} />
+          </div>
+
+          {/* Image upload */}
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "4px" }}>Photo (optional)</div>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 14px", border: "1.5px dashed #C9A84C", borderRadius: "7px", cursor: "pointer", fontSize: "13px", color: "#7A7880", fontWeight: 600 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              {imageFile ? imageFile.name : "Upload a photo"}
+              <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
+            </label>
+            {imagePreview && (
+              <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "12px" }}>
+                <img src={imagePreview} alt="Preview" style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "6px", border: "1px solid #E2E0DA" }} />
+                <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }} style={{ fontSize: "12px", color: "#E8242A", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Remove</button>
+              </div>
+            )}
           </div>
 
           {submitMsg && (
@@ -197,7 +243,7 @@ function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthe
           )}
 
           <div style={{ display: "flex", gap: "10px" }}>
-            <button type="button" onClick={() => setShowForm(false)} style={{ padding: "10px 18px", border: "1.5px solid #E2E0DA", borderRadius: "7px", fontSize: "13px", fontWeight: 600, cursor: "pointer", background: "#fff" }}>
+            <button type="button" onClick={() => { setShowForm(false); setImageFile(null); setImagePreview(null); }} style={{ padding: "10px 18px", border: "1.5px solid #E2E0DA", borderRadius: "7px", fontSize: "13px", fontWeight: 600, cursor: "pointer", background: "#fff" }}>
               Cancel
             </button>
             <button type="submit" disabled={submitting || !form.reviewer_name.trim() || form.body.trim().length < 10}
@@ -219,22 +265,33 @@ function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthe
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {reviews.map(r => (
           <div key={r.id} style={{ padding: "18px 20px", background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                  <StarRow rating={r.rating} size={13} />
+            {/* Name at top */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#F4F3EF", border: "1px solid #E2E0DA", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "13px", color: "#2A2830", flexShrink: 0 }}>
+                  {r.reviewer_name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "13px", color: "#2A2830" }}>
+                    {r.reviewer_name}
+                    {r.reviewer_company && <span style={{ fontWeight: 400, color: "#7A7880" }}> · {r.reviewer_company}</span>}
+                  </div>
                   {r.is_verified && (
-                    <span style={{ background: "rgba(5,150,105,.1)", color: "#059669", fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: "3px" }}>Verified</span>
+                    <span style={{ background: "rgba(5,150,105,.1)", color: "#059669", fontSize: "10px", fontWeight: 700, padding: "1px 5px", borderRadius: "3px" }}>Verified</span>
                   )}
                 </div>
-                {r.title && <div style={{ fontWeight: 700, fontSize: "14px", color: "#2A2830", marginBottom: "2px" }}>{r.title}</div>}
               </div>
               <div style={{ fontSize: "11px", color: "#aaa", flexShrink: 0 }}>{new Date(r.created_at).toLocaleDateString()}</div>
             </div>
-            <p style={{ fontSize: "14px", color: "#2A2830", lineHeight: 1.6, margin: 0, marginBottom: "8px" }}>{r.body}</p>
-            <div style={{ fontSize: "12px", color: "#7A7880" }}>
-              — {r.reviewer_name}{r.reviewer_company ? `, ${r.reviewer_company}` : ""}
+            {/* Stars + title */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: r.title ? "4px" : "8px" }}>
+              <StarRow rating={r.rating} size={13} />
             </div>
+            {r.title && <div style={{ fontWeight: 700, fontSize: "14px", color: "#2A2830", marginBottom: "6px" }}>{r.title}</div>}
+            <p style={{ fontSize: "14px", color: "#2A2830", lineHeight: 1.6, margin: 0, marginBottom: r.image_url ? "10px" : "0" }}>{r.body}</p>
+            {r.image_url && (
+              <img src={r.image_url} alt="Review photo" style={{ marginTop: "4px", maxWidth: "180px", maxHeight: "180px", objectFit: "cover", borderRadius: "6px", border: "1px solid #E2E0DA" }} />
+            )}
           </div>
         ))}
       </div>

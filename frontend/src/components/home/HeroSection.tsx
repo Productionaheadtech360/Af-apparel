@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useAuthStore } from "@/stores/auth.store";
 
 export default function HeroSection() {
+  const { isAuthenticated } = useAuthStore();
+  const loggedIn = isAuthenticated();
+
   return (
     <section style={{ background: "##080808", minHeight: "580px", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 60% at 70% 50%,rgba(26,92,255,.08) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 10% 80%,rgba(232,36,42,.06) 0%,transparent 60%)" }} />
@@ -21,8 +27,11 @@ export default function HeroSection() {
             Factory-direct blank apparel with <strong style={{ color: "#000", fontWeight: 800 }}>no middlemen</strong>, no minimums on in-stock items, and same-day shipping from Dallas. Print-optimized fabrics tested for DTF, screen printing, and embroidery.
           </p>
           <div className="hero-cta-row" style={{ marginBottom: "40px" }}>
-            <Link href="/wholesale/register" style={{ background: "#E8242A", color: "#fff", padding: "15px 36px", fontSize: "15px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
-              Apply for Wholesale →
+            <Link
+              href={loggedIn ? "/account" : "/wholesale/register"}
+              style={{ background: "#E8242A", color: "#fff", padding: "15px 36px", fontSize: "15px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", transition: "all .2s", display: "inline-flex", alignItems: "center" }}
+            >
+              {loggedIn ? "Go to Dashboard →" : "Apply for Wholesale →"}
             </Link>
             <Link href="/products" style={{ background: "transparent", color: "#1a5cff", padding: "15px 36px", fontSize: "15px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", border: "1.5px solid #1a5cff", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
               Browse Catalog
@@ -43,14 +52,6 @@ export default function HeroSection() {
             ))}
           </div>
         </div>
-        {/* <div className="hidden lg:flex" style={{ position: "relative" }}>
-          <div style={{ background: "linear-gradient(135deg,#1a1a1a 0%,#111 100%)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "12px", height: "400px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", position: "relative", overflow: "hidden", width: "100%" }}>
-            <div style={{ position: "absolute", top: "-20%", right: "-30%", width: "300px", height: "300px", background: "radial-gradient(circle,rgba(26,92,255,.15) 0%,transparent 70%)", pointerEvents: "none" }} />
-            <div style={{ fontSize: "64px", opacity: .3 }}>👕</div>
-            <div style={{ fontSize: "13px", color: "#333", fontWeight: 600, letterSpacing: ".05em" }}>HERO LIFESTYLE IMAGE</div>
-            <div style={{ position: "absolute", top: "-12px", right: "20px", background: "#E8242A", color: "#fff", fontFamily: "var(--font-bebas)", fontSize: "14px", letterSpacing: ".06em", padding: "6px 16px", borderRadius: "4px" }}>NEW ARRIVALS</div>
-          </div>
-        </div> */}
         <div className="hidden lg:flex" style={{ position: "relative" }}>
           <div style={{ background: "linear-gradient(135deg,#1a1a1a 0%,#111 100%)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "12px", height: "400px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", position: "relative", overflow: "hidden", width: "100%" }}>
             <div style={{ position: "absolute", top: "-20%", right: "-30%", width: "300px", height: "300px", background: "radial-gradient(circle,rgba(26,92,255,.15) 0%,transparent 70%)", pointerEvents: "none" }} />

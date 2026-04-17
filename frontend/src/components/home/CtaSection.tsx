@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useAuthStore } from "@/stores/auth.store";
 
 export default function CtaSection() {
+  const { isAuthenticated } = useAuthStore();
+  const loggedIn = isAuthenticated();
+
   return (
     <div style={{ background: "#080808", padding: "88px 32px", textAlign: "center", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 50% 50%,rgba(26,92,255,.08) 0%,transparent 70%)" }} />
@@ -11,8 +17,11 @@ export default function CtaSection() {
         Join 2,000+ printing companies, retailers, and brands sourcing direct from American Fashion. Apply free — approved in 24 hours.
       </p>
       <div style={{ display: "flex", gap: "14px", justifyContent: "center", flexWrap: "wrap", position: "relative", marginBottom: "18px" }}>
-        <Link href="/wholesale/register" style={{ background: "#E8242A", color: "#fff", padding: "15px 36px", fontSize: "17px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
-          Apply for Wholesale Access →
+        <Link
+          href={loggedIn ? "/account" : "/wholesale/register"}
+          style={{ background: "#E8242A", color: "#fff", padding: "15px 36px", fontSize: "17px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", transition: "all .2s", display: "inline-flex", alignItems: "center" }}
+        >
+          {loggedIn ? "Go to Dashboard →" : "Apply for Wholesale Access →"}
         </Link>
         <Link href="/products" style={{ background: "transparent", color: "#d3d0d0", padding: "15px 36px", fontSize: "17px", borderRadius: "6px", fontWeight: 700, textDecoration: "none", border: "1.5px solid #444", transition: "all .2s", display: "inline-flex", alignItems: "center" }}>
           Browse Catalog
