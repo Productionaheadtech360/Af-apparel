@@ -735,9 +735,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                                 <input
                                   type="number"
                                   min="0"
+                                  max={variant.stock_quantity ?? undefined}
                                   value={qty === 0 ? "" : qty}
                                   onChange={e => {
-                                    const val = parseInt(e.target.value, 10) || 0;
+                                    const raw = parseInt(e.target.value, 10) || 0;
+                                    const maxStock = variant.stock_quantity ?? 9999;
+                                    const val = Math.min(raw, maxStock);
                                     setQuantities(prev => {
                                       if (val <= 0) {
                                         const next = { ...prev };
@@ -749,12 +752,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                                   }}
                                   style={{ width: "64px", height: "44px", textAlign: "center", border: qty > 0 ? "2px solid #1A5CFF" : "1.5px solid #E2E0DA", borderRadius: "8px", fontSize: "15px", fontWeight: 700, outline: "none", fontFamily: "var(--font-jakarta)" }}
                                 />
-                                <div style={{
-                                  fontSize: "10px", fontWeight: 700, marginTop: "4px", textAlign: "center",
-                                  color: (variant.stock_quantity ?? 0) > 10 ? "#059669" : (variant.stock_quantity ?? 0) >= 5 ? "#D97706" : "#E8242A",
-                                }}>
-                                  {variant.stock_quantity ?? 0}
-                                </div>
+                                {(() => {
+                                  const stock = variant.stock_quantity ?? 0;
+                                  const isUnlimited = stock >= 9999;
+                                  const color = isUnlimited || stock > 10 ? "#059669" : stock >= 5 ? "#D97706" : "#E8242A";
+                                  return (
+                                    <div style={{ fontSize: "10px", fontWeight: 700, marginTop: "4px", textAlign: "center", color }}>
+                                      {isUnlimited ? "In Stock" : `${stock} left`}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             );
                           })}
@@ -870,10 +877,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                   {uniqueSizes.map(size => {
                     const sizeStock = (product.variants ?? []).filter(v => v.size === size).reduce((s, v) => s + (v.stock_quantity ?? 0), 0);
+                    const sizeUnlimited = sizeStock >= 9999;
                     return (
                       <div key={size} style={{ textAlign: "center" }}>
                         <span style={{ display: "block", padding: "4px 10px", border: "1px solid #E2E0DA", borderRadius: "4px", fontSize: "12px", fontWeight: 600, color: "#2A2830", background: "#fff" }}>{size}</span>
-                        <span style={{ fontSize: "10px", color: "#7A7880", marginTop: "2px", display: "block" }}>{sizeStock} in stock</span>
+                        <span style={{ fontSize: "10px", color: "#7A7880", marginTop: "2px", display: "block" }}>{sizeUnlimited ? "In Stock" : `${sizeStock} left`}</span>
                       </div>
                     );
                   })}
