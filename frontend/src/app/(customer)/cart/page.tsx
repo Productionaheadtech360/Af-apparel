@@ -214,22 +214,52 @@ export default function CartPage() {
                       transition: "opacity .2s",
                     }}
                   >
-                    {/* ── Product header ── */}
-                    <div style={{ marginBottom: "4px" }}>
-                      <h2 style={{ fontSize: "15px", fontWeight: 800, color: "#2A2830", marginBottom: "4px", lineHeight: 1.2 }}>
-                        {group.productName}
-                      </h2>
-                      <div style={{ fontSize: "12px", color: "#7A7880", display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                        {group.sku && <span style={{ fontFamily: "monospace", background: "#F4F3EF", padding: "1px 6px", borderRadius: "3px", fontSize: "11px" }}>#{group.sku}</span>}
+                    {/* ── Product header (image + title) ── */}
+                    <div style={{ display: "flex", gap: "14px", marginBottom: "4px", alignItems: "flex-start" }}>
+                      {/* Product image */}
+                      <div style={{ width: "72px", height: "72px", borderRadius: "8px", overflow: "hidden", background: "#F4F3EF", border: "1px solid #E2E0DA", flexShrink: 0 }}>
+                        {group.items[0]?.product_image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={group.items[0].product_image_url}
+                            alt={group.productName}
+                            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                          />
+                        ) : (
+                          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth={1.5}><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h2 style={{ fontSize: "15px", fontWeight: 800, color: "#2A2830", marginBottom: "4px", lineHeight: 1.2 }}>
+                          {group.productName}
+                        </h2>
+                        <div style={{ fontSize: "12px", color: "#7A7880", display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                          {group.sku && <span style={{ fontFamily: "monospace", background: "#F4F3EF", padding: "1px 6px", borderRadius: "3px", fontSize: "11px" }}>#{group.sku}</span>}
+                        </div>
                       </div>
                     </div>
 
                     {/* ── Units + price/unit ── */}
-                    <div style={{ marginTop: "10px", fontSize: "13px", color: "#7A7880", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ fontWeight: 700, color: "#2A2830", fontSize: "14px" }}>{group.totalUnits.toLocaleString()} total units</span>
-                      <span style={{ color: "#ccc" }}>·</span>
-                      <span>{formatCurrency(group.unitPrice)}/unit</span>
-                    </div>
+                    {(() => {
+                      const retailPrice = Number(group.items[0]?.retail_price ?? 0);
+                      const hasDiscount = retailPrice > 0 && retailPrice > group.unitPrice + 0.001;
+                      return (
+                        <div style={{ marginTop: "10px", fontSize: "13px", color: "#7A7880", display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                          <span style={{ fontWeight: 700, color: "#2A2830", fontSize: "14px" }}>{group.totalUnits.toLocaleString()} total units</span>
+                          <span style={{ color: "#ccc" }}>·</span>
+                          {hasDiscount ? (
+                            <>
+                              <span style={{ textDecoration: "line-through", color: "#bbb" }}>{formatCurrency(retailPrice)}</span>
+                              <span style={{ fontWeight: 700, color: "#059669" }}>{formatCurrency(group.unitPrice)}/unit</span>
+                            </>
+                          ) : (
+                            <span>{formatCurrency(group.unitPrice)}/unit</span>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {divider}
 

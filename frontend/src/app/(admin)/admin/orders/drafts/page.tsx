@@ -61,6 +61,7 @@ function CreateDraftModal({ onClose, onSuccess }: { onClose: () => void; onSucce
   const [companyId, setCompanyId] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [companySearch, setCompanySearch] = useState("");
+  const [companyDiscount, setCompanyDiscount] = useState(0); // percent
 
   // Step 2
   const [products, setProducts] = useState<DraftProduct[]>([]);
@@ -97,6 +98,11 @@ function CreateDraftModal({ onClose, onSuccess }: { onClose: () => void; onSucce
       .finally(() => setLoadingProducts(false));
   }, [step, productSearch]);
 
+  function applyDiscount(price: number) {
+    if (!companyDiscount) return price;
+    return price * (1 - companyDiscount / 100);
+  }
+
   function addLineItems() {
     if (!selectedProduct) return;
     const toAdd: DraftLineItem[] = [];
@@ -105,11 +111,12 @@ function CreateDraftModal({ onClose, onSuccess }: { onClose: () => void; onSucce
       if (!qty || qty <= 0) continue;
       const variant = selectedProduct.variants?.find(v => v.id === vid);
       if (!variant) continue;
+      const discountedPrice = applyDiscount(parseFloat(variant.retail_price) || 0);
       const existing = lineItems.findIndex(l => l.variantId === vid);
       if (existing >= 0) {
         setLineItems(prev => prev.map((l, i) => i === existing ? { ...l, qty: l.qty + qty } : l));
       } else {
-        toAdd.push({ variantId: vid, productId: selectedProduct.id, productName: selectedProduct.name, color: variant.color, size: variant.size, price: parseFloat(variant.retail_price) || 0, qty });
+        toAdd.push({ variantId: vid, productId: selectedProduct.id, productName: selectedProduct.name, color: variant.color, size: variant.size, price: discountedPrice, qty });
       }
     }
     if (toAdd.length > 0) setLineItems(prev => [...prev, ...toAdd]);
@@ -181,7 +188,13 @@ function CreateDraftModal({ onClose, onSuccess }: { onClose: () => void; onSucce
               {companies.length > 0 && !companyId && (
                 <div style={{ border: "1.5px solid #E2E0DA", borderTop: "none", borderRadius: "0 0 7px 7px", maxHeight: "200px", overflowY: "auto", background: "#fff" }}>
                   {companies.map(c => (
-                    <div key={c.id} onClick={() => { setCompanyId(c.id); setCompanyName(c.name); setCompanySearch(c.name); setCompanies([]); }}
+                    <div key={c.id} onClick={async () => {
+                      setCompanyId(c.id); setCompanyName(c.name); setCompanySearch(c.name); setCompanies([]);
+                      try {
+                        const detail = await apiClient.get<{ discount_percent?: number | null }>(`/api/v1/admin/companies/${c.id}`);
+                        setCompanyDiscount(detail?.discount_percent ?? 0);
+                      } catch { setCompanyDiscount(0); }
+                    }}
                       style={{ padding: "10px 12px", fontSize: "13px", cursor: "pointer", color: "#2A2830" }}
                       onMouseEnter={e => (e.currentTarget.style.background = "#F4F3EF")}
                       onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
@@ -228,11 +241,19 @@ function CreateDraftModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                           </tr>
                         </thead>
                         <tbody>
-                          {(selectedProduct.variants ?? []).map(v => (
+                          {(selectedProduct.variants ?? []).map(v => {
+                            const retail = parseFloat(v.retail_price);
+                            const discounted = applyDiscount(retail);
+                            const hasDiscount = companyDiscount > 0;
+                            return (
                             <tr key={v.id} style={{ borderBottom: "1px solid #F4F3EF" }}>
                               <td style={{ padding: "8px 12px", color: "#2A2830" }}>{v.color ?? "—"}</td>
                               <td style={{ padding: "8px 12px", color: "#2A2830" }}>{v.size ?? "—"}</td>
-                              <td style={{ padding: "8px 12px", color: "#2A2830" }}>${parseFloat(v.retail_price).toFixed(2)}</td>
+                              <td style={{ padding: "8px 12px", color: "#2A2830" }}>
+                                {hasDiscount ? (
+                                  <><span style={{ textDecoration: "line-through", color: "#bbb", fontSize: "11px" }}>${retail.toFixed(2)}</span>{" "}<span style={{ color: "#059669", fontWeight: 700 }}>${discounted.toFixed(2)}</span></>
+                                ) : `$${retail.toFixed(2)}`}
+                              </td>
                               <td style={{ padding: "8px 12px" }}>
                                 <input type="number" min="0" placeholder="0"
                                   value={variantQtys[v.id] ?? ""}
@@ -241,7 +262,7 @@ function CreateDraftModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                                 />
                               </td>
                             </tr>
-                          ))}
+                          ); })}
                         </tbody>
                       </table>
                     </div>

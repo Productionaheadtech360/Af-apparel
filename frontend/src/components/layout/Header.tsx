@@ -98,8 +98,24 @@ export function Header() {
                 </svg>
               </button>
               {resourcesOpen && (
-                <div style={{ position: "absolute", top: "100%", left: 0, marginTop: "6px", background: "#1a1a1f", border: "1px solid rgba(255,255,255,.1)", borderRadius: "8px", padding: "8px", minWidth: "180px", boxShadow: "0 8px 24px rgba(0,0,0,.4)", zIndex: 100 }}>
-                  <p style={{ fontSize: "11px", color: "#555", padding: "8px 10px", textTransform: "uppercase", letterSpacing: ".08em" }}>Coming soon</p>
+                <div style={{ position: "absolute", top: "100%", left: 0, marginTop: "6px", background: "#1a1a1f", border: "1px solid rgba(255,255,255,.1)", borderRadius: "8px", padding: "6px", minWidth: "200px", boxShadow: "0 8px 24px rgba(0,0,0,.4)", zIndex: 100 }}>
+                  {[
+                    { href: "/reviews", label: "Customer Reviews", icon: "★" },
+                    { href: "/wholesale/register", label: "Apply for Wholesale", icon: "📋" },
+                    { href: "/contact", label: "Contact Us", icon: "✉" },
+                  ].map(({ href, label, icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setResourcesOpen(false)}
+                      style={{ display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", color: "#d3d0d0", fontSize: "13px", fontWeight: 600, textDecoration: "none", borderRadius: "5px", transition: "background .15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,.08)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <span style={{ fontSize: "14px", flexShrink: 0 }}>{icon}</span>
+                      {label}
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>

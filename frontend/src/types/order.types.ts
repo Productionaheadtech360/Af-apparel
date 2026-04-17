@@ -6,10 +6,13 @@ export interface CartItem {
   variant_id: string;
   product_id: string;
   product_name: string;
+  product_slug?: string;
+  product_image_url?: string | null;
   sku: string;
   color: string | null;
   size: string | null;
   quantity: number;
+  retail_price?: string;
   unit_price: string;
   line_total: string;
   moq: number;

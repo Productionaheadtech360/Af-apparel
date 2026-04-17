@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import type { ProductDetail, ProductVariant } from "@/types/product.types";
@@ -35,6 +35,214 @@ const COLOR_MAP: Record<string, string> = {
 
 const TABS = ["Description", "Specifications", "Print Guide", "Size Chart", "Reviews"] as const;
 type Tab = (typeof TABS)[number];
+
+// ── Reviews Tab ───────────────────────────────────────────────────────────────
+
+interface ReviewData {
+  id: string; rating: number; title: string | null; body: string;
+  reviewer_name: string; reviewer_company: string | null;
+  is_verified: boolean; created_at: string;
+}
+
+function StarRow({ rating, size = 14 }: { rating: number; size?: number }) {
+  return (
+    <div style={{ display: "flex", gap: "2px" }}>
+      {[1, 2, 3, 4, 5].map(s => (
+        <svg key={s} width={size} height={size} viewBox="0 0 24 24" fill={s <= rating ? "#C9A84C" : "#E2E0DA"}>
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthenticated: boolean }) {
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
+  const [total, setTotal] = useState(0);
+  const [avgRating, setAvgRating] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [form, setForm] = useState({ rating: 5, title: "", body: "", reviewer_name: "", reviewer_company: "" });
+
+  async function fetchReviews() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/v1/products/${productId}/reviews`);
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(data.reviews ?? []);
+        setTotal(data.total ?? 0);
+        setAvgRating(data.avg_rating ?? 0);
+      }
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }
+
+  useEffect(() => { fetchReviews(); }, [productId]); // eslint-disable-line
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.reviewer_name.trim() || !form.body.trim()) return;
+    setSubmitting(true);
+    setSubmitMsg(null);
+    try {
+      const res = await fetch(`/api/v1/products/${productId}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ rating: form.rating, title: form.title || null, body: form.body, reviewer_name: form.reviewer_name, reviewer_company: form.reviewer_company || null }),
+      });
+      if (res.ok) {
+        setSubmitMsg({ type: "success", text: "Review submitted! Thank you." });
+        setForm({ rating: 5, title: "", body: "", reviewer_name: "", reviewer_company: "" });
+        setShowForm(false);
+        await fetchReviews();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setSubmitMsg({ type: "error", text: err.detail ?? "Failed to submit review." });
+      }
+    } catch { setSubmitMsg({ type: "error", text: "Network error. Please try again." }); }
+    finally { setSubmitting(false); }
+  }
+
+  const inp: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E0DA", borderRadius: "7px", fontSize: "13px", outline: "none", boxSizing: "border-box", fontFamily: "var(--font-jakarta)" };
+  const starCounts = [5, 4, 3, 2, 1].map(s => ({ star: s, count: reviews.filter(r => r.rating === s).length }));
+
+  return (
+    <div style={{ maxWidth: "720px" }}>
+      {/* Summary bar */}
+      {total > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "24px", padding: "20px 24px", background: "#F4F3EF", borderRadius: "10px", marginBottom: "24px", border: "1px solid #E2E0DA" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontFamily: "var(--font-bebas)", fontSize: "52px", color: "#2A2830", lineHeight: 1 }}>{avgRating.toFixed(1)}</div>
+            <StarRow rating={Math.round(avgRating)} />
+            <div style={{ fontSize: "12px", color: "#7A7880", marginTop: "4px" }}>{total} review{total !== 1 ? "s" : ""}</div>
+          </div>
+          <div style={{ flex: 1 }}>
+            {starCounts.map(({ star, count }) => {
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+              return (
+                <div key={star} style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "12px", color: "#7A7880", width: "8px" }}>{star}</span>
+                  <div style={{ flex: 1, height: "6px", background: "#E2E0DA", borderRadius: "3px", overflow: "hidden" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: "#C9A84C", borderRadius: "3px" }} />
+                  </div>
+                  <span style={{ fontSize: "11px", color: "#7A7880", width: "28px" }}>{pct}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Write review button */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <div style={{ fontSize: "15px", fontWeight: 700, color: "#2A2830" }}>
+          {loading ? "Loading reviews…" : total === 0 ? "No reviews yet" : `${total} Review${total !== 1 ? "s" : ""}`}
+        </div>
+        {!showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            style={{ padding: "9px 18px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
+          >
+            Write a Review
+          </button>
+        )}
+      </div>
+
+      {/* Submit form */}
+      {showForm && (
+        <form onSubmit={handleSubmit} style={{ background: "#F4F3EF", border: "1px solid #E2E0DA", borderRadius: "10px", padding: "20px 22px", marginBottom: "24px" }}>
+          <div style={{ fontFamily: "var(--font-bebas)", fontSize: "18px", letterSpacing: ".04em", color: "#2A2830", marginBottom: "16px" }}>YOUR REVIEW</div>
+
+          {/* Star picker */}
+          <div style={{ marginBottom: "14px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "6px" }}>Rating *</div>
+            <div style={{ display: "flex", gap: "6px" }}>
+              {[1, 2, 3, 4, 5].map(s => (
+                <button key={s} type="button" onClick={() => setForm(f => ({ ...f, rating: s }))} style={{ background: "none", border: "none", cursor: "pointer", padding: "2px" }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill={s <= form.rating ? "#C9A84C" : "#E2E0DA"} style={{ transition: "fill .1s" }}>
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+            <div>
+              <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "4px" }}>Your Name *</div>
+              <input style={inp} value={form.reviewer_name} onChange={e => setForm(f => ({ ...f, reviewer_name: e.target.value }))} placeholder="John Smith" required />
+            </div>
+            <div>
+              <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "4px" }}>Company (optional)</div>
+              <input style={inp} value={form.reviewer_company} onChange={e => setForm(f => ({ ...f, reviewer_company: e.target.value }))} placeholder="Acme Shirts Co." />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "12px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "4px" }}>Review Title (optional)</div>
+            <input style={inp} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Great quality blanks" />
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "4px" }}>Review *</div>
+            <textarea style={{ ...inp, minHeight: "100px", resize: "vertical" }} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="Share your experience with this product…" required minLength={10} />
+          </div>
+
+          {submitMsg && (
+            <div style={{ padding: "10px 14px", borderRadius: "7px", fontSize: "13px", fontWeight: 600, marginBottom: "12px", background: submitMsg.type === "success" ? "rgba(5,150,105,.08)" : "rgba(232,36,42,.08)", color: submitMsg.type === "success" ? "#059669" : "#E8242A" }}>
+              {submitMsg.text}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button type="button" onClick={() => setShowForm(false)} style={{ padding: "10px 18px", border: "1.5px solid #E2E0DA", borderRadius: "7px", fontSize: "13px", fontWeight: 600, cursor: "pointer", background: "#fff" }}>
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting || !form.reviewer_name.trim() || form.body.trim().length < 10}
+              style={{ padding: "10px 24px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: 700, cursor: "pointer", opacity: (!form.reviewer_name.trim() || form.body.trim().length < 10) ? 0.5 : 1 }}>
+              {submitting ? "Submitting…" : "Submit Review"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Review list */}
+      {!loading && reviews.length === 0 && !showForm && (
+        <div style={{ textAlign: "center", padding: "40px", background: "#F4F3EF", borderRadius: "10px", color: "#7A7880" }}>
+          <div style={{ fontSize: "32px", marginBottom: "8px" }}>★</div>
+          <div style={{ fontSize: "14px", fontWeight: 600, marginBottom: "4px" }}>Be the first to review</div>
+          <div style={{ fontSize: "13px" }}>Share your experience with this product.</div>
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {reviews.map(r => (
+          <div key={r.id} style={{ padding: "18px 20px", background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <StarRow rating={r.rating} size={13} />
+                  {r.is_verified && (
+                    <span style={{ background: "rgba(5,150,105,.1)", color: "#059669", fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: "3px" }}>Verified</span>
+                  )}
+                </div>
+                {r.title && <div style={{ fontWeight: 700, fontSize: "14px", color: "#2A2830", marginBottom: "2px" }}>{r.title}</div>}
+              </div>
+              <div style={{ fontSize: "11px", color: "#aaa", flexShrink: 0 }}>{new Date(r.created_at).toLocaleDateString()}</div>
+            </div>
+            <p style={{ fontSize: "14px", color: "#2A2830", lineHeight: 1.6, margin: 0, marginBottom: "8px" }}>{r.body}</p>
+            <div style={{ fontSize: "12px", color: "#7A7880" }}>
+              — {r.reviewer_name}{r.reviewer_company ? `, ${r.reviewer_company}` : ""}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function groupVariantsByColor(variants: ProductVariant[]) {
@@ -590,7 +798,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   {uniqueColors.map(color => {
                     const hex = COLOR_MAP[color] ?? "#E2E0DA";
                     return (
-                      <div key={color} title={color} style={{ width: "24px", height: "24px", borderRadius: "50%", background: hex, border: ["#FFFFFF", "#fffff0", "#fef3c7", "#f5f0e8"].includes(hex) ? "1px solid #E2E0DA" : "1px solid transparent", cursor: "default" }} />
+                      <button
+                        key={color}
+                        title={color}
+                        onClick={() => {
+                          const colorLower = color.toLowerCase();
+                          const matchIdx = images.findIndex(img => img.alt_text?.toLowerCase().includes(colorLower));
+                          if (matchIdx >= 0) setActiveImageIdx(matchIdx);
+                        }}
+                        style={{ width: "24px", height: "24px", borderRadius: "50%", background: hex, border: ["#FFFFFF", "#fffff0", "#fef3c7", "#f5f0e8"].includes(hex) ? "1px solid #E2E0DA" : "1px solid transparent", cursor: "pointer", padding: 0 }}
+                      />
                     );
                   })}
                 </div>
@@ -782,32 +999,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             )}
 
             {activeTab === "Reviews" && (
-              <div style={{ maxWidth: "640px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "24px", padding: "24px", background: "#F4F3EF", borderRadius: "10px", marginBottom: "24px", border: "1px solid #E2E0DA" }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontFamily: "var(--font-bebas)", fontSize: "56px", color: "#2A2830", lineHeight: 1 }}>4.8</div>
-                    <div style={{ display: "flex", gap: "2px", justifyContent: "center", marginTop: "4px" }}>
-                      {[1, 2, 3, 4, 5].map(s => <svg key={s} width="14" height="14" viewBox="0 0 24 24" fill={s <= 4 ? "#C9A84C" : "#E2E0DA"}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>)}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#7A7880", marginTop: "4px" }}>124 reviews</div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    {[5, 4, 3, 2, 1].map(star => {
-                      const pct = star === 5 ? 72 : star === 4 ? 18 : star === 3 ? 6 : star === 2 ? 2 : 2;
-                      return (
-                        <div key={star} style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                          <span style={{ fontSize: "12px", color: "#7A7880", width: "8px" }}>{star}</span>
-                          <div style={{ flex: 1, height: "6px", background: "#E2E0DA", borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${pct}%`, height: "100%", background: "#C9A84C", borderRadius: "3px" }} />
-                          </div>
-                          <span style={{ fontSize: "11px", color: "#7A7880", width: "28px" }}>{pct}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <p style={{ fontSize: "13px", color: "#7A7880", textAlign: "center" }}>Verified buyer reviews coming soon.</p>
-              </div>
+              <ReviewsTab productId={product.id} isAuthenticated={isAuthenticated} />
             )}
           </div>
         </div>
