@@ -36,36 +36,106 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ── Create Draft Modal ─────────────────────────────────────────────────────────
+// ── Types for draft modal ──────────────────────────────────────────────────────
+
+interface DraftProduct {
+  id: string; name: string; slug: string;
+  primary_image?: { url_medium?: string; url_thumbnail?: string } | null;
+  variants?: { id: string; color: string | null; size: string | null; retail_price: string; stock_quantity?: number }[];
+  categories?: { name: string }[];
+}
+
+interface DraftLineItem {
+  variantId: string; productId: string; productName: string;
+  color: string | null; size: string | null; price: number; qty: number;
+}
+
+// ── Create Draft Modal (3-step) ────────────────────────────────────────────────
 
 function CreateDraftModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (id: string) => void }) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const inp: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E0DA", borderRadius: "7px", fontSize: "13px", outline: "none", boxSizing: "border-box", fontFamily: "var(--font-jakarta)" };
+
+  // Step 1
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [companyId, setCompanyId] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [companySearch, setCompanySearch] = useState("");
+
+  // Step 2
+  const [products, setProducts] = useState<DraftProduct[]>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<DraftProduct | null>(null);
+  const [variantQtys, setVariantQtys] = useState<Record<string, string>>({});
+  const [lineItems, setLineItems] = useState<DraftLineItem[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  // Step 3
   const [poNumber, setPoNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Company search
   useEffect(() => {
     adminService.listCompanies({ q: companySearch || undefined, page_size: 50 })
-      .then((d: unknown) => {
-        const data = d as { items: CompanyOption[] };
-        setCompanies(data.items ?? []);
-      })
+      .then((d: unknown) => { const data = d as { items: CompanyOption[] }; setCompanies(data.items ?? []); })
       .catch(() => {});
   }, [companySearch]);
+
+  // Product search
+  useEffect(() => {
+    if (step !== 2) return;
+    setLoadingProducts(true);
+    adminService.listProducts({ q: productSearch || undefined })
+      .then((res: unknown) => {
+        const r = res as { items?: DraftProduct[] } | DraftProduct[] | null;
+        const items: DraftProduct[] = Array.isArray(r) ? r : (r as any)?.items ?? [];
+        setProducts(items);
+      })
+      .catch(() => setProducts([]))
+      .finally(() => setLoadingProducts(false));
+  }, [step, productSearch]);
+
+  function addLineItems() {
+    if (!selectedProduct) return;
+    const toAdd: DraftLineItem[] = [];
+    for (const [vid, qtyStr] of Object.entries(variantQtys)) {
+      const qty = parseInt(qtyStr, 10);
+      if (!qty || qty <= 0) continue;
+      const variant = selectedProduct.variants?.find(v => v.id === vid);
+      if (!variant) continue;
+      const existing = lineItems.findIndex(l => l.variantId === vid);
+      if (existing >= 0) {
+        setLineItems(prev => prev.map((l, i) => i === existing ? { ...l, qty: l.qty + qty } : l));
+      } else {
+        toAdd.push({ variantId: vid, productId: selectedProduct.id, productName: selectedProduct.name, color: variant.color, size: variant.size, price: parseFloat(variant.retail_price) || 0, qty });
+      }
+    }
+    if (toAdd.length > 0) setLineItems(prev => [...prev, ...toAdd]);
+    setVariantQtys({});
+    setSelectedProduct(null);
+  }
+
+  const orderTotal = lineItems.reduce((s, l) => s + l.price * l.qty, 0);
 
   async function handleCreate() {
     if (!companyId) { setError("Please select a company."); return; }
     setSaving(true); setError(null);
     try {
-      const result = await apiClient.post<{ id: string; order_number: string }>("/api/v1/admin/orders/draft", {
+      const draft = await apiClient.post<{ id: string }>("/api/v1/admin/orders/draft", {
         company_id: companyId,
         po_number: poNumber || undefined,
         notes: notes || undefined,
       });
-      onSuccess(result.id);
+      for (const item of lineItems) {
+        await apiClient.post(`/api/v1/admin/orders/${draft.id}/items`, {
+          variant_id: item.variantId,
+          quantity: item.qty,
+          unit_price: item.price,
+        });
+      }
+      onSuccess(draft.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create draft order");
     } finally {
@@ -73,79 +143,251 @@ function CreateDraftModal({ onClose, onSuccess }: { onClose: () => void; onSucce
     }
   }
 
-  const inp: React.CSSProperties = {
-    width: "100%", padding: "9px 12px", border: "1.5px solid #E2E0DA",
-    borderRadius: "7px", fontSize: "13px", outline: "none", boxSizing: "border-box",
-    fontFamily: "var(--font-jakarta)",
-  };
+  const STEPS = ["Company", "Products", "Review"];
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.5)", padding: "16px" }}>
-      <div style={{ background: "#fff", borderRadius: "12px", width: "100%", maxWidth: "480px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid #E2E0DA" }}>
-          <h2 style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", color: "#2A2830", letterSpacing: ".04em", margin: 0 }}>CREATE DRAFT ORDER</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "22px", color: "#7A7880", lineHeight: 1 }}>×</button>
+      <div style={{ background: "#fff", borderRadius: "12px", width: "100%", maxWidth: step === 2 ? "860px" : "560px", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "1px solid #E2E0DA", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <h2 style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", color: "#2A2830", letterSpacing: ".04em", margin: 0 }}>CREATE DRAFT ORDER</h2>
+            <div style={{ display: "flex", gap: "6px" }}>
+              {STEPS.map((label, i) => (
+                <div key={label} style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, background: step === i + 1 ? "#1A5CFF" : step > i + 1 ? "#059669" : "#E2E0DA", color: step >= i + 1 ? "#fff" : "#aaa" }}>
+                    {step > i + 1 ? "✓" : i + 1}
+                  </div>
+                  <span style={{ fontSize: "11px", fontWeight: 600, color: step === i + 1 ? "#1A5CFF" : "#aaa" }}>{label}</span>
+                  {i < 2 && <span style={{ color: "#E2E0DA", fontSize: "12px" }}>›</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "22px", color: "#7A7880", lineHeight: 1, flexShrink: 0 }}>×</button>
         </div>
 
-        <div style={{ padding: "20px 24px" }}>
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+
           {error && <div style={{ background: "rgba(232,36,42,.08)", border: "1px solid rgba(232,36,42,.2)", borderRadius: "6px", padding: "10px 14px", fontSize: "13px", color: "#E8242A", marginBottom: "16px" }}>{error}</div>}
 
-          <div style={{ marginBottom: "14px" }}>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "5px" }}>
-              Company *
-            </label>
-            <input
-              style={inp}
-              placeholder="Search company…"
-              value={companySearch}
-              onChange={e => setCompanySearch(e.target.value)}
-            />
-            {companies.length > 0 && (
-              <div style={{ border: "1.5px solid #E2E0DA", borderTop: "none", borderRadius: "0 0 7px 7px", maxHeight: "160px", overflowY: "auto", background: "#fff" }}>
-                {companies.map(c => (
-                  <div
-                    key={c.id}
-                    onClick={() => { setCompanyId(c.id); setCompanySearch(c.name); setCompanies([]); }}
-                    style={{ padding: "9px 12px", fontSize: "13px", cursor: "pointer", background: companyId === c.id ? "rgba(26,92,255,.07)" : "#fff", color: companyId === c.id ? "#1A5CFF" : "#2A2830", fontWeight: companyId === c.id ? 700 : 400 }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "#F4F3EF")}
-                    onMouseLeave={e => (e.currentTarget.style.background = companyId === c.id ? "rgba(26,92,255,.07)" : "#fff")}
-                  >
-                    {c.name}
+          {/* ── Step 1: Company ── */}
+          {step === 1 && (
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "5px" }}>Select Company *</label>
+              <input style={inp} placeholder="Search company…" value={companySearch} onChange={e => { setCompanySearch(e.target.value); setCompanyId(""); setCompanyName(""); }} />
+              {companies.length > 0 && !companyId && (
+                <div style={{ border: "1.5px solid #E2E0DA", borderTop: "none", borderRadius: "0 0 7px 7px", maxHeight: "200px", overflowY: "auto", background: "#fff" }}>
+                  {companies.map(c => (
+                    <div key={c.id} onClick={() => { setCompanyId(c.id); setCompanyName(c.name); setCompanySearch(c.name); setCompanies([]); }}
+                      style={{ padding: "10px 12px", fontSize: "13px", cursor: "pointer", color: "#2A2830" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#F4F3EF")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+                    >{c.name}</div>
+                  ))}
+                </div>
+              )}
+              {companyId && (
+                <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", background: "rgba(5,150,105,.06)", border: "1px solid rgba(5,150,105,.2)", borderRadius: "7px", fontSize: "13px", color: "#059669", fontWeight: 600 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  {companyName} selected
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 2: Products ── */}
+          {step === 2 && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "16px", minHeight: "400px" }}>
+              {/* Left: browse */}
+              <div>
+                <input style={{ ...inp, marginBottom: "12px" }} placeholder="Search products…" value={productSearch} onChange={e => setProductSearch(e.target.value)} />
+
+                {selectedProduct ? (
+                  <div style={{ border: "1px solid #E2E0DA", borderRadius: "8px", overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", background: "#F4F3EF", borderBottom: "1px solid #E2E0DA" }}>
+                      {selectedProduct.primary_image?.url_thumbnail && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={selectedProduct.primary_image.url_thumbnail} alt="" style={{ width: "36px", height: "36px", objectFit: "contain", borderRadius: "4px", background: "#fff" }} />
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: "13px", color: "#2A2830" }}>{selectedProduct.name}</div>
+                        <div style={{ fontSize: "11px", color: "#7A7880" }}>{selectedProduct.variants?.length ?? 0} variants</div>
+                      </div>
+                      <button onClick={() => { setSelectedProduct(null); setVariantQtys({}); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "13px", color: "#7A7880" }}>✕ back</button>
+                    </div>
+                    <div style={{ maxHeight: "320px", overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                        <thead>
+                          <tr style={{ background: "#FAFAFA" }}>
+                            {["Color", "Size", "Price", "Qty"].map(h => (
+                              <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: "10px", textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", fontWeight: 700 }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(selectedProduct.variants ?? []).map(v => (
+                            <tr key={v.id} style={{ borderBottom: "1px solid #F4F3EF" }}>
+                              <td style={{ padding: "8px 12px", color: "#2A2830" }}>{v.color ?? "—"}</td>
+                              <td style={{ padding: "8px 12px", color: "#2A2830" }}>{v.size ?? "—"}</td>
+                              <td style={{ padding: "8px 12px", color: "#2A2830" }}>${parseFloat(v.retail_price).toFixed(2)}</td>
+                              <td style={{ padding: "8px 12px" }}>
+                                <input type="number" min="0" placeholder="0"
+                                  value={variantQtys[v.id] ?? ""}
+                                  onChange={e => setVariantQtys(prev => ({ ...prev, [v.id]: e.target.value }))}
+                                  style={{ width: "56px", padding: "4px 6px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", textAlign: "center" }}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{ padding: "10px 14px", borderTop: "1px solid #E2E0DA", display: "flex", justifyContent: "flex-end" }}>
+                      <button onClick={addLineItems}
+                        disabled={!Object.values(variantQtys).some(q => parseInt(q, 10) > 0)}
+                        style={{ padding: "8px 18px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", opacity: !Object.values(variantQtys).some(q => parseInt(q, 10) > 0) ? 0.4 : 1 }}>
+                        Add to Order
+                      </button>
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  <div style={{ maxHeight: "340px", overflowY: "auto", border: "1px solid #E2E0DA", borderRadius: "8px" }}>
+                    {loadingProducts ? (
+                      <div style={{ padding: "32px", textAlign: "center", color: "#aaa", fontSize: "13px" }}>Loading…</div>
+                    ) : products.length === 0 ? (
+                      <div style={{ padding: "32px", textAlign: "center", color: "#aaa", fontSize: "13px" }}>No products found</div>
+                    ) : products.map((p, i) => (
+                      <div key={p.id} onClick={() => { setSelectedProduct(p); setVariantQtys({}); }}
+                        style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", cursor: "pointer", borderBottom: i < products.length - 1 ? "1px solid #F4F3EF" : "none", background: "#fff" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "#F4F3EF")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+                      >
+                        {p.primary_image?.url_thumbnail ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.primary_image.url_thumbnail} alt="" style={{ width: "40px", height: "40px", objectFit: "contain", borderRadius: "4px", background: "#F4F3EF", flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ width: "40px", height: "40px", background: "#F4F3EF", borderRadius: "4px", flexShrink: 0 }} />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: "13px", color: "#2A2830", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                          <div style={{ fontSize: "11px", color: "#7A7880" }}>{p.categories?.[0]?.name ?? "Apparel"} · {p.variants?.length ?? 0} variants</div>
+                        </div>
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#aaa" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <div style={{ marginBottom: "14px" }}>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "5px" }}>
-              PO Number (optional)
-            </label>
-            <input style={inp} value={poNumber} onChange={e => setPoNumber(e.target.value)} placeholder="Customer purchase order #" />
-          </div>
+              {/* Right: cart summary */}
+              <div style={{ border: "1px solid #E2E0DA", borderRadius: "8px", display: "flex", flexDirection: "column" }}>
+                <div style={{ padding: "12px 14px", borderBottom: "1px solid #E2E0DA", background: "#F4F3EF" }}>
+                  <div style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", letterSpacing: ".06em", color: "#2A2830" }}>ORDER ITEMS</div>
+                  <div style={{ fontSize: "11px", color: "#7A7880" }}>{lineItems.length} line items</div>
+                </div>
+                <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+                  {lineItems.length === 0 ? (
+                    <div style={{ padding: "24px 14px", textAlign: "center", color: "#aaa", fontSize: "12px" }}>No items added yet</div>
+                  ) : lineItems.map((item, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "8px", padding: "8px 14px", borderBottom: "1px solid #F4F3EF" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "12px", fontWeight: 600, color: "#2A2830", lineHeight: 1.3 }}>{item.productName}</div>
+                        <div style={{ fontSize: "11px", color: "#7A7880" }}>{[item.color, item.size].filter(Boolean).join(" / ")}</div>
+                        <div style={{ fontSize: "11px", color: "#2A2830" }}>{item.qty} × ${item.price.toFixed(2)}</div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: "12px", fontWeight: 700, color: "#2A2830" }}>${(item.qty * item.price).toFixed(2)}</div>
+                        <button onClick={() => setLineItems(prev => prev.filter((_, idx) => idx !== i))}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "12px", padding: 0 }}>✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {lineItems.length > 0 && (
+                  <div style={{ padding: "10px 14px", borderTop: "1px solid #E2E0DA", background: "#FAFAFA" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: 700, color: "#2A2830" }}>
+                      <span>Total</span>
+                      <span>${orderTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-          <div style={{ marginBottom: "20px" }}>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "5px" }}>
-              Notes (optional)
-            </label>
-            <textarea style={{ ...inp, resize: "vertical", minHeight: "64px" }} value={notes} onChange={e => setNotes(e.target.value)} />
-          </div>
+          {/* ── Step 3: Review ── */}
+          {step === 3 && (
+            <div>
+              <div style={{ background: "#F4F3EF", border: "1px solid #E2E0DA", borderRadius: "8px", padding: "14px 16px", marginBottom: "16px" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "4px" }}>Company</div>
+                <div style={{ fontSize: "14px", fontWeight: 600, color: "#2A2830" }}>{companyName}</div>
+              </div>
 
-          <p style={{ fontSize: "12px", color: "#7A7880", marginBottom: "16px" }}>
-            A draft order is created with status "pending" and $0 total. You can add items and update pricing from the order detail page.
-          </p>
+              {lineItems.length > 0 && (
+                <div style={{ border: "1px solid #E2E0DA", borderRadius: "8px", overflow: "hidden", marginBottom: "16px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                    <thead>
+                      <tr style={{ background: "#FAFAFA" }}>
+                        {["Product", "Variant", "Qty", "Unit Price", "Total"].map(h => (
+                          <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: "10px", textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", fontWeight: 700 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lineItems.map((item, i) => (
+                        <tr key={i} style={{ borderBottom: "1px solid #F4F3EF" }}>
+                          <td style={{ padding: "8px 12px", color: "#2A2830", fontWeight: 600 }}>{item.productName}</td>
+                          <td style={{ padding: "8px 12px", color: "#7A7880" }}>{[item.color, item.size].filter(Boolean).join(" / ")}</td>
+                          <td style={{ padding: "8px 12px", color: "#2A2830" }}>{item.qty}</td>
+                          <td style={{ padding: "8px 12px", color: "#2A2830" }}>${item.price.toFixed(2)}</td>
+                          <td style={{ padding: "8px 12px", fontWeight: 700, color: "#2A2830" }}>${(item.qty * item.price).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ background: "#F4F3EF" }}>
+                        <td colSpan={4} style={{ padding: "10px 12px", fontWeight: 700, textAlign: "right", fontSize: "13px" }}>Order Total</td>
+                        <td style={{ padding: "10px 12px", fontWeight: 700, fontSize: "14px", color: "#1A5CFF" }}>${orderTotal.toFixed(2)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
 
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button type="button" onClick={onClose}
-              style={{ flex: 1, padding: "10px", border: "1.5px solid #E2E0DA", borderRadius: "7px", fontSize: "13px", fontWeight: 600, cursor: "pointer", background: "#fff" }}>
-              Cancel
-            </button>
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "5px" }}>PO Number (optional)</label>
+                <input style={inp} value={poNumber} onChange={e => setPoNumber(e.target.value)} placeholder="Customer purchase order #" />
+              </div>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "5px" }}>Notes (optional)</label>
+                <textarea style={{ ...inp, resize: "vertical", minHeight: "64px" }} value={notes} onChange={e => setNotes(e.target.value)} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: "flex", gap: "10px", padding: "16px 24px", borderTop: "1px solid #E2E0DA", flexShrink: 0 }}>
+          <button onClick={step === 1 ? onClose : () => setStep(s => (s - 1) as 1 | 2 | 3)}
+            style={{ flex: 1, padding: "10px", border: "1.5px solid #E2E0DA", borderRadius: "7px", fontSize: "13px", fontWeight: 600, cursor: "pointer", background: "#fff" }}>
+            {step === 1 ? "Cancel" : "← Back"}
+          </button>
+          {step < 3 ? (
             <button
-              onClick={handleCreate} disabled={saving || !companyId}
-              style={{ flex: 2, padding: "10px", background: (saving || !companyId) ? "#E2E0DA" : "#1A5CFF", color: (saving || !companyId) ? "#aaa" : "#fff", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: 700, cursor: (saving || !companyId) ? "not-allowed" : "pointer" }}>
+              disabled={step === 1 && !companyId}
+              onClick={() => setStep(s => (s + 1) as 2 | 3)}
+              style={{ flex: 2, padding: "10px", background: (step === 1 && !companyId) ? "#E2E0DA" : "#1A5CFF", color: (step === 1 && !companyId) ? "#aaa" : "#fff", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: 700, cursor: (step === 1 && !companyId) ? "not-allowed" : "pointer" }}>
+              Continue →
+            </button>
+          ) : (
+            <button onClick={handleCreate} disabled={saving}
+              style={{ flex: 2, padding: "10px", background: saving ? "#E2E0DA" : "#1A5CFF", color: saving ? "#aaa" : "#fff", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
               {saving ? "Creating…" : "Create Draft Order"}
             </button>
-          </div>
+          )}
         </div>
       </div>
     </div>

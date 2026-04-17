@@ -18,7 +18,7 @@ export default function HowItWorks() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", background: "#fff", border: "1px solid #E2E0DA", borderRadius: "12px", overflow: "hidden" }} className="steps-grid-responsive">
           {steps.map((step, i) => (
             <div key={step.n} style={{ padding: "36px 28px", borderRight: i < 3 ? "1px solid #E2E0DA" : "none" }}>
-              <div style={{ fontFamily: "var(--font-bebas)", fontSize: "48px", color: "#F4F3EF", lineHeight: 1, marginBottom: "6px" }}>{step.n}</div>
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: "48px", color: "#e8242a", lineHeight: 1, marginBottom: "6px" }}>{step.n}</div>
               <div style={{ marginBottom: "12px" }}>{step.icon}</div>
               <h4 style={{ fontFamily: "var(--font-bebas)", fontSize: "17px", letterSpacing: ".03em", marginBottom: "8px", color: "#2A2830" }}>{step.h}</h4>
               <p style={{ fontSize: "15px", color: "#7A7880", lineHeight: 1.65, fontWeight: 500 }}>{step.p}</p>

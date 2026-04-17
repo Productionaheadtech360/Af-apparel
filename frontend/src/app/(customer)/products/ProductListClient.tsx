@@ -585,7 +585,7 @@ export function ProductListClient({
                     className="prod-card-hover"
                   >
                     {/* Image area */}
-                    <div style={{ background: "linear-gradient(135deg,#ede9e3 0%,#e3dfd8 100%)", height: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#bbb", fontSize: "12px", fontWeight: 600, position: "relative" }}>
+                    <div style={{ background: "white", height: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#bbb", fontSize: "12px", fontWeight: 600, position: "relative" }}>
                       {primaryImage ? (
                         <Image
                           src={primaryImage.url_medium_webp ?? primaryImage.url_medium}

@@ -18,13 +18,19 @@ const COLOR_MAP: Record<string, string> = {
   Blue: "#1A5CFF", Royal: "#2251CC", "Royal Blue": "#2251CC",
   Grey: "#9ca3af", Gray: "#9ca3af", "Dark Grey": "#4b5563", "Dark Gray": "#4b5563",
   "Light Grey": "#d1d5db", "Light Gray": "#d1d5db", Charcoal: "#374151",
-  Heather: "#b0b7c3", Sand: "#e2c89a", Natural: "#f5f0e8", Tan: "#c9a96e",
-  Brown: "#78350f", Maroon: "#7f1d1d", Burgundy: "#881337",
-  Green: "#166534", "Forest Green": "#14532d", "Kelly Green": "#15803d",
-  Lime: "#65a30d", Yellow: "#eab308", Gold: "#C9A84C", Orange: "#ea580c",
-  Purple: "#7c3aed", Pink: "#ec4899", "Hot Pink": "#db2777", Coral: "#f87171",
-  Teal: "#0d9488", Turquoise: "#06b6d4", Mint: "#6ee7b7", Olive: "#4d7c0f",
-  Cream: "#fef3c7", Ivory: "#fffff0", "Sky Blue": "#38bdf8", Lavender: "#a78bfa",
+  "Sport Grey": "#9ca3af", "Heather Grey": "#b0b7c3", "Athletic Heather": "#b0b7c3",
+  Heather: "#b0b7c3", "Dark Heather": "#6b7280", Sand: "#e2c89a", Natural: "#f5f0e8",
+  Tan: "#c9a96e", Brown: "#78350f", Maroon: "#7f1d1d", Burgundy: "#881337",
+  Green: "#166534", Forest: "#1B4332", "Forest Green": "#14532d", "Kelly Green": "#15803d",
+  Lime: "#65a30d", Yellow: "#eab308", Gold: "#C9A84C", Mustard: "#D4A843",
+  Orange: "#ea580c", Purple: "#7c3aed", Pink: "#ec4899", "Hot Pink": "#db2777",
+  Coral: "#f87171", Teal: "#0d9488", Turquoise: "#06b6d4", Mint: "#6ee7b7",
+  Olive: "#4d7c0f", Cream: "#fef3c7", Ivory: "#fffff0", "Sky Blue": "#38bdf8",
+  Lavender: "#a78bfa", "Light Blue": "#7DD3FC", "Stonewash Blue": "#5b8fa8",
+  "Dark Navy": "#0f1f3d", Indigo: "#3730a3", Cardinal: "#7b1520", Crimson: "#9f0712",
+  "Carolina Blue": "#56a0d3", "Columbia Blue": "#9bc4e2", Silver: "#c0c0c0",
+  "Ash Grey": "#b2b2b2", Ash: "#b2b2b2", Stone: "#a8a29e", Mocha: "#7c5c48",
+  Chocolate: "#5c3d2e", Caramel: "#b5651d", Camo: "#78866b",
 };
 
 const TABS = ["Description", "Specifications", "Print Guide", "Size Chart", "Reviews"] as const;
@@ -99,11 +105,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   function toggleColor(color: string) {
     const isCurrentlyExpanded = expandedColors.includes(color);
     if (!isCurrentlyExpanded) {
-      // If this color is not yet visible in the accordion, make it visible first
       const visibleInAccordion = filteredGroups.some(g => g.color === color);
       if (!visibleInAccordion) {
         setShowAllColors(true);
       }
+      // Switch main image to the one matching this color
+      const colorLower = color.toLowerCase();
+      const matchIdx = images.findIndex(img =>
+        img.alt_text?.toLowerCase().includes(colorLower)
+      );
+      if (matchIdx >= 0) setActiveImageIdx(matchIdx);
     }
     setExpandedColors(prev =>
       prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
@@ -273,7 +284,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           {/* ── RIGHT: Product Info ─────────────────────────────────────── */}
           <div>
             {/* Category */}
-            {/* ✅ Naya — Tags + Copy URL + Category */}
+            {/* Tags + Copy URL + Category */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                 {(product.tags?.some(t => t.toLowerCase().includes("best seller") || t.toLowerCase().includes("bestseller"))) && (
@@ -282,6 +293,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <span style={{ background: "rgba(5,150,105,.1)", color: "#059669", fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
                   <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="#059669"/></svg> In Stock
                 </span>
+                {(product.tags ?? []).filter(t => !t.toLowerCase().includes("best seller") && !t.toLowerCase().includes("bestseller")).map(tag => (
+                  <span key={tag} style={{ background: "#F4F3EF", color: "#7A7880", fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px", textTransform: "uppercase", letterSpacing: ".06em", border: "1px solid #E2E0DA" }}>
+                    {tag}
+                  </span>
+                ))}
               </div>
               <button
                 onClick={() => {
@@ -470,6 +486,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                                   }}
                                   style={{ width: "64px", height: "44px", textAlign: "center", border: qty > 0 ? "2px solid #1A5CFF" : "1.5px solid #E2E0DA", borderRadius: "8px", fontSize: "15px", fontWeight: 700, outline: "none", fontFamily: "var(--font-jakarta)" }}
                                 />
+                                <div style={{
+                                  fontSize: "10px", fontWeight: 700, marginTop: "4px", textAlign: "center",
+                                  color: (variant.stock_quantity ?? 0) > 10 ? "#059669" : (variant.stock_quantity ?? 0) >= 5 ? "#D97706" : "#E8242A",
+                                }}>
+                                  {variant.stock_quantity ?? 0}
+                                </div>
                               </div>
                             );
                           })}
@@ -651,9 +673,16 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           <div style={{ padding: "32px 0" }}>
             {activeTab === "Description" && (
               <div style={{ maxWidth: "720px" }}>
-                <p style={{ fontSize: "15px", color: "#2A2830", lineHeight: 1.7 }}>
-                  {product.description ?? "No description available for this product."}
-                </p>
+                {product.description ? (
+                  <div
+                    style={{ fontSize: "15px", color: "#2A2830", lineHeight: 1.7 }}
+                    dangerouslySetInnerHTML={{ __html: product.description }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "15px", color: "#2A2830", lineHeight: 1.7 }}>
+                    No description available for this product.
+                  </p>
+                )}
               </div>
             )}
 
@@ -825,25 +854,40 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}>
               {product.images!.map((img, i) => (
                 <div key={img.id} style={{ border: "1px solid #E2E0DA", borderRadius: "10px", overflow: "hidden", background: "#F4F3EF" }}>
-                  <a href={imgSrc(img)} target="_blank" rel="noreferrer" style={{ display: "block" }}>
+                  <button
+                    onClick={() => { setActiveImageIdx(images.indexOf(img)); setShowImageLibrary(false); }}
+                    style={{ display: "block", width: "100%", border: "none", padding: 0, cursor: "pointer", background: "none" }}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={imgSrc(img)}
                       alt={img.alt_text ?? `${product.name} — Image ${i + 1}`}
                       style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }}
                     />
-                  </a>
+                  </button>
                   <div style={{ padding: "8px 10px", display: "flex", gap: "6px" }}>
-                    <a
-                      href={imgSrc(img)}
-                      download={`${product.slug}-image-${i + 1}.jpg`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", padding: "6px 10px", background: "#1A5CFF", color: "#fff", borderRadius: "6px", fontSize: "11px", fontWeight: 700, textDecoration: "none" }}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const resp = await fetch(imgSrc(img));
+                          const blob = await resp.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `${product.slug}-image-${i + 1}.jpg`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                        } catch {
+                          window.open(imgSrc(img), "_blank");
+                        }
+                      }}
+                      style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", padding: "6px 10px", background: "#1A5CFF", color: "#fff", borderRadius: "6px", fontSize: "11px", fontWeight: 700, border: "none", cursor: "pointer" }}
                     >
                       <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                       Download
-                    </a>
+                    </button>
                   </div>
                 </div>
               ))}
