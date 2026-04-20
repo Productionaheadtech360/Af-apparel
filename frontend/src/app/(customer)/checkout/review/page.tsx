@@ -29,9 +29,9 @@ function brandDisplayName(brand: string): string {
 }
 
 const SHIPPING_LABELS: Record<string, string> = {
-  standard: "Standard Ground — FREE",
-  expedited: "Expedited (2-Day) — $45.00",
-  freight: "Freight / LTL — Quoted",
+  standard: "Standard Ground",
+  expedited: "Expedited (2-Day)",
+  will_call: "Will Call Pickup",
 };
 
 const row: React.CSSProperties = {
@@ -42,6 +42,7 @@ export default function CheckoutReviewPage() {
   const router = useRouter();
   const {
     shippingAddress, companyName, contactName, shippingPhone, shippingMethod,
+    shippingCost,
     addressId, poNumber, orderNotes, setPoNumber, setOrderNotes,
     savedCardId, qbToken,
     setConfirmedOrder,
@@ -112,9 +113,7 @@ export default function CheckoutReviewPage() {
       const productName = cart?.items[0]?.product_name ?? "Your Order";
       const colorSummary = cart ? buildColorSummary(cart) : "";
       const subtotal = Number(cart?.subtotal ?? 0);
-      const baseShipping = Number(cart?.validation?.estimated_shipping ?? 0);
-      const expeditedSurcharge = shippingMethod === "expedited" ? 45 : 0;
-      const total = subtotal + baseShipping + expeditedSurcharge;
+      const total = subtotal + shippingCost;
 
       const confirmedData = {
         id: order.id,
@@ -145,9 +144,7 @@ export default function CheckoutReviewPage() {
     : "Credit Card";
 
   const subtotal = Number(cart?.subtotal ?? 0);
-  const baseShipping = Number(cart?.validation?.estimated_shipping ?? 0);
-  const expeditedSurcharge = shippingMethod === "expedited" ? 45 : 0;
-  const shipping = baseShipping + expeditedSurcharge;
+  const shipping = shippingCost;
   const total = subtotal + shipping;
   const shippingLabel = SHIPPING_LABELS[shippingMethod] ?? "Standard Ground";
 
@@ -193,7 +190,9 @@ export default function CheckoutReviewPage() {
         <div style={{ borderTop: "1px solid #F0EEE9", margin: "12px 0" }} />
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
           <span style={{ color: "#7A7880" }}>Shipping Method</span>
-          <span style={{ fontWeight: 700, color: "#2A2830" }}>{shippingLabel}</span>
+          <span style={{ fontWeight: 700, color: "#2A2830" }}>
+            {shippingLabel} — {shipping === 0 ? "FREE" : formatCurrency(shipping)}
+          </span>
         </div>
       </div>
 
@@ -282,15 +281,11 @@ export default function CheckoutReviewPage() {
             </div>
           )}
           <div style={row}>
-            <span style={{ color: "#7A7880" }}>Shipping</span>
-            <span style={{ color: "#7A7880" }}>{baseShipping > 0 ? formatCurrency(baseShipping) : "Calculated"}</span>
+            <span style={{ color: "#7A7880" }}>Shipping ({shippingLabel})</span>
+            <span style={{ color: shipping === 0 ? "#059669" : "#2A2830", fontWeight: 600 }}>
+              {shipping === 0 ? "FREE" : formatCurrency(shipping)}
+            </span>
           </div>
-          {expeditedSurcharge > 0 && (
-            <div style={row}>
-              <span style={{ color: "#7A7880" }}>Expedited (2-Day) Surcharge</span>
-              <span style={{ color: "#2A2830", fontWeight: 600 }}>{formatCurrency(expeditedSurcharge)}</span>
-            </div>
-          )}
           <div style={{ borderTop: "1.5px solid #E2E0DA", paddingTop: "10px", display: "flex", justifyContent: "space-between" }}>
             <span style={{ fontSize: "15px", fontWeight: 800, color: "#2A2830" }}>Total</span>
             <span style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", color: "#E8242A", letterSpacing: ".02em" }}>{formatCurrency(total)}</span>

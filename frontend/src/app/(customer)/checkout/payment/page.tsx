@@ -39,7 +39,7 @@ const sectionTitle: React.CSSProperties = {
 
 export default function CheckoutPaymentPage() {
   const router = useRouter();
-  const { shippingAddress, setSavedCardId, setQbToken } = useCheckoutStore();
+  const { shippingAddress, shippingMethod, shippingCost, setSavedCardId, setQbToken } = useCheckoutStore();
   const { isAuthenticated, isLoading } = useAuthStore();
 
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
@@ -101,8 +101,14 @@ export default function CheckoutPaymentPage() {
   }
 
   const subtotal = Number(cart?.subtotal ?? 0);
-  const shipping = Number(cart?.validation?.estimated_shipping ?? 0);
+  const shipping = shippingCost;
   const total = subtotal + shipping;
+
+  const SHIPPING_LABELS: Record<string, string> = {
+    standard: "Standard Ground",
+    expedited: "Expedited (2-Day)",
+    will_call: "Will Call Pickup",
+  };
 
   return (
     <div>
@@ -215,8 +221,10 @@ export default function CheckoutPaymentPage() {
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#7A7880" }}>
-              <span>Shipping</span>
-              <span>{shipping > 0 ? formatCurrency(shipping) : "Calculated"}</span>
+              <span>Shipping ({SHIPPING_LABELS[shippingMethod] ?? "Standard"})</span>
+              <span style={{ color: shipping === 0 ? "#059669" : "#2A2830", fontWeight: 600 }}>
+                {shipping === 0 ? "FREE" : formatCurrency(shipping)}
+              </span>
             </div>
             <div style={{ borderTop: "1px solid #F0EEE9", paddingTop: "8px", display: "flex", justifyContent: "space-between", fontSize: "15px", fontWeight: 800, color: "#2A2830" }}>
               <span>Total</span>

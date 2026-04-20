@@ -9,7 +9,7 @@ interface ShippingAddress {
   country: string;
 }
 
-export type ShippingMethod = "standard" | "expedited" | "freight";
+export type ShippingMethod = "standard" | "expedited" | "will_call";
 
 interface CheckoutState {
   // Step 1 — shipping
@@ -19,6 +19,7 @@ interface CheckoutState {
   contactName: string;
   shippingPhone: string;
   shippingMethod: ShippingMethod;
+  shippingCost: number;
 
   // Step 1 extras (PO + notes kept for backward compat)
   poNumber: string;
@@ -47,6 +48,7 @@ interface CheckoutState {
   setContactName: (v: string) => void;
   setShippingPhone: (v: string) => void;
   setShippingMethod: (m: ShippingMethod) => void;
+  setShippingCost: (cost: number) => void;
   setPoNumber: (po: string) => void;
   setOrderNotes: (notes: string) => void;
   setQbToken: (token: string | null) => void;
@@ -71,6 +73,7 @@ const initialState = {
   contactName: "",
   shippingPhone: "",
   shippingMethod: "standard" as ShippingMethod,
+  shippingCost: 0,
   poNumber: "",
   orderNotes: "",
   qbToken: null,
@@ -94,6 +97,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
   setContactName: (v) => set({ contactName: v }),
   setShippingPhone: (v) => set({ shippingPhone: v }),
   setShippingMethod: (m) => set({ shippingMethod: m }),
+  setShippingCost: (cost) => set({ shippingCost: cost }),
   setPoNumber: (po) => set({ poNumber: po }),
   setOrderNotes: (notes) => set({ orderNotes: notes }),
   setQbToken: (token) => set({ qbToken: token, savedCardId: null }),

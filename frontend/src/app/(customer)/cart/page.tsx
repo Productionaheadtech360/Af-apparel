@@ -424,9 +424,9 @@ function OrderSummary({
           </div>
         )}
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#7A7880" }}>
-          <span>Shipping</span>
-          <span style={{ color: "#7A7880" }}>
-            {estimatedShipping > 0 ? formatCurrency(estimatedShipping) : "Calculated at checkout"}
+          <span>Shipping (Standard Ground)</span>
+          <span style={{ fontWeight: 600, color: estimatedShipping === 0 ? "#059669" : "#2A2830" }}>
+            {estimatedShipping === 0 ? "FREE" : formatCurrency(estimatedShipping)}
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#7A7880" }}>

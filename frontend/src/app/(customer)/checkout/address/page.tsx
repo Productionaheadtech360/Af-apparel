@@ -45,11 +45,7 @@ const sectionTitle: React.CSSProperties = {
   color: "#2A2830", marginBottom: "18px", display: "block",
 };
 
-const SHIPPING_OPTIONS: { id: ShippingMethod; label: string; sub: string; price: string; note?: string }[] = [
-  { id: "standard", label: "Standard Ground", sub: "3–5 business days · Ships from Dallas, TX", price: "FREE", note: "Free shipping on orders over $500." },
-  { id: "expedited", label: "Expedited (2-Day)", sub: "2 business days — guaranteed delivery", price: "$45.00" },
-  { id: "freight", label: "Freight / LTL", sub: "For pallet-size orders — quote provided after checkout", price: "Quoted" },
-];
+const EXPEDITED_SURCHARGE = 45;
 
 export default function CheckoutAddressPage() {
   const router = useRouter();
@@ -60,12 +56,14 @@ export default function CheckoutAddressPage() {
     shippingAddress, setShippingAddress,
     setAddressId,
     shippingMethod, setShippingMethod,
+    setShippingCost,
   } = useCheckoutStore();
 
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [subtotal, setSubtotal] = useState(0);
+  const [tierShipping, setTierShipping] = useState<number | null>(null); // null = loading
 
   const [form, setForm] = useState({
     company: companyName || "",
@@ -78,13 +76,17 @@ export default function CheckoutAddressPage() {
   });
   const [errors, setErrors] = useState<Partial<typeof form>>({});
 
-  // Load saved addresses + cart subtotal
+  // Load saved addresses + cart (subtotal + tier-based shipping)
   useEffect(() => {
-    cartService.getCart().then(c => setSubtotal(Number(c.subtotal))).catch(() => {});
+    cartService.getCart().then(c => {
+      setSubtotal(Number(c.subtotal));
+      setTierShipping(Number(c.validation?.estimated_shipping ?? 0));
+    }).catch(() => {
+      setTierShipping(0);
+    });
     apiClient.get<SavedAddress[]>("/api/v1/account/addresses").then(addrs => {
       setSavedAddresses(addrs);
       if (addrs.length > 0) {
-        // Pre-select the default address (or first)
         const def = addrs.find(a => a.is_default) ?? addrs[0]!;
         setSelectedAddressId(def.id);
         setShowNewForm(false);
@@ -95,6 +97,17 @@ export default function CheckoutAddressPage() {
       setShowNewForm(true);
     });
   }, []);
+
+  // Compute the shipping cost for a given method
+  function methodCost(method: ShippingMethod): number {
+    const base = tierShipping ?? 0;
+    if (method === "will_call") return 0;
+    if (method === "expedited") return base + EXPEDITED_SURCHARGE;
+    return base; // standard
+  }
+
+  const selectedCost = methodCost(shippingMethod);
+  const orderTotal = subtotal + selectedCost;
 
   function validate() {
     const e: Partial<typeof form> = {};
@@ -109,8 +122,10 @@ export default function CheckoutAddressPage() {
   }
 
   function handleContinue() {
+    // Save the chosen shipping cost before navigating
+    setShippingCost(methodCost(shippingMethod));
+
     if (!showNewForm && selectedAddressId) {
-      // Use a saved address
       const addr = savedAddresses.find(a => a.id === selectedAddressId);
       if (!addr) return;
       setCompanyName(form.company || companyName);
@@ -127,7 +142,6 @@ export default function CheckoutAddressPage() {
       setAddressId(selectedAddressId);
       router.push("/checkout/payment");
     } else {
-      // Manual entry
       if (!validate()) return;
       setCompanyName(form.company);
       setContactName(form.contact);
@@ -144,7 +158,33 @@ export default function CheckoutAddressPage() {
     }
   }
 
-  const qualifiesFreeship = subtotal >= 500;
+  // Build shipping option display
+  function shippingOptionLabel(method: ShippingMethod): { price: string; note?: string } {
+    const base = tierShipping;
+    if (base === null) return { price: "Loading…" };
+
+    if (method === "will_call") {
+      return { price: "FREE", note: "Pick up from our warehouse — no shipping charge." };
+    }
+    if (method === "expedited") {
+      const cost = base + EXPEDITED_SURCHARGE;
+      return {
+        price: formatCurrency(cost),
+        note: `Your tier rate ${formatCurrency(base)} + $${EXPEDITED_SURCHARGE} expedited surcharge.`,
+      };
+    }
+    // standard
+    if (base === 0) {
+      return { price: "FREE", note: "Free shipping on your account's tier." };
+    }
+    return { price: formatCurrency(base), note: "Rate based on your assigned shipping tier." };
+  }
+
+  const SHIPPING_OPTIONS: { id: ShippingMethod; label: string; sub: string }[] = [
+    { id: "standard", label: "Standard Ground", sub: "3–5 business days · Ships from Dallas, TX" },
+    { id: "expedited", label: "Expedited (2-Day)", sub: "2 business days — guaranteed delivery" },
+    { id: "will_call", label: "Will Call Pickup", sub: "Pick up from our warehouse · No shipping fee" },
+  ];
 
   return (
     <div>
@@ -152,7 +192,6 @@ export default function CheckoutAddressPage() {
       <div style={sectionCard}>
         <span style={sectionTitle}>Shipping Address</span>
 
-        {/* Saved addresses */}
         {savedAddresses.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "10px" }}>
             {savedAddresses.map(addr => {
@@ -169,7 +208,6 @@ export default function CheckoutAddressPage() {
                     cursor: "pointer", transition: "all .15s",
                   }}
                 >
-                  {/* Radio */}
                   <div style={{
                     width: "18px", height: "18px", borderRadius: "50%", flexShrink: 0, marginTop: "2px",
                     border: `2px solid ${isSelected ? "#E8242A" : "#E2E0DA"}`,
@@ -178,7 +216,6 @@ export default function CheckoutAddressPage() {
                   }}>
                     {isSelected && <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#fff" }} />}
                   </div>
-                  {/* Address text */}
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "2px" }}>
                       <span style={{ fontSize: "13px", fontWeight: 700, color: "#2A2830" }}>
@@ -200,7 +237,6 @@ export default function CheckoutAddressPage() {
               );
             })}
 
-            {/* Use a different address */}
             <label
               onClick={() => { setShowNewForm(true); setSelectedAddressId(null); }}
               style={{
@@ -225,7 +261,7 @@ export default function CheckoutAddressPage() {
           </div>
         )}
 
-        {/* Company name always shown (needed for order label) */}
+        {/* Company name */}
         <div style={{ marginBottom: "14px" }}>
           <label style={lbl}>Company Name <span style={{ color: "#E8242A" }}>*</span></label>
           <input
@@ -237,7 +273,6 @@ export default function CheckoutAddressPage() {
           {errors.company && <p style={{ fontSize: "11px", color: "#E8242A", marginTop: "3px" }}>{errors.company}</p>}
         </div>
 
-        {/* Manual address form — shown when no saved addresses or "different address" selected */}
         {showNewForm && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
             <div style={{ gridColumn: "1 / -1" }}>
@@ -319,9 +354,8 @@ export default function CheckoutAddressPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {SHIPPING_OPTIONS.map(opt => {
             const isSelected = shippingMethod === opt.id;
-            const priceDisplay = opt.id === "standard"
-              ? (qualifiesFreeship ? "FREE" : subtotal > 0 ? "FREE on $500+" : "FREE")
-              : opt.price;
+            const { price: priceDisplay, note } = shippingOptionLabel(opt.id);
+            const isFree = priceDisplay === "FREE";
 
             return (
               <label
@@ -346,20 +380,45 @@ export default function CheckoutAddressPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
                     <span style={{ fontSize: "14px", fontWeight: 700, color: "#2A2830" }}>{opt.label}</span>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: priceDisplay === "FREE" ? "#059669" : "#2A2830" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: isFree ? "#059669" : "#2A2830" }}>
                       {priceDisplay}
                     </span>
                   </div>
                   <div style={{ fontSize: "12px", color: "#7A7880", marginTop: "3px" }}>{opt.sub}</div>
-                  {opt.note && (
-                    <div style={{ fontSize: "11px", color: qualifiesFreeship ? "#059669" : "#7A7880", marginTop: "4px", fontWeight: qualifiesFreeship ? 600 : 400 }}>
-                      {opt.note}{qualifiesFreeship ? " Your order qualifies." : ""}
+                  {note && (
+                    <div style={{ fontSize: "11px", color: isFree ? "#059669" : "#7A7880", marginTop: "4px", fontWeight: isFree ? 600 : 400 }}>
+                      {note}
                     </div>
                   )}
                 </div>
               </label>
             );
           })}
+        </div>
+      </div>
+
+      {/* ── Order Summary ── */}
+      <div style={{ background: "#fff", border: "1.5px solid #E2E0DA", borderRadius: "12px", padding: "18px 24px", marginBottom: "16px" }}>
+        <div style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", letterSpacing: ".06em", color: "#2A2830", marginBottom: "12px" }}>
+          Order Summary
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#7A7880" }}>
+            <span>Subtotal</span>
+            <span style={{ fontWeight: 600, color: "#2A2830" }}>{formatCurrency(subtotal)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#7A7880" }}>
+            <span>Shipping ({SHIPPING_OPTIONS.find(o => o.id === shippingMethod)?.label})</span>
+            <span style={{ fontWeight: 600, color: selectedCost === 0 ? "#059669" : "#2A2830" }}>
+              {tierShipping === null ? "Loading…" : selectedCost === 0 ? "FREE" : formatCurrency(selectedCost)}
+            </span>
+          </div>
+          <div style={{ borderTop: "1px solid #F0EEE9", paddingTop: "8px", display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "14px", fontWeight: 800, color: "#2A2830" }}>Total</span>
+            <span style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#E8242A", letterSpacing: ".02em" }}>
+              {tierShipping === null ? "—" : formatCurrency(orderTotal)}
+            </span>
+          </div>
         </div>
       </div>
 
