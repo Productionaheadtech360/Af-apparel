@@ -149,6 +149,22 @@ export const adminService = {
     return apiClient.get("/api/v1/admin/shipping-tiers");
   },
 
+  async createShippingTier(data: object) {
+    return apiClient.post("/api/v1/admin/shipping-tiers", data);
+  },
+
+  async updateShippingTier(id: string, data: object) {
+    return apiClient.patch(`/api/v1/admin/shipping-tiers/${id}`, data);
+  },
+
+  async deleteShippingTier(id: string) {
+    return apiClient.delete(`/api/v1/admin/shipping-tiers/${id}`);
+  },
+
+  async seedDefaultShippingTiers() {
+    return apiClient.post("/api/v1/admin/shipping-tiers/seed-defaults", {});
+  },
+
   // Companies
   async listCompanies(params?: { q?: string; status?: string; page?: number; page_size?: number }) {
     const query = new URLSearchParams();

@@ -185,8 +185,8 @@ export default function PricingTiersPage() {
       {/* Page header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <div>
-          <h1 style={{ fontFamily: "var(--font-bebas)", fontSize: "32px", color: "#2A2830", letterSpacing: ".02em", lineHeight: 1 }}>Pricing Tiers</h1>
-          <p style={{ fontSize: "13px", color: "#7A7880", marginTop: "4px" }}>Manage wholesale discount tiers, MOQ, shipping and payment terms</p>
+          <h1 style={{ fontFamily: "var(--font-bebas)", fontSize: "32px", color: "#2A2830", letterSpacing: ".02em", lineHeight: 1 }}>Customer Tiers</h1>
+          <p style={{ fontSize: "13px", color: "#7A7880", marginTop: "4px" }}>Manage wholesale discount tiers, MOQ, and payment terms</p>
         </div>
         <button
           onClick={openCreate}
@@ -216,7 +216,7 @@ export default function PricingTiersPage() {
       ) : tiers.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px", background: "#fff", border: "1px solid #E2E0DA", borderRadius: "10px" }}>
           <div style={{ marginBottom: "12px" }}><TagIcon size={32} color="#2A2830" /></div>
-          <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#2A2830", marginBottom: "6px" }}>No Pricing Tiers</div>
+          <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#2A2830", marginBottom: "6px" }}>No Customer Tiers</div>
           <div style={{ fontSize: "13px", color: "#7A7880", marginBottom: "20px" }}>Create your first tier to start segmenting wholesale customers</div>
           <button onClick={openCreate} style={{ padding: "10px 20px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
             + Create First Tier
