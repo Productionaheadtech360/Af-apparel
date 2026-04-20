@@ -169,20 +169,22 @@ export default function CustomerDetailPage() {
     async function load() {
       setLoading(true);
       try {
-        const [co, pt, st] = await Promise.all([
-          adminService.getCompany(id) as Promise<Customer>,
-          adminService.listPricingTiers() as Promise<PricingTierFull[]>,
-          adminService.listShippingTiers() as Promise<ShippingTier[]>,
-        ]);
+        const co = await adminService.getCompany(id) as Customer;
         setCustomer(co);
-        setPricingTiers(pt);
-        setShippingTiers(st);
         setEditPricing(co.pricing_tier_id ?? "");
         setEditShipping(co.shipping_tier_id ?? "");
         setEditOverride(co.shipping_override_amount ?? "");
         setTags(co.tags ?? []);
         setNote(co.admin_notes ?? "");
         setNoteText(co.admin_notes ?? "");
+
+        // Load tiers separately — failure here is non-fatal
+        const [pt, st] = await Promise.all([
+          adminService.listPricingTiers().catch(() => []) as Promise<PricingTierFull[]>,
+          adminService.listShippingTiers().catch(() => []) as Promise<ShippingTier[]>,
+        ]);
+        setPricingTiers(pt);
+        setShippingTiers(st);
       } finally {
         setLoading(false);
       }
