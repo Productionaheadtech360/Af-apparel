@@ -257,7 +257,7 @@ function TierCard({
     }
   }
 
-  const typeStyle = TYPE_COLORS[tier.calculation_type] ?? TYPE_COLORS.units;
+  const typeStyle = TYPE_COLORS[tier.calculation_type] ?? TYPE_COLORS.units!;
 
   return (
     <div style={cardStyle}>
