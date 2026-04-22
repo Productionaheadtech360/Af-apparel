@@ -6,12 +6,16 @@ import { useAuthStore } from "@/stores/auth.store";
 
 const PRIMARY_BUSINESS_OPTIONS = [
   "Please Select One...",
-  "Brands",
-  "Retail",
-  "Decorators (Screen printers)",
-  "Promotional Products",
-  "Merch Souvenirs & Tourism",
-  "Wholesalers / Re-sellers",
+  "Screen Printer",
+  "Embroiderer",
+  "Promotional Products Distributor",
+  "Retailer",
+  "Online Retailer",
+  "Corporate Buyer",
+  "Athletic Team Dealer",
+  "Boutique",
+  "Decorator",
+  "Other",
 ];
 
 const ANNUAL_VOLUME_OPTIONS = [
@@ -23,6 +27,44 @@ const ANNUAL_VOLUME_OPTIONS = [
   "$250,000 - $500,000",
   "$500,000 - $1,000,000",
   "Over $1,000,000",
+];
+
+const EMPLOYEE_OPTIONS = [
+  "Please Select One...",
+  "1 – 5",
+  "6 – 10",
+  "11 – 25",
+  "26 – 50",
+  "51 – 100",
+  "100+",
+];
+
+const SALES_REP_OPTIONS = [
+  "Please Select One...",
+  "0",
+  "1 – 2",
+  "3 – 5",
+  "6 – 10",
+  "10+",
+];
+
+const HOW_HEARD_OPTIONS = [
+  "Please Select One...",
+  "Google Search",
+  "Social Media",
+  "Trade Show",
+  "Referral from Another Business",
+  "Email Campaign",
+  "Industry Publication",
+  "Other",
+];
+
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
+  "HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
+  "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
+  "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
 ];
 
 interface ProfileData {
@@ -456,12 +498,16 @@ export default function AccountProfilePage() {
                 />
               </Field>
               <Field label="State / Province">
-                <input
-                  type="text"
+                <select
                   value={companyForm.state_province}
                   onChange={(e) => setCompanyForm((p) => ({ ...p, state_province: e.target.value }))}
                   className={inputCls}
-                />
+                >
+                  <option value="">Select State</option>
+                  {US_STATES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
               </Field>
             </div>
 
@@ -475,42 +521,54 @@ export default function AccountProfilePage() {
                 />
               </Field>
               <Field label="Country">
-                <input
-                  type="text"
+                <select
                   value={companyForm.country}
                   onChange={(e) => setCompanyForm((p) => ({ ...p, country: e.target.value }))}
                   className={inputCls}
-                />
+                >
+                  <option value="">Select Country</option>
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                </select>
               </Field>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mt-3">
               <Field label="Number of Employees">
-                <input
-                  type="text"
+                <select
                   value={companyForm.num_employees}
                   onChange={(e) => setCompanyForm((p) => ({ ...p, num_employees: e.target.value }))}
                   className={inputCls}
-                />
+                >
+                  {EMPLOYEE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt === "Please Select One..." ? "" : opt}>{opt}</option>
+                  ))}
+                </select>
               </Field>
               <Field label="Number of Sales Reps">
-                <input
-                  type="text"
+                <select
                   value={companyForm.num_sales_reps}
                   onChange={(e) => setCompanyForm((p) => ({ ...p, num_sales_reps: e.target.value }))}
                   className={inputCls}
-                />
+                >
+                  {SALES_REP_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt === "Please Select One..." ? "" : opt}>{opt}</option>
+                  ))}
+                </select>
               </Field>
             </div>
 
             <div className="mt-3">
               <Field label="How Did You Hear About Us">
-                <input
-                  type="text"
+                <select
                   value={companyForm.how_heard}
                   onChange={(e) => setCompanyForm((p) => ({ ...p, how_heard: e.target.value }))}
                   className={inputCls}
-                />
+                >
+                  {HOW_HEARD_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt === "Please Select One..." ? "" : opt}>{opt}</option>
+                  ))}
+                </select>
               </Field>
             </div>
           </div>

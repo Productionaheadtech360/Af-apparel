@@ -4,13 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth.store";
 
-const USER_GROUPS = ["Admin", "Accounting", "Purchasing", "Promo Standards", "Users"];
-const ROLES = [
-  { value: "owner", label: "Owner" },
-  { value: "buyer", label: "Buyer" },
-  { value: "viewer", label: "Viewer" },
-  { value: "finance", label: "Finance" },
-];
+const USER_GROUPS = ["Admin", "Accounting", "Purchasing", "Promo Standards"];
 
 const GROUP_COLORS: Record<string, string> = {
   Admin: "bg-purple-100 text-purple-700",
@@ -35,8 +29,7 @@ const EMPTY_FORM = {
   first_name: "",
   last_name: "",
   email: "",
-  role: "buyer",
-  user_group: "Users",
+  user_group: "Admin",
   password: "",
   confirm_password: "",
   password_hint: "",
@@ -138,7 +131,6 @@ export default function ManageUsersPage() {
       first_name: u.first_name,
       last_name: u.last_name,
       email: u.email,
-      role: u.role,
       user_group: u.user_group,
       password: "",
       confirm_password: "",
@@ -160,7 +152,6 @@ export default function ManageUsersPage() {
         await apiClient.patch(`/api/v1/account/users/${editingUser.user_id}`, {
           first_name: form.first_name,
           last_name: form.last_name,
-          role: form.role,
           user_group: form.user_group,
         });
         setMessage({ type: "success", text: "User updated successfully!" });
@@ -169,7 +160,7 @@ export default function ManageUsersPage() {
           first_name: form.first_name,
           last_name: form.last_name,
           email: form.email,
-          role: form.role,
+          role: "buyer",
           user_group: form.user_group,
           password: form.password,
           ...(form.password_hint ? { password_hint: form.password_hint } : {}),
@@ -338,20 +329,6 @@ export default function ManageUsersPage() {
             </div>
           </div>
 
-          {/* Role */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select
-              value={form.role}
-              onChange={(e) => setForm(p => ({ ...p, role: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {ROLES.map(r => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-          </div>
-
           {/* Password fields — new user only */}
           {!editingUser && (
             <>
@@ -468,61 +445,80 @@ export default function ManageUsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {users.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{u.first_name} {u.last_name}</p>
-                    <p className="text-xs text-gray-400 capitalize">{u.role}</p>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{u.email}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      GROUP_COLORS[u.user_group] ?? "bg-gray-100 text-gray-600"
-                    }`}>
-                      {u.user_group}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-                    }`}>
-                      {u.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2 justify-end flex-wrap">
-                      <button
-                        onClick={() => handleEdit(u)}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleToggleActive(u)}
-                        className={`text-xs font-medium ${
-                          u.is_active
-                            ? "text-orange-500 hover:text-orange-600"
-                            : "text-green-600 hover:text-green-700"
-                        }`}
-                      >
-                        {u.is_active ? "Deactivate" : "Activate"}
-                      </button>
-                      <button
-                        onClick={() => handleResetPassword(u)}
-                        className="text-xs text-gray-500 hover:text-gray-700 font-medium"
-                      >
-                        Reset PW
-                      </button>
-                      <button
-                        onClick={() => handleRemove(u)}
-                        className="text-xs text-red-500 hover:text-red-600 font-medium"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {users.map((u) => {
+                const isOwner = u.role === "owner";
+                return (
+                  <tr key={u.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900">{u.first_name} {u.last_name}</p>
+                        {isOwner && (
+                          <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                            Owner
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                    <td className="px-4 py-3">
+                      {isOwner ? (
+                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-purple-100 text-purple-700">
+                          Full Access
+                        </span>
+                      ) : (
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          GROUP_COLORS[u.user_group] ?? "bg-gray-100 text-gray-600"
+                        }`}>
+                          {u.user_group}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+                      }`}>
+                        {u.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2 justify-end flex-wrap">
+                        {!isOwner && (
+                          <>
+                            <button
+                              onClick={() => handleEdit(u)}
+                              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleToggleActive(u)}
+                              className={`text-xs font-medium ${
+                                u.is_active
+                                  ? "text-orange-500 hover:text-orange-600"
+                                  : "text-green-600 hover:text-green-700"
+                              }`}
+                            >
+                              {u.is_active ? "Deactivate" : "Activate"}
+                            </button>
+                            <button
+                              onClick={() => handleResetPassword(u)}
+                              className="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                            >
+                              Reset PW
+                            </button>
+                            <button
+                              onClick={() => handleRemove(u)}
+                              className="text-xs text-red-500 hover:text-red-600 font-medium"
+                            >
+                              Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

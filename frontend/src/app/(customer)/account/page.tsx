@@ -70,6 +70,7 @@ export default function AccountOverviewPage() {
           { label: "Profile", href: "/account/profile" },
           { label: "Addresses", href: "/account/addresses" },
           { label: "Price List", href: "/account/price-list" },
+          { label: "Sales History", href: "/account/sales-history" },
         ].map((item) => (
           <Link
             key={item.href}

@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth.store";
 
-const DEPARTMENTS = ["MAIN", "Accounting", "Purchasing", "Sales", "Warehouse", "WEB"];
-
 const US_TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (ET) — UTC-5/4" },
   { value: "America/Chicago", label: "Central Time (CT) — UTC-6/5" },
@@ -55,7 +53,6 @@ interface Contact {
 const EMPTY_FORM = {
   first_name: "",
   last_name: "",
-  department: "",
   time_zone: "",
   phone: "",
   phone_ext: "",
@@ -126,7 +123,6 @@ export default function ManageContactsPage() {
     setForm({
       first_name: contact.first_name,
       last_name: contact.last_name,
-      department: contact.department || "",
       time_zone: contact.time_zone || "",
       phone: contact.phone || "",
       phone_ext: contact.phone_ext || "",
@@ -294,27 +290,6 @@ export default function ManageContactsPage() {
                   </div>
                 </div>
 
-                {/* Department pill buttons */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                  <div className="flex flex-wrap gap-2">
-                    {DEPARTMENTS.map((dept) => (
-                      <button
-                        key={dept}
-                        type="button"
-                        onClick={() => setForm(p => ({ ...p, department: p.department === dept ? "" : dept }))}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-                          form.department === dept
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
-                        }`}
-                      >
-                        {dept}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Time Zone */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Time Zone</label>
@@ -400,26 +375,6 @@ export default function ManageContactsPage() {
                     rows={3}
                     className={`${inputCls} resize-none`}
                   />
-                </div>
-
-                {/* Notification preferences */}
-                <div className="border border-gray-200 rounded-md p-4 space-y-2">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Email Notifications</p>
-                  {[
-                    { key: "notify_order_confirmation", label: "Order Confirmation" },
-                    { key: "notify_order_shipped", label: "Order Shipped" },
-                    { key: "notify_invoices", label: "Invoices" },
-                  ].map(({ key, label }) => (
-                    <label key={key} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={form[key as keyof typeof form] as boolean}
-                        onChange={(e) => setForm(p => ({ ...p, [key]: e.target.checked }))}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                      />
-                      <span className="text-sm text-gray-600">{label}</span>
-                    </label>
-                  ))}
                 </div>
 
                 {/* Primary contact */}
@@ -609,11 +564,6 @@ export default function ManageContactsPage() {
                         Primary
                       </span>
                     )}
-                    {contact.department && (
-                      <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">
-                        {contact.department}
-                      </span>
-                    )}
                   </div>
                   <div className="mt-1 space-y-0.5 text-sm text-gray-500">
                     <p>{contact.email}</p>
@@ -648,23 +598,6 @@ export default function ManageContactsPage() {
                     )}
                     {contact.notes && (
                       <p className="text-xs text-gray-400 italic">Note: {contact.notes}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-1 mt-2 flex-wrap">
-                    {contact.notify_order_confirmation && (
-                      <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded">
-                        Order Updates
-                      </span>
-                    )}
-                    {contact.notify_order_shipped && (
-                      <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded">
-                        Shipping
-                      </span>
-                    )}
-                    {contact.notify_invoices && (
-                      <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded">
-                        Invoices
-                      </span>
                     )}
                   </div>
                 </div>

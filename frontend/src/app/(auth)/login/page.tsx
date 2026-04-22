@@ -74,11 +74,11 @@ export default function LoginPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#080808", fontFamily: "var(--font-jakarta)", display: "flex", flexDirection: "column" }}>
       {/* Top bar */}
-      <div style={{ padding: "24px 32px", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+      {/* <div style={{ padding: "24px 32px", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
         <Link href="/" style={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
           <img src="/Af-apparel logo.jpeg" alt="AF Apparels Logo" style={{ height: "50px", width: "auto", objectFit: "contain" }} />
         </Link>
-      </div>
+      </div> */}
 
       {/* Main */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
