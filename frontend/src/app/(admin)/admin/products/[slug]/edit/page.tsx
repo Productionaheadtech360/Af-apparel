@@ -96,10 +96,30 @@ export default function AdminProductEditPage() {
     await load();
   }
 
-  // Add Variant modal
+  async function applyToSelectedVariants() {
+    if (!product || !selectedVariantIds.size) return;
+    const updates: Record<string, string> = {};
+    if (bulkApply.price.trim()) updates.retail_price = bulkApply.price.trim();
+    if (bulkApply.compare.trim()) updates.compare_price = bulkApply.compare.trim();
+    if (bulkApply.stock.trim()) updates.stock_quantity = bulkApply.stock.trim();
+    if (!Object.keys(updates).length) return;
+    await Promise.all(
+      product.variants.filter(v => selectedVariantIds.has(v.id)).map(v => adminService.updateVariant(product.id, v.id, updates))
+    );
+    setBulkApply({ price: "", compare: "", stock: "" });
+    setSelectedVariantIds(new Set());
+    await load();
+  }
+
+  // Add Variant modal (Shopify-style multi)
   const [showAddVariant, setShowAddVariant] = useState(false);
-  const [newVariant, setNewVariant] = useState({ color: "", size: "", sku: "", retail_price: "" });
+  const [bulkColors, setBulkColors] = useState("");
+  const [bulkSizes, setBulkSizes] = useState<string[]>([]);
+  const [bulkPrice, setBulkPrice] = useState("");
   const [addingVariant, setAddingVariant] = useState(false);
+
+  // Variant selection for "Apply to Selected"
+  const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(new Set());
 
   async function load() {
     setIsLoading(true);
@@ -172,30 +192,33 @@ export default function AdminProductEditPage() {
     await adminService.updateVariant(product.id, variantId, variantEdits[variantId]);
   }
 
-  async function handleAddVariant() {
-    if (!product || !newVariant.color || !newVariant.size) return;
+  async function handleAddVariants() {
+    if (!product) return;
+    const colors = bulkColors.split(",").map(c => c.trim()).filter(Boolean);
+    if (!colors.length || !bulkSizes.length) return;
     setAddingVariant(true);
     try {
-      const colorCode = newVariant.color.slice(0, 3).toUpperCase();
-      const sizeCode = newVariant.size.toUpperCase();
       const productCode = product.name.split(" ").map(w => w[0] ?? "").join("").toUpperCase();
-      const sku = newVariant.sku.trim() || `${productCode}-${colorCode}-${sizeCode}-${Date.now().toString(36).toUpperCase()}`;
-
-      const created = await apiClient.post<ProductVariant>(`/api/v1/admin/products/${product.id}/variants`, {
-        sku,
-        color: newVariant.color,
-        size: newVariant.size,
-        retail_price: parseFloat(newVariant.retail_price) || 0,
-        status: "active",
-      });
-
-      setProduct(prev => prev ? { ...prev, variants: [...prev.variants, created] } : prev);
-      setNewVariant({ color: "", size: "", sku: "", retail_price: "" });
+      const price = parseFloat(bulkPrice) || 0;
+      const newVariants: ProductVariant[] = [];
+      for (const color of colors) {
+        for (const size of bulkSizes) {
+          const colorCode = color.slice(0, 3).toUpperCase();
+          const sizeCode = size.toUpperCase();
+          const sku = `${productCode}-${colorCode}-${sizeCode}-${Date.now().toString(36).toUpperCase()}`;
+          const created = await apiClient.post<ProductVariant>(`/api/v1/admin/products/${product.id}/variants`, {
+            sku, color, size, retail_price: price, status: "active",
+          });
+          newVariants.push(created);
+        }
+      }
+      setProduct(prev => prev ? { ...prev, variants: [...prev.variants, ...newVariants] } : prev);
+      const newColors = colors.filter(c => c);
+      setExpandedGroups(prev => [...new Set([...prev, ...newColors])]);
+      setBulkColors(""); setBulkSizes([]); setBulkPrice("");
       setShowAddVariant(false);
-      // Auto-expand the new color group
-      if (created.color) setExpandedGroups(prev => [...new Set([...prev, created.color!])]);
     } catch (err) {
-      alert("Failed to add variant. Check the console for details.");
+      alert("Failed to add variants.");
       console.error(err);
     } finally {
       setAddingVariant(false);
@@ -490,10 +513,10 @@ export default function AdminProductEditPage() {
               </div>
             </div>
 
-            {/* Apply to All bar */}
+            {/* Apply to All / Selected bar */}
             {groupedVariants.length > 0 && (
               <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "14px", padding: "12px 14px", background: "#F4F3EF", borderRadius: "8px", flexWrap: "wrap" }}>
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "#7A7880", whiteSpace: "nowrap" }}>APPLY TO ALL:</span>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#7A7880", whiteSpace: "nowrap" }}>BULK EDIT:</span>
                 <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   <span style={{ fontSize: "12px", color: "#aaa" }}>Price $</span>
                   <input type="number" placeholder="—" value={bulkApply.price} onChange={e => setBulkApply(p => ({ ...p, price: e.target.value }))} style={{ width: "72px", padding: "5px 7px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px" }} />
@@ -511,8 +534,17 @@ export default function AdminProductEditPage() {
                   disabled={!bulkApply.price && !bulkApply.compare && !bulkApply.stock}
                   style={{ padding: "5px 14px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "5px", fontSize: "12px", fontWeight: 700, cursor: "pointer", opacity: (!bulkApply.price && !bulkApply.compare && !bulkApply.stock) ? 0.4 : 1 }}
                 >
-                  Apply
+                  Apply to All
                 </button>
+                {selectedVariantIds.size > 0 && (
+                  <button
+                    onClick={applyToSelectedVariants}
+                    disabled={!bulkApply.price && !bulkApply.compare && !bulkApply.stock}
+                    style={{ padding: "5px 14px", background: "#059669", color: "#fff", border: "none", borderRadius: "5px", fontSize: "12px", fontWeight: 700, cursor: "pointer", opacity: (!bulkApply.price && !bulkApply.compare && !bulkApply.stock) ? 0.4 : 1 }}
+                  >
+                    Apply to Selected ({selectedVariantIds.size})
+                  </button>
+                )}
               </div>
             )}
 
@@ -541,6 +573,20 @@ export default function AdminProductEditPage() {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                     <thead>
                       <tr style={{ borderBottom: "1px solid #E2E0DA", background: "#FAFAFA" }}>
+                        <th style={{ ...thStyle, width: "36px" }}>
+                          <input
+                            type="checkbox"
+                            checked={group.variants.every(v => selectedVariantIds.has(v.id))}
+                            onChange={e => {
+                              setSelectedVariantIds(prev => {
+                                const next = new Set(prev);
+                                if (e.target.checked) group.variants.forEach(v => next.add(v.id));
+                                else group.variants.forEach(v => next.delete(v.id));
+                                return next;
+                              });
+                            }}
+                          />
+                        </th>
                         {["Size", "SKU", "Price", "Compare Price", "Stock", ""].map(h => (
                           <th key={h} style={thStyle}>{h}</th>
                         ))}
@@ -548,7 +594,20 @@ export default function AdminProductEditPage() {
                     </thead>
                     <tbody>
                       {group.variants.map(variant => (
-                        <tr key={variant.id} style={{ borderBottom: "1px solid #F4F3EF" }}>
+                        <tr key={variant.id} style={{ borderBottom: "1px solid #F4F3EF", background: selectedVariantIds.has(variant.id) ? "rgba(26,92,255,.04)" : undefined }}>
+                          <td style={{ padding: "10px 16px", width: "36px" }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedVariantIds.has(variant.id)}
+                              onChange={e => {
+                                setSelectedVariantIds(prev => {
+                                  const next = new Set(prev);
+                                  if (e.target.checked) next.add(variant.id); else next.delete(variant.id);
+                                  return next;
+                                });
+                              }}
+                            />
+                          </td>
                           <td style={{ padding: "10px 16px", fontWeight: 700, fontSize: "13px" }}>{variant.size ?? "—"}</td>
                           <td style={{ padding: "10px 16px" }}>
                             <input
@@ -954,80 +1013,103 @@ export default function AdminProductEditPage() {
       </div>
 
       {/* ── Add Variant Modal ──────────────────────────────────────── */}
-      {showAddVariant && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "#fff", borderRadius: "12px", width: "480px", padding: "28px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h3 style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", color: "#2A2830", letterSpacing: ".04em" }}>ADD VARIANT</h3>
-              <button onClick={() => setShowAddVariant(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#aaa" }}>✕</button>
-            </div>
+      {showAddVariant && (() => {
+        const parsedColors = bulkColors.split(",").map(c => c.trim()).filter(Boolean);
+        const willCreate = parsedColors.length * bulkSizes.length;
+        const ALL_SIZES = ["XS", "S", "S/M", "M", "M/L", "L", "XL", "2XL", "3XL", "4XL", "5XL", "One Size"];
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+            <div style={{ background: "#fff", borderRadius: "12px", width: "540px", maxHeight: "90vh", overflowY: "auto", padding: "28px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", color: "#2A2830", letterSpacing: ".04em" }}>ADD VARIANTS</h3>
+                <button onClick={() => { setShowAddVariant(false); setBulkColors(""); setBulkSizes([]); setBulkPrice(""); }} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#aaa" }}>✕</button>
+              </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
-              <div>
-                <label style={labelStyle}>Color <span style={{ color: "#E8242A" }}>*</span></label>
+              {/* Colors */}
+              <div style={{ marginBottom: "18px" }}>
+                <label style={labelStyle}>Colors <span style={{ color: "#E8242A" }}>*</span></label>
                 <input
-                  value={newVariant.color}
-                  onChange={e => setNewVariant(v => ({ ...v, color: e.target.value }))}
-                  placeholder="e.g. Navy, Black, White"
-                  list="color-suggestions"
+                  value={bulkColors}
+                  onChange={e => setBulkColors(e.target.value)}
+                  placeholder="Navy, Black, White, Red, Forest…"
                   style={inputStyle}
                 />
-                <datalist id="color-suggestions">
-                  {Object.keys(COLOR_MAP).map(c => <option key={c} value={c} />)}
-                </datalist>
+                <p style={{ fontSize: "11px", color: "#7A7880", marginTop: "4px" }}>Separate multiple colors with commas</p>
+                {parsedColors.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
+                    {parsedColors.map(c => (
+                      <span key={c} style={{ display: "flex", alignItems: "center", gap: "5px", background: "#F4F3EF", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
+                        <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: COLOR_MAP[c] ?? "#888", border: "1px solid rgba(0,0,0,.1)", display: "inline-block", flexShrink: 0 }} />
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div>
-                <label style={labelStyle}>Size <span style={{ color: "#E8242A" }}>*</span></label>
-                <select
-                  value={newVariant.size}
-                  onChange={e => setNewVariant(v => ({ ...v, size: e.target.value }))}
-                  style={{ ...inputStyle, background: "#fff" }}
-                >
-                  <option value="">Select size…</option>
-                  {["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "One Size"].map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+
+              {/* Sizes */}
+              <div style={{ marginBottom: "18px" }}>
+                <label style={{ ...labelStyle, marginBottom: "10px" }}>Sizes <span style={{ color: "#E8242A" }}>*</span></label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {ALL_SIZES.map(s => {
+                    const checked = bulkSizes.includes(s);
+                    return (
+                      <label key={s} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "6px 12px", border: `1.5px solid ${checked ? "#1A5CFF" : "#E2E0DA"}`, borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: checked ? 700 : 500, background: checked ? "rgba(26,92,255,.06)" : "#fff", color: checked ? "#1A5CFF" : "#2A2830", userSelect: "none" }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={e => setBulkSizes(prev => e.target.checked ? [...prev, s] : prev.filter(x => x !== s))}
+                          style={{ display: "none" }}
+                        />
+                        {s}
+                      </label>
+                    );
+                  })}
+                </div>
+                <div style={{ marginTop: "8px", display: "flex", gap: "8px" }}>
+                  <button onClick={() => setBulkSizes(ALL_SIZES)} style={{ fontSize: "11px", color: "#1A5CFF", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 600 }}>Select All</button>
+                  <button onClick={() => setBulkSizes([])} style={{ fontSize: "11px", color: "#7A7880", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Clear</button>
+                </div>
               </div>
-              <div>
-                <label style={labelStyle}>SKU</label>
-                <input
-                  value={newVariant.sku}
-                  onChange={e => setNewVariant(v => ({ ...v, sku: e.target.value }))}
-                  placeholder="Auto-generated if empty"
-                  style={inputStyle}
-                />
-              </div>
-              <div>
+
+              {/* Price */}
+              <div style={{ marginBottom: "18px" }}>
                 <label style={labelStyle}>Price ($)</label>
                 <input
                   type="number"
-                  value={newVariant.retail_price}
-                  onChange={e => setNewVariant(v => ({ ...v, retail_price: e.target.value }))}
+                  value={bulkPrice}
+                  onChange={e => setBulkPrice(e.target.value)}
                   placeholder="0.00"
-                  style={inputStyle}
+                  style={{ ...inputStyle, width: "140px" }}
                 />
               </div>
-            </div>
 
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" }}>
-              <button
-                onClick={() => setShowAddVariant(false)}
-                style={{ padding: "10px 20px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "13px" }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddVariant}
-                disabled={addingVariant || !newVariant.color || !newVariant.size}
-                style={{ padding: "10px 20px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "13px", opacity: (addingVariant || !newVariant.color || !newVariant.size) ? 0.6 : 1 }}
-              >
-                {addingVariant ? "Adding…" : "Add Variant"}
-              </button>
+              {/* Preview */}
+              {willCreate > 0 && (
+                <div style={{ padding: "10px 14px", background: "rgba(5,150,105,.06)", border: "1px solid rgba(5,150,105,.2)", borderRadius: "6px", fontSize: "13px", color: "#059669", fontWeight: 600, marginBottom: "16px" }}>
+                  Will create {willCreate} variant{willCreate !== 1 ? "s" : ""} ({parsedColors.length} color{parsedColors.length !== 1 ? "s" : ""} × {bulkSizes.length} size{bulkSizes.length !== 1 ? "s" : ""})
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => { setShowAddVariant(false); setBulkColors(""); setBulkSizes([]); setBulkPrice(""); }}
+                  style={{ padding: "10px 20px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "13px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddVariants}
+                  disabled={addingVariant || !parsedColors.length || !bulkSizes.length}
+                  style={{ padding: "10px 20px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "13px", opacity: (addingVariant || !parsedColors.length || !bulkSizes.length) ? 0.6 : 1 }}
+                >
+                  {addingVariant ? "Adding…" : `Add ${willCreate || ""} Variant${willCreate !== 1 ? "s" : ""}`}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

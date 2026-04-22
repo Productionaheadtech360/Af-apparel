@@ -430,8 +430,9 @@ export default function DraftOrdersPage() {
       const data = await apiClient.get<{ items: DraftOrder[]; total: number }>(
         "/api/v1/admin/orders?status=pending&page_size=100"
       );
-      setOrders(data?.items ?? []);
-      setTotal(data?.total ?? 0);
+      const drafts = (data?.items ?? []).filter(o => o.order_number.startsWith("DRAFT-"));
+      setOrders(drafts);
+      setTotal(drafts.length);
     } finally {
       setIsLoading(false);
     }

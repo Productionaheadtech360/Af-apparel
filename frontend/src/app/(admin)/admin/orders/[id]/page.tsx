@@ -161,6 +161,9 @@ export default function AdminOrderDetailPage() {
   const [editingNote, setEditingNote] = useState(false);
   const [noteText, setNoteText] = useState("");
 
+  // Order items edit mode
+  const [editingItems, setEditingItems] = useState(false);
+
   // Add item state
   const [itemSearch, setItemSearch] = useState("");
   const [itemResults, setItemResults] = useState<{ variant_id: string; sku: string; product_name: string; color: string | null; size: string | null; price: number }[]>([]);
@@ -498,10 +501,25 @@ export default function AdminOrderDetailPage() {
           <div style={{ ...CardStyle, padding: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ ...SectionHead, fontSize: "18px", letterSpacing: ".05em" }}>ORDER ITEMS</h3>
+              {["pending", "confirmed", "processing"].includes(order.status) && (
+                editingItems ? (
+                  <button
+                    onClick={() => setEditingItems(false)}
+                    style={{ display: "flex", alignItems: "center", gap: "5px", background: "none", border: "1.5px solid #E2E0DA", borderRadius: "6px", padding: "6px 12px", fontSize: "12px", fontWeight: 700, cursor: "pointer", color: "#7A7880" }}>
+                    ✕ Done Editing
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setEditingItems(true)}
+                    style={{ display: "flex", alignItems: "center", gap: "5px", background: "#F4F3EF", border: "1px solid #E2E0DA", borderRadius: "6px", padding: "6px 12px", fontSize: "12px", fontWeight: 700, cursor: "pointer", color: "#2A2830" }}>
+                    ✎ Edit
+                  </button>
+                )
+              )}
             </div>
 
-            {/* Add Items — only for pending/draft orders */}
-            {(order.status === "pending" || order.status === "confirmed") && (
+            {/* Add Items — only in edit mode */}
+            {editingItems && (
               <div style={{ background: "#F4F3EF", borderRadius: "8px", padding: "16px", marginBottom: "20px" }}>
                 <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A7880", marginBottom: "10px" }}>Add Product</div>
                 <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
@@ -581,7 +599,7 @@ export default function AdminOrderDetailPage() {
                     <td style={{ padding: "14px 12px", textAlign: "right" as const, color: "#7A7880" }}>${Number(item.unit_price).toFixed(2)}</td>
                     <td style={{ padding: "14px 12px", textAlign: "right" as const, fontWeight: 700, fontFamily: "var(--font-bebas)", fontSize: "16px", color: "#2A2830" }}>${Number(item.line_total).toFixed(2)}</td>
                     <td style={{ padding: "14px 12px", textAlign: "right" as const }}>
-                      {(order.status === "pending" || order.status === "confirmed") && (
+                      {editingItems && (
                         <button
                           onClick={() => handleRemoveItem(item.id, item.line_total)}
                           style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "14px", fontWeight: 700, padding: "2px 6px" }}
