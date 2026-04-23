@@ -229,8 +229,7 @@ export default function DiscountGroupsPage() {
   const [groupCustomers, setGroupCustomers]           = useState<CustomerItem[]>([]);
   const [groupCustomersLoading, setGroupCustomersLoading] = useState(false);
   const [customerAssignSearch, setCustomerAssignSearch]   = useState("");
-  const [customerSearchResults, setCustomerSearchResults] = useState<CustomerItem[]>([]);
-  const [customerSearching, setCustomerSearching]         = useState(false);
+  const [showAddPanel, setShowAddPanel]                   = useState(false);
   const [allCustomers, setAllCustomers]                   = useState<CustomerItem[]>([]);
 
   // ── Individual Variant Pricing state ──────────────────────────────────────
@@ -326,7 +325,7 @@ export default function DiscountGroupsPage() {
     setFlatBrackets([]);
     setGroupCustomers([]);
     setCustomerAssignSearch("");
-    setCustomerSearchResults([]);
+    setShowAddPanel(false);
     setShowGroupModal(true);
     loadAllCustomers();
   }
@@ -349,7 +348,7 @@ export default function DiscountGroupsPage() {
     setFlatCutoffTime(g.shipping_cutoff_time || "");
     setFlatBrackets(g.shipping_brackets && g.shipping_brackets.length > 0 ? g.shipping_brackets : []);
     setCustomerAssignSearch("");
-    setCustomerSearchResults([]);
+    setShowAddPanel(false);
     if (g.applies_to !== "store") loadBrowseList(g.applies_to);
     else setBrowseList([]);
     setShowGroupModal(true);
@@ -373,16 +372,6 @@ export default function DiscountGroupsPage() {
     } finally {
       setGroupCustomersLoading(false);
     }
-  }
-
-  function searchCustomers(q: string) {
-    setCustomerAssignSearch(q);
-    if (!q.trim()) { setCustomerSearchResults([]); return; }
-    const q2 = q.toLowerCase();
-    const results = allCustomers.filter(c =>
-      c.name?.toLowerCase().includes(q2)
-    );
-    setCustomerSearchResults(results.slice(0, 15));
   }
 
   async function toggleCustomerAssignment(customer: CustomerItem, assign: boolean) {
@@ -638,41 +627,31 @@ export default function DiscountGroupsPage() {
                       </td>
                       {groups.map(group => {
                         const ov = vpOverrides[product.id]?.[group.id] ?? { price: "", discount: "" };
-                        // Auto-calculate discount % from entered price vs base price
-                        const enteredPrice = ov.price ? parseFloat(ov.price) : null;
+                        const discountAmt = ov.price ? parseFloat(ov.price) : null;
                         const bp = product.base_price;
-                        const calcDiscount = (enteredPrice != null && bp != null && bp > 0)
-                          ? ((bp - enteredPrice) / bp * 100).toFixed(1)
+                        const calcDiscount = (discountAmt != null && bp != null && bp > 0)
+                          ? (discountAmt / bp * 100).toFixed(1)
                           : null;
                         return (
                           <td key={group.id} style={{ padding: "8px 12px", borderLeft: "1px solid #E2E0DA" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "center" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
-                                <span style={{ fontSize: "11px", color: "#aaa" }}>$</span>
+                                <span style={{ fontSize: "11px", color: "#aaa" }}>-$</span>
                                 <input
                                   type="number"
                                   value={ov.price}
                                   onChange={e => updateVPOverride(product.id, group.id, "price", e.target.value)}
-                                  placeholder="Price"
+                                  placeholder="0.00"
                                   style={{ width: "72px", padding: "4px 6px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", textAlign: "center" }}
                                 />
                               </div>
-                              {/* Show auto-calculated % when price is entered */}
-                              {calcDiscount != null && (
+                              {calcDiscount != null ? (
                                 <div style={{ fontSize: "10px", color: "#059669", fontWeight: 700, textAlign: "center" }}>
                                   ≈ {calcDiscount}% off
                                 </div>
+                              ) : (
+                                <div style={{ fontSize: "10px", color: "#ddd", textAlign: "center" }}>— %</div>
                               )}
-                              <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
-                                <input
-                                  type="number"
-                                  value={ov.discount}
-                                  onChange={e => updateVPOverride(product.id, group.id, "discount", e.target.value)}
-                                  placeholder="%"
-                                  style={{ width: "72px", padding: "4px 6px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", textAlign: "center" }}
-                                />
-                                <span style={{ fontSize: "11px", color: "#aaa" }}>%</span>
-                              </div>
                             </div>
                           </td>
                         );
@@ -722,13 +701,11 @@ export default function DiscountGroupsPage() {
             <div style={sectionBox}>
               <div style={{ fontFamily: "var(--font-bebas)", fontSize: "13px", letterSpacing: ".1em", color: "#7A7880", marginBottom: "14px" }}>CUSTOMER TAG & ASSIGNMENT</div>
 
-              <div style={{ marginBottom: "14px" }}>
+              <div style={{ marginBottom: "16px" }}>
                 <label style={labelStyle}>Customer Tag</label>
                 <input
                   value={groupForm.customer_tag}
-                  onChange={e => {
-                    setGroupForm(f => ({ ...f, customer_tag: e.target.value }));
-                  }}
+                  onChange={e => setGroupForm(f => ({ ...f, customer_tag: e.target.value }))}
                   onBlur={e => {
                     if (e.target.value.trim()) loadGroupCustomers(e.target.value.trim());
                     else setGroupCustomers([]);
@@ -741,9 +718,19 @@ export default function DiscountGroupsPage() {
                 </p>
               </div>
 
-              {/* Currently assigned customers */}
+              {/* Assigned customers — always visible */}
               <div>
-                <label style={{ ...labelStyle, marginBottom: "8px" }}>Assigned Customers</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>
+                    Assigned Customers{groupCustomers.length > 0 ? ` (${groupCustomers.length})` : ""}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddPanel(p => !p); if (!showAddPanel) { loadAllCustomers(); setCustomerAssignSearch(""); } }}
+                    style={{ padding: "5px 12px", background: showAddPanel ? "#E2E0DA" : "rgba(26,92,255,.08)", border: `1px solid ${showAddPanel ? "#ccc" : "rgba(26,92,255,.2)"}`, color: showAddPanel ? "#7A7880" : "#1A5CFF", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+                  >{showAddPanel ? "✕ Close" : "+ Add"}</button>
+                </div>
+
                 {groupCustomersLoading ? (
                   <div style={{ fontSize: "12px", color: "#bbb", padding: "8px 0" }}>Loading…</div>
                 ) : groupCustomers.length > 0 ? (
@@ -753,51 +740,52 @@ export default function DiscountGroupsPage() {
                         <span style={{ fontSize: "13px", fontWeight: 600, color: "#2A2830" }}>{c.name}</span>
                         <button
                           onClick={() => toggleCustomerAssignment(c, false)}
-                          style={{ background: "none", border: "none", color: "#E8242A", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}
+                          style={{ background: "rgba(232,36,42,.06)", border: "1px solid rgba(232,36,42,.2)", color: "#E8242A", padding: "4px 10px", borderRadius: "5px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                         >Remove</button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div style={{ fontSize: "12px", color: "#bbb" }}>No customers assigned yet</div>
+                  <div style={{ fontSize: "12px", color: "#bbb", padding: "4px 0" }}>No customers assigned yet</div>
                 )}
-              </div>
 
-              {/* Add customer search */}
-              <div style={{ marginTop: "12px" }}>
-                <label style={{ ...labelStyle, marginBottom: "6px" }}>Add Customer</label>
-                <input
-                  value={customerAssignSearch}
-                  onChange={e => searchCustomers(e.target.value)}
-                  placeholder="Search by company name…"
-                  style={inputStyle}
-                />
-                {customerSearchResults.length > 0 && (
-                  <div style={{ border: "1px solid #E2E0DA", borderRadius: "7px", background: "#fff", maxHeight: "150px", overflowY: "auto", marginTop: "4px" }}>
-                    {customerSearchResults.map(c => {
-                      const isAssigned = groupCustomers.some(gc => gc.id === c.id);
-                      const tag = groupForm.customer_tag;
-                      const hasTag = Array.isArray(c.tags) && c.tags.includes(tag);
-                      return (
-                        <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid #F4F3EF" }}>
-                          <div>
+                {/* Add panel — visible when "+ Add" is clicked */}
+                {showAddPanel && (
+                  <div style={{ border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", overflow: "hidden", marginTop: "10px" }}>
+                    <div style={{ padding: "8px 12px", borderBottom: "1px solid #F4F3EF" }}>
+                      <input
+                        value={customerAssignSearch}
+                        onChange={e => setCustomerAssignSearch(e.target.value)}
+                        placeholder="Search by company name…"
+                        style={{ ...inputStyle, fontSize: "13px" }}
+                        autoFocus
+                      />
+                    </div>
+                    <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+                      {(() => {
+                        const unassigned = allCustomers.filter(c => {
+                          if (groupCustomers.some(gc => gc.id === c.id)) return false;
+                          if (!customerAssignSearch.trim()) return true;
+                          return c.name?.toLowerCase().includes(customerAssignSearch.toLowerCase());
+                        });
+                        if (unassigned.length === 0) {
+                          return (
+                            <div style={{ padding: "20px", textAlign: "center", color: "#bbb", fontSize: "12px" }}>
+                              {allCustomers.length === 0 ? "Loading customers…" : "No more customers to add"}
+                            </div>
+                          );
+                        }
+                        return unassigned.slice(0, 20).map(c => (
+                          <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid #F4F3EF" }}>
                             <span style={{ fontSize: "13px", fontWeight: 600, color: "#2A2830" }}>{c.name}</span>
-                            {hasTag && <span style={{ marginLeft: "6px", fontSize: "10px", color: "#059669", fontWeight: 700 }}>already assigned</span>}
-                          </div>
-                          {!isAssigned && !hasTag ? (
                             <button
-                              onClick={() => { toggleCustomerAssignment(c, true); setCustomerAssignSearch(""); setCustomerSearchResults([]); }}
+                              onClick={() => toggleCustomerAssignment(c, true)}
                               style={{ background: "rgba(26,92,255,.08)", border: "1px solid rgba(26,92,255,.2)", color: "#1A5CFF", padding: "4px 10px", borderRadius: "5px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
-                            >Assign</button>
-                          ) : (
-                            <button
-                              onClick={() => { toggleCustomerAssignment(c, false); setCustomerAssignSearch(""); setCustomerSearchResults([]); }}
-                              style={{ background: "rgba(232,36,42,.06)", border: "1px solid rgba(232,36,42,.2)", color: "#E8242A", padding: "4px 10px", borderRadius: "5px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
-                            >Remove</button>
-                          )}
-                        </div>
-                      );
-                    })}
+                            >Add</button>
+                          </div>
+                        ));
+                      })()}
+                    </div>
                   </div>
                 )}
               </div>
