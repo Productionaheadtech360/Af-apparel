@@ -99,6 +99,10 @@ export default function CheckoutReviewPage() {
       phone: shippingPhone || undefined,
     };
 
+    const appliedCoupon = typeof window !== "undefined"
+      ? localStorage.getItem("af_coupon") ?? undefined
+      : undefined;
+
     try {
       const order = await ordersService.confirmOrder({
         qb_token: qbToken ?? undefined,
@@ -108,6 +112,7 @@ export default function CheckoutReviewPage() {
         shipping_method: shippingMethod || "standard",
         po_number: poNumber || undefined,
         order_notes: orderNotes || undefined,
+        discount_code: appliedCoupon || undefined,
       });
 
       const productName = cart?.items[0]?.product_name ?? "Your Order";
@@ -128,6 +133,7 @@ export default function CheckoutReviewPage() {
       // Persist to sessionStorage so the confirmed page survives any navigation type
       sessionStorage.setItem("af_confirmed_order", JSON.stringify(confirmedData));
 
+      if (typeof window !== "undefined") localStorage.removeItem("af_coupon");
       clearCart();
       router.push("/checkout/confirmed");
     } catch (err: unknown) {

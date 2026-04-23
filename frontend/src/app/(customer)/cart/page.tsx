@@ -83,6 +83,14 @@ function groupByProduct(items: CartItem[]): ProductGroup[] {
 const divider = <div style={{ borderTop: "1px solid #F0EEE9", margin: "14px 0" }} />;
 
 // ── Component ─────────────────────────────────────────────────────────────────
+interface AppliedCoupon {
+  code: string;
+  discount_type: string;
+  discount_amount: number;
+  final_total: number;
+  message: string;
+}
+
 export default function CartPage() {
   const router = useRouter();
   const [cart, setCart] = useState<Cart | null>(null);
@@ -91,6 +99,15 @@ export default function CartPage() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("af_coupon") : null;
+    if (saved) setCouponInput(saved);
+  }, []);
 
   useEffect(() => {
     cartService.getCart().then(setCart).catch(console.error).finally(() => setIsLoading(false));
@@ -127,6 +144,50 @@ export default function CartPage() {
     } finally {
       setSavingTemplate(false);
     }
+  }
+
+  async function handleApplyCoupon() {
+    if (!couponInput.trim()) return;
+    setApplyingCoupon(true);
+    setCouponError(null);
+    try {
+      const res = await fetch("/api/v1/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          code: couponInput.trim(),
+          cart_total: subtotal,
+          customer_type: "wholesale",
+        }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        const coupon: AppliedCoupon = {
+          code: data.code,
+          discount_type: data.discount_type,
+          discount_amount: Number(data.discount_amount),
+          final_total: Number(data.final_total),
+          message: data.message,
+        };
+        setAppliedCoupon(coupon);
+        if (typeof window !== "undefined") localStorage.setItem("af_coupon", data.code);
+      } else {
+        setCouponError(data.message || "Invalid discount code.");
+        setAppliedCoupon(null);
+      }
+    } catch {
+      setCouponError("Failed to validate coupon. Please try again.");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponError(null);
+    if (typeof window !== "undefined") localStorage.removeItem("af_coupon");
   }
 
   function getCheckoutDisabledReason(): string | undefined {
@@ -345,6 +406,13 @@ export default function CartPage() {
                 isValid={isCheckoutEnabled}
                 disabledReason={disabledReason}
                 onCheckout={() => router.push("/checkout/address")}
+                couponInput={couponInput}
+                onCouponInputChange={setCouponInput}
+                appliedCoupon={appliedCoupon}
+                couponError={couponError}
+                applyingCoupon={applyingCoupon}
+                onApplyCoupon={handleApplyCoupon}
+                onRemoveCoupon={handleRemoveCoupon}
               />
             </div>
           </div>
@@ -388,6 +456,7 @@ export default function CartPage() {
 // ── Order Summary sidebar component ──────────────────────────────────────────
 function OrderSummary({
   subtotal, estimatedShipping, hasShippingTier, discountPercent, isValid, disabledReason, onCheckout,
+  couponInput, onCouponInputChange, appliedCoupon, couponError, applyingCoupon, onApplyCoupon, onRemoveCoupon,
 }: {
   subtotal: number;
   estimatedShipping: number;
@@ -396,9 +465,17 @@ function OrderSummary({
   isValid: boolean;
   disabledReason?: string;
   onCheckout: () => void;
+  couponInput: string;
+  onCouponInputChange: (v: string) => void;
+  appliedCoupon: AppliedCoupon | null;
+  couponError: string | null;
+  applyingCoupon: boolean;
+  onApplyCoupon: () => void;
+  onRemoveCoupon: () => void;
 }) {
   const tax = 0;
-  const total = subtotal + (hasShippingTier ? estimatedShipping : 0) + tax;
+  const couponDiscount = appliedCoupon?.discount_amount ?? 0;
+  const total = subtotal + (hasShippingTier ? estimatedShipping : 0) + tax - couponDiscount;
 
   const usp = [
     { icon: "🚚", text: "Orders before 2 PM CT ship same day" },
@@ -441,6 +518,17 @@ function OrderSummary({
           <span style={{ color: "#7A7880" }}>Calculated at checkout</span>
         </div>
 
+        {/* Coupon discount line */}
+        {appliedCoupon && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#059669" }}>
+            <span style={{ fontWeight: 600 }}>
+              Coupon ({appliedCoupon.code})
+              <button onClick={onRemoveCoupon} style={{ marginLeft: "8px", fontSize: "10px", color: "#E8242A", background: "none", border: "none", cursor: "pointer", fontWeight: 700, padding: 0 }}>✕</button>
+            </span>
+            <span style={{ fontWeight: 700 }}>-{formatCurrency(couponDiscount)}</span>
+          </div>
+        )}
+
         {/* Divider */}
         <div style={{ borderTop: "1.5px solid #F0EEE9", margin: "4px 0" }} />
 
@@ -448,6 +536,38 @@ function OrderSummary({
           <span>Total</span>
           <span style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", letterSpacing: ".02em" }}>{formatCurrency(total)}</span>
         </div>
+      </div>
+
+      {/* Coupon input */}
+      <div style={{ padding: "0 20px 16px" }}>
+        <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "8px" }}>Discount Code</div>
+        {appliedCoupon ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "9px 12px", background: "rgba(5,150,105,.06)", border: "1px solid rgba(5,150,105,.3)", borderRadius: "7px", fontSize: "13px" }}>
+            <span style={{ flex: 1, fontWeight: 700, color: "#059669" }}>{appliedCoupon.code}</span>
+            <button onClick={onRemoveCoupon} style={{ fontSize: "12px", color: "#E8242A", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>Remove</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: "6px" }}>
+              <input
+                type="text"
+                value={couponInput}
+                onChange={e => onCouponInputChange(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") onApplyCoupon(); }}
+                placeholder="Enter code"
+                style={{ flex: 1, padding: "9px 12px", border: `1.5px solid ${couponError ? "#E8242A" : "#E2E0DA"}`, borderRadius: "7px", fontSize: "13px", fontFamily: "var(--font-jakarta)", outline: "none" }}
+              />
+              <button
+                onClick={onApplyCoupon}
+                disabled={applyingCoupon || !couponInput.trim()}
+                style={{ padding: "9px 14px", background: couponInput.trim() ? "#1A5CFF" : "#E2E0DA", color: couponInput.trim() ? "#fff" : "#aaa", border: "none", borderRadius: "7px", fontSize: "12px", fontWeight: 700, cursor: couponInput.trim() ? "pointer" : "not-allowed", transition: "background .15s", whiteSpace: "nowrap" }}
+              >
+                {applyingCoupon ? "…" : "Apply"}
+              </button>
+            </div>
+            {couponError && <p style={{ fontSize: "11px", color: "#E8242A", marginTop: "5px" }}>{couponError}</p>}
+          </>
+        )}
       </div>
 
       {/* CTA */}

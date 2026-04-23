@@ -28,6 +28,7 @@ export interface ConfirmOrderPayload {
   shipping_method?: string;
   po_number?: string;
   order_notes?: string;
+  discount_code?: string;
 }
 
 export const ordersService = {

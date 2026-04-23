@@ -186,6 +186,10 @@ export function AdminSidebar() {
         </div>
       )}
 
+      {/* ── MARKETING ── */}
+      <div style={SECTION_HEAD}>Marketing</div>
+      <NavLink href="/admin/discounts" label="Discounts" icon={<span style={{ fontSize: "15px" }}>%</span>} />
+
       {/* ── SETTINGS ── */}
       <div style={SECTION_HEAD}>Settings</div>
       <NavLink href="/admin/settings" label="Settings" icon={<SettingsIcon size={15} color="currentColor" />} />
