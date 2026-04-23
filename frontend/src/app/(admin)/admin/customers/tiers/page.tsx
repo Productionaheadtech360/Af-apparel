@@ -255,14 +255,14 @@ export default function DiscountGroupsPage() {
       const prods = await apiClient.get<Array<{
         id: string; name: string;
         categories: Array<{ id: string; name: string }>;
-        variants?: Array<{ price?: number | string }>;
+        variants?: Array<{ retail_price?: number | string }>;
       }>>("/api/v1/admin/products?page_size=200").catch(() => []);
       setVpProducts(
         (Array.isArray(prods) ? prods : []).map(p => ({
           id: String(p.id),
           name: p.name,
           categories: (p.categories || []).map(c => c.name),
-          base_price: p.variants?.[0]?.price != null ? Number(p.variants[0].price) : null,
+          base_price: p.variants?.[0]?.retail_price != null ? Number(p.variants[0].retail_price) : null,
         }))
       );
       const overrides = await apiClient.get<Record<string, Record<string, TierOverride>>>("/api/v1/admin/variant-pricing").catch(() => ({}));
