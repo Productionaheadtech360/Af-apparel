@@ -15,8 +15,6 @@ const US_STATES = [
   "VA", "WA", "WV", "WI", "WY",
 ];
 
-const [couponDiscount, setCouponDiscount] = useState(0);
-
 interface SavedAddress {
   id: string;
   label: string | null;
@@ -78,7 +76,7 @@ export default function CheckoutAddressPage() {
     phone: shippingPhone || "",
   });
   const [errors, setErrors] = useState<Partial<typeof form>>({});
-
+  const [couponDiscount, setCouponDiscount] = useState(0);
   // Load saved addresses + cart (subtotal + tier-based shipping)
   useEffect(() => {
     const saved = localStorage.getItem("af_coupon");
