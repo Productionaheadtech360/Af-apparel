@@ -1,3 +1,4 @@
+// frontend/src/app/(customer)/products/[slug]/page.tsx
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { productsService } from "@/services/products.service";

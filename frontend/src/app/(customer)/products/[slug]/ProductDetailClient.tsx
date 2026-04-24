@@ -1,7 +1,9 @@
+// frontend/src/app/%28customer%29/products/%5Bslug%5D/ProductDetailClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import type { ProductDetail, ProductVariant } from "@/types/product.types";
 import { useAuthStore } from "@/stores/auth.store";
@@ -323,6 +325,7 @@ function thumbSrc(img: { url_thumbnail_webp?: string | null; url_thumbnail?: str
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
+  const router = useRouter();
   // ── Image gallery state ────────────────────────────────────────────────────
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const images = product.images ?? [];
@@ -412,8 +415,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       }
       localStorage.setItem("af_guest_cart", JSON.stringify(guestCart));
       setQuantities({});
-      setCartMsg({ type: "success", text: `${totalUnits} unit${totalUnits !== 1 ? "s" : ""} added! Log in or create an account to checkout.` });
-      setTimeout(() => setCartMsg(null), 6000);
+      // setCartMsg({ type: "success", text: `${totalUnits} unit${totalUnits !== 1 ? "s" : ""} added! Log in or create an account to checkout.` });
+      // setTimeout(() => setCartMsg(null), 6000);
+      router.push("/checkout/address");
       return;
     }
 
