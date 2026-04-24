@@ -1,3 +1,4 @@
+// frontend/src/app/%28admin%29/admin/customers/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";

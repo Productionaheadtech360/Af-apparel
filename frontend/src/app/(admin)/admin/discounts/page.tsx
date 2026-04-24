@@ -1,3 +1,4 @@
+// frontend/src/app/(admin)/admin/discounts/page.tsx
 "use client";
 export const dynamic = "force-dynamic";
 

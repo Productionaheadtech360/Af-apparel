@@ -1,3 +1,4 @@
+// frontend/src/app/(admin)/admin/customers/tiers/page.tsx
 "use client";
 export const dynamic = "force-dynamic";
 
@@ -162,8 +163,10 @@ function BracketEditor({
                       onChange={e => update(i, "cost", e.target.value)}
                       style={{ ...inputStyle, width: "80px" }} />
                     {Number(b.cost) === 0 && (
-                      <span style={{ fontSize: "10px", fontWeight: 700, color: "#059669",
-                        background: "rgba(5,150,105,.1)", padding: "2px 6px", borderRadius: "4px" }}>FREE</span>
+                      <span style={{
+                        fontSize: "10px", fontWeight: 700, color: "#059669",
+                        background: "rgba(5,150,105,.1)", padding: "2px 6px", borderRadius: "4px"
+                      }}>FREE</span>
                     )}
                   </div>
                 </td>
@@ -182,8 +185,10 @@ function BracketEditor({
         </table>
       </div>
       <button onClick={() => onChange([...brackets, emptyBracket()])}
-        style={{ marginTop: "8px", padding: "6px 14px", background: "#F4F3EF", border: "1px solid #E2E0DA",
-          borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", color: "#2A2830" }}>
+        style={{
+          marginTop: "8px", padding: "6px 14px", background: "#F4F3EF", border: "1px solid #E2E0DA",
+          borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", color: "#2A2830"
+        }}>
         + Add Bracket
       </button>
     </div>
@@ -206,38 +211,38 @@ export default function DiscountGroupsPage() {
   }
 
   // ── Discount Groups state ─────────────────────────────────────────────────
-  const [groups, setGroups]               = useState<DiscountGroup[]>([]);
+  const [groups, setGroups] = useState<DiscountGroup[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [groupForm, setGroupForm]           = useState({ ...EMPTY_GROUP_FORM });
-  const [savingGroup, setSavingGroup]       = useState(false);
-  const [groupSearch, setGroupSearch]       = useState("");
+  const [groupForm, setGroupForm] = useState({ ...EMPTY_GROUP_FORM });
+  const [savingGroup, setSavingGroup] = useState(false);
+  const [groupSearch, setGroupSearch] = useState("");
 
   // ── Browse state (Applies To picker) ─────────────────────────────────────
-  const [browseIds, setBrowseIds]       = useState<string[]>([]);
+  const [browseIds, setBrowseIds] = useState<string[]>([]);
   const [browseSearch, setBrowseSearch] = useState("");
-  const [browseList, setBrowseList]     = useState<BrowseItem[]>([]);
+  const [browseList, setBrowseList] = useState<BrowseItem[]>([]);
   const [browseLoading, setBrowseLoading] = useState(false);
 
   // ── Flat rate shipping config ─────────────────────────────────────────────
-  const [flatCalcType, setFlatCalcType]     = useState<"units" | "order_value">("order_value");
+  const [flatCalcType, setFlatCalcType] = useState<"units" | "order_value">("order_value");
   const [flatCutoffTime, setFlatCutoffTime] = useState("");
-  const [flatBrackets, setFlatBrackets]     = useState<FullShippingBracket[]>([]);
+  const [flatBrackets, setFlatBrackets] = useState<FullShippingBracket[]>([]);
 
   // ── Assigned customers in group modal ────────────────────────────────────
-  const [groupCustomers, setGroupCustomers]           = useState<CustomerItem[]>([]);
+  const [groupCustomers, setGroupCustomers] = useState<CustomerItem[]>([]);
   const [groupCustomersLoading, setGroupCustomersLoading] = useState(false);
-  const [customerAssignSearch, setCustomerAssignSearch]   = useState("");
-  const [showAddPanel, setShowAddPanel]                   = useState(false);
-  const [allCustomers, setAllCustomers]                   = useState<CustomerItem[]>([]);
+  const [customerAssignSearch, setCustomerAssignSearch] = useState("");
+  const [showAddPanel, setShowAddPanel] = useState(false);
+  const [allCustomers, setAllCustomers] = useState<CustomerItem[]>([]);
 
   // ── Individual Variant Pricing state ──────────────────────────────────────
-  const [vpProducts, setVpProducts]   = useState<VPProduct[]>([]);
-  const [vpLoading, setVpLoading]     = useState(false);
+  const [vpProducts, setVpProducts] = useState<VPProduct[]>([]);
+  const [vpLoading, setVpLoading] = useState(false);
   const [vpOverrides, setVpOverrides] = useState<Record<string, Record<string, TierOverride>>>({}); // productId → groupId → {price, discount}
-  const [vpSaving, setVpSaving]       = useState(false);
-  const [vpSearch, setVpSearch]       = useState("");
+  const [vpSaving, setVpSaving] = useState(false);
+  const [vpSearch, setVpSearch] = useState("");
 
   async function loadGroups() {
     setGroupsLoading(true);
@@ -406,6 +411,9 @@ export default function DiscountGroupsPage() {
         applies_to_ids: groupForm.applies_to === "store" ? [] : browseIds,
         shipping_calc_type: flatCalcType,
         shipping_cutoff_time: flatCutoffTime,
+        shipping_type: groupForm.shipping_type === "flat_rate" && flatBrackets.length > 0
+          ? "custom_brackets"
+          : groupForm.shipping_type,
         shipping_brackets: groupForm.shipping_type === "flat_rate" ? flatBrackets : [],
       };
       if (editingGroupId) {
