@@ -37,6 +37,7 @@ interface VariantRow {
   size: string;
   sku: string;
   retail_price: string;
+  msrp: string;
 }
 
 export default function NewProductPage() {
@@ -66,7 +67,7 @@ export default function NewProductPage() {
   });
 
   const [variants, setVariants] = useState<VariantRow[]>([
-    { id: crypto.randomUUID(), color: "", size: "", sku: "", retail_price: "" },
+    { id: crypto.randomUUID(), color: "", size: "", sku: "", retail_price: "", msrp: "" },
   ]);
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export default function NewProductPage() {
   }
 
   function addVariantRow() {
-    setVariants(rows => [...rows, { id: crypto.randomUUID(), color: "", size: "", sku: "", retail_price: "" }]);
+    setVariants(rows => [...rows, { id: crypto.randomUUID(), color: "", size: "", sku: "", retail_price: "", msrp: "" }]);
   }
 
   function removeVariantRow(id: string) {
@@ -172,6 +173,7 @@ export default function NewProductPage() {
           color: v.color.trim(),
           size: v.size.trim(),
           retail_price: parseFloat(v.retail_price) || 0,
+          ...(v.msrp.trim() ? { msrp: parseFloat(v.msrp) } : {}),
           status: "active",
         }).catch(() => {});
       }
@@ -318,7 +320,7 @@ export default function NewProductPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                   <thead>
                     <tr style={{ background: "#F4F3EF", borderBottom: "1px solid #E2E0DA" }}>
-                      {["Color *", "Size *", "SKU (optional)", "Price ($)"].map(h => (
+                      {["Color *", "Size *", "SKU (optional)", "Price ($)", "MSRP ($)"].map(h => (
                         <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: "11px", textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", fontWeight: 700 }}>{h}</th>
                       ))}
                       <th style={{ width: "40px" }} />
@@ -364,6 +366,15 @@ export default function NewProductPage() {
                             type="number"
                             value={row.retail_price}
                             onChange={e => updateVariant(row.id, "retail_price", e.target.value)}
+                            placeholder="0.00"
+                            style={{ padding: "6px 10px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", width: "80px" }}
+                          />
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          <input
+                            type="number"
+                            value={row.msrp}
+                            onChange={e => updateVariant(row.id, "msrp", e.target.value)}
                             placeholder="0.00"
                             style={{ padding: "6px 10px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", width: "80px" }}
                           />

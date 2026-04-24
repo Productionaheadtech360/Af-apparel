@@ -53,6 +53,7 @@ export default function CheckoutReviewPage() {
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [isPlacing, setIsPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount_amount: number; discount_type: string } | null>(null);
 
   // Guard: must have shipping + payment
   useEffect(() => {
@@ -69,6 +70,16 @@ export default function CheckoutReviewPage() {
 
   useEffect(() => {
     apiClient.get<SavedCard[]>("/api/v1/account/payment-methods").then(setSavedCards).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem("af_coupon");
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed?.code) setAppliedCoupon(parsed);
+    } catch { /* ignore */ }
   }, []);
 
   function buildColorSummary(c: Cart): string {
@@ -99,10 +110,6 @@ export default function CheckoutReviewPage() {
       phone: shippingPhone || undefined,
     };
 
-    const appliedCoupon = typeof window !== "undefined"
-      ? localStorage.getItem("af_coupon") ?? undefined
-      : undefined;
-
     try {
       const order = await ordersService.confirmOrder({
         qb_token: qbToken ?? undefined,
@@ -112,7 +119,7 @@ export default function CheckoutReviewPage() {
         shipping_method: shippingMethod || "standard",
         po_number: poNumber || undefined,
         order_notes: orderNotes || undefined,
-        discount_code: appliedCoupon || undefined,
+        discount_code: appliedCoupon?.code || undefined,
       });
 
       const productName = cart?.items[0]?.product_name ?? "Your Order";
@@ -151,7 +158,8 @@ export default function CheckoutReviewPage() {
 
   const subtotal = Number(cart?.subtotal ?? 0);
   const shipping = shippingCost;
-  const total = subtotal + shipping;
+  const couponDiscount = appliedCoupon ? Number(appliedCoupon.discount_amount) : 0;
+  const total = subtotal + shipping - couponDiscount;
   const shippingLabel = SHIPPING_LABELS[shippingMethod] ?? "Standard Ground";
 
   const sectionCard: React.CSSProperties = {
@@ -284,6 +292,12 @@ export default function CheckoutReviewPage() {
             <div style={{ ...row, color: "#059669" }}>
               <span style={{ fontWeight: 600 }}>Tier Discount ({cart?.discount_percent}% applied)</span>
               <span style={{ fontWeight: 700 }}>&#10003; Included</span>
+            </div>
+          )}
+          {appliedCoupon && (
+            <div style={{ ...row, color: "#059669" }}>
+              <span style={{ fontWeight: 600 }}>Coupon ({appliedCoupon.code})</span>
+              <span style={{ fontWeight: 700 }}>-{formatCurrency(couponDiscount)}</span>
             </div>
           )}
           <div style={row}>

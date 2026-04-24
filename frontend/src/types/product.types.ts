@@ -29,6 +29,7 @@ export interface ProductVariant {
   size: string | null;
   retail_price: string;
   compare_price: string | null;
+  msrp: string | null;
   effective_price: string | null;
   status: "active" | "discontinued" | "out_of_stock";
   stock_quantity: number;

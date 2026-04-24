@@ -106,8 +106,19 @@ export default function CartPage() {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   useEffect(() => {
-    const saved = typeof window !== "undefined" ? localStorage.getItem("af_coupon") : null;
-    if (saved) setCouponInput(saved);
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem("af_coupon");
+    if (!saved) return;
+    try {
+      const parsed: AppliedCoupon = JSON.parse(saved);
+      if (parsed.code) {
+        setCouponInput(parsed.code);
+        setAppliedCoupon(parsed);
+      }
+    } catch {
+      // legacy plain-string entry
+      setCouponInput(saved);
+    }
   }, []);
 
   useEffect(() => {
@@ -169,7 +180,7 @@ export default function CartPage() {
           message: data.message,
         };
         setAppliedCoupon(coupon);
-        if (typeof window !== "undefined") localStorage.setItem("af_coupon", data.code!);
+        if (typeof window !== "undefined") localStorage.setItem("af_coupon", JSON.stringify(coupon));
       } else {
         setCouponError(data.message || "Invalid discount code.");
         setAppliedCoupon(null);

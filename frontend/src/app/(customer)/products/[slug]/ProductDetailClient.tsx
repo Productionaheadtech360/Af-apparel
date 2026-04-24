@@ -389,11 +389,34 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  function getGuestCart(): Array<{ variant_id: string; quantity: number; product_id: string; product_name: string; slug: string; color: string | null; size: string | null; unit_price: number }> {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem("af_guest_cart") || "[]"); } catch { return []; }
+  }
+
   async function handleAddToCart() {
     const items = Object.entries(quantities)
       .filter(([, qty]) => qty > 0)
       .map(([variant_id, quantity]) => ({ variant_id, quantity }));
     if (items.length === 0) return;
+
+    if (!isAuthenticated) {
+      const guestCart = getGuestCart();
+      for (const { variant_id, quantity } of items) {
+        const v = product.variants?.find(x => x.id === variant_id);
+        if (!v) continue;
+        const idx = guestCart.findIndex(i => i.variant_id === variant_id);
+        const entry = { variant_id, quantity, product_id: product.id, product_name: product.name, slug: product.slug, color: v.color, size: v.size, unit_price: Number(v.effective_price ?? v.retail_price) };
+        if (idx >= 0) guestCart[idx]!.quantity += quantity;
+        else guestCart.push(entry);
+      }
+      localStorage.setItem("af_guest_cart", JSON.stringify(guestCart));
+      setQuantities({});
+      setCartMsg({ type: "success", text: `${totalUnits} unit${totalUnits !== 1 ? "s" : ""} added! Log in or create an account to checkout.` });
+      setTimeout(() => setCartMsg(null), 6000);
+      return;
+    }
+
     setIsSubmitting(true);
     setCartMsg(null);
     try {
@@ -657,25 +680,43 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               </div>
             )} */}
 
-            {/* // ✅ Sirf logout box rakho: */}
-            {!isAuthenticated && (
-              <div style={{ background: "#111016", border: "1px solid rgba(255,255,255,.08)", borderRadius: "10px", padding: "24px", marginBottom: "20px", textAlign: "center" }}>
-                <div style={{ fontSize: "24px", marginBottom: "8px" }}>🔒</div>
-                <div style={{ fontFamily: "var(--font-bebas)", fontSize: "18px", color: "#fff", letterSpacing: ".04em", marginBottom: "6px" }}>
-                  Wholesale Pricing Locked
+            {/* Pricing block — shown to all users */}
+            <div style={{ background: "#F4F3EF", border: "1px solid #E2E0DA", borderRadius: "10px", padding: "20px", marginBottom: "16px" }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A7880", marginBottom: "8px" }}>
+                {isAuthenticated ? "Wholesale Price" : "Retail Price"}
+              </div>
+              {primaryVariant?.effective_price ? (
+                <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+                  <span style={{ fontFamily: "var(--font-bebas)", fontSize: "36px", color: "#E8242A", letterSpacing: ".02em" }}>
+                    {formatCurrency(Number(primaryVariant.effective_price))}
+                  </span>
+                  <span style={{ fontSize: "12px", color: "#7A7880" }}>/ unit</span>
                 </div>
-                <p style={{ fontSize: "13px", color: "#555", marginBottom: "16px", lineHeight: 1.5 }}>
-                  Log in to your approved wholesale account to see factory-direct pricing and place orders.
+              ) : (
+                <span style={{ fontFamily: "var(--font-bebas)", fontSize: "28px", color: "#7A7880" }}>Price on request</span>
+              )}
+              {product.moq > 1 && (
+                <p style={{ fontSize: "12px", color: "#7A7880", marginTop: "6px", marginBottom: 0 }}>
+                  Minimum order quantity: <strong style={{ color: "#2A2830" }}>{product.moq} units</strong>
                 </p>
-                <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
-                  <Link href="/login" style={{ background: "#E8242A", color: "#fff", padding: "10px 20px", borderRadius: "6px", fontSize: "13px", fontWeight: 700, textDecoration: "none", textTransform: "uppercase", letterSpacing: ".06em" }}>Log In</Link>
-                  <Link href="/wholesale/register" style={{ background: "transparent", color: "#fff", padding: "10px 20px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, textDecoration: "none", border: "1px solid rgba(255,255,255,.15)" }}>Apply for Access</Link>
+              )}
+            </div>
+
+            {/* Wholesale upsell banner — guests only */}
+            {!isAuthenticated && (
+              <div style={{ background: "rgba(26,92,255,.05)", border: "1px solid rgba(26,92,255,.2)", borderRadius: "8px", padding: "10px 16px", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "13px", color: "#1A5CFF", fontWeight: 600 }}>
+                  🏭 Get factory-direct wholesale pricing — apply for a B2B account
+                </span>
+                <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                  <Link href="/login" style={{ background: "#1A5CFF", color: "#fff", padding: "6px 14px", borderRadius: "5px", fontSize: "12px", fontWeight: 700, textDecoration: "none" }}>Log In</Link>
+                  <Link href="/wholesale/register" style={{ background: "none", color: "#1A5CFF", padding: "6px 14px", borderRadius: "5px", fontSize: "12px", fontWeight: 600, textDecoration: "none", border: "1px solid rgba(26,92,255,.3)" }}>Apply</Link>
                 </div>
               </div>
             )}
 
-            {/* ── Color + Order section (authenticated only) ──────────── */}
-            {isAuthenticated && colorGroups.length > 0 && (
+            {/* ── Color + Order section ──────────────────────────────── */}
+            {colorGroups.length > 0 && (
               <div style={{ marginBottom: "20px" }}>
                 {/* Color selector pills */}
                 <div style={{ fontSize: "13px", fontWeight: 700, color: "#2A2830", marginBottom: "12px" }}>
@@ -730,7 +771,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                               <div key={variant.id} style={{ textAlign: "center", minWidth: "64px" }}>
                                 <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", color: "#7A7880", marginBottom: "4px" }}>{variant.size}</div>
                                 <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "6px" }}>
-                                  ${Number(variant.retail_price).toFixed(2)}
+                                  ${Number(variant.effective_price ?? variant.retail_price).toFixed(2)}
                                 </div>
                                 <input
                                   type="number"
@@ -792,7 +833,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     <span style={{ fontWeight: 700, fontSize: "15px", color: "#2A2830" }}>${pricePerUnit.toFixed(2)}</span>
                   </div>
                   <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "12px", fontStyle: "italic" }}>
-                    Tier pricing applies at checkout
+                    {isAuthenticated ? "Tier pricing applies at checkout" : "Retail pricing — log in for wholesale rates"}
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #E2E0DA", paddingTop: "12px" }}>
                     <span style={{ fontSize: "14px", fontWeight: 700, color: "#2A2830" }}>Order Total</span>
@@ -835,6 +876,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 >
                   {isSubmitting ? "ADDING TO CART…" : totalUnits > 0 ? `ADD TO CART — ${totalUnits} UNITS` : "SELECT QUANTITIES TO ORDER"}
                 </button>
+                {!isAuthenticated && totalUnits > 0 && (
+                  <p style={{ textAlign: "center", fontSize: "12px", color: "#7A7880", marginBottom: "8px" }}>
+                    <Link href="/login" style={{ color: "#1A5CFF", fontWeight: 600, textDecoration: "none" }}>Log in</Link> or <Link href="/register" style={{ color: "#1A5CFF", fontWeight: 600, textDecoration: "none" }}>create an account</Link> to complete your purchase
+                  </p>
+                )}
 
                 {/* Request quote */}
                 <div style={{ textAlign: "center" }}>
@@ -850,8 +896,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               </div>
             )}
 
-            {/* Color swatches + sizes (non-authenticated or no variants) */}
-            {(!isAuthenticated || colorGroups.length === 0) && uniqueColors.length > 0 && (
+            {/* Fallback color swatches when product has no variants */}
+            {colorGroups.length === 0 && uniqueColors.length > 0 && (
               <div style={{ marginBottom: "16px" }}>
                 <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A7880", marginBottom: "8px" }}>
                   Available Colors ({uniqueColors.length})
@@ -870,19 +916,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                         }}
                         style={{ width: "24px", height: "24px", borderRadius: "50%", background: hex, border: ["#FFFFFF", "#fffff0", "#fef3c7", "#f5f0e8"].includes(hex) ? "1px solid #E2E0DA" : "1px solid transparent", cursor: "pointer", padding: 0 }}
                       />
-                    );
-                  })}
-                </div>
-                <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A7880", marginBottom: "8px" }}>Sizes</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {uniqueSizes.map(size => {
-                    const sizeStock = (product.variants ?? []).filter(v => v.size === size).reduce((s, v) => s + (v.stock_quantity ?? 0), 0);
-                    const sizeUnlimited = sizeStock >= 9999;
-                    return (
-                      <div key={size} style={{ textAlign: "center" }}>
-                        <span style={{ display: "block", padding: "4px 10px", border: "1px solid #E2E0DA", borderRadius: "4px", fontSize: "12px", fontWeight: 600, color: "#2A2830", background: "#fff" }}>{size}</span>
-                        <span style={{ fontSize: "10px", color: "#7A7880", marginTop: "2px", display: "block" }}>{sizeUnlimited ? "In Stock" : `${sizeStock} left`}</span>
-                      </div>
                     );
                   })}
                 </div>
