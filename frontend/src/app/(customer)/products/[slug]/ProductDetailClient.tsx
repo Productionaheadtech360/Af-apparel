@@ -333,6 +333,7 @@ function thumbSrc(img: { url_thumbnail_webp?: string | null; url_thumbnail?: str
 export function ProductDetailClient({ slug }: ProductDetailClientProps) {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const authIsLoading = useAuthStore((s) => s.isLoading);
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [productLoading, setProductLoading] = useState(true);
@@ -356,9 +357,12 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
   const [showImageLibrary, setShowImageLibrary] = useState(false);
 
   useEffect(() => {
+    if (authIsLoading) return; // wait for auth to resolve before fetching
+    console.log("[ProductDetail] fetching slug:", slug, "| isAuthenticated:", isAuthenticated);
     setProductLoading(true);
     productsService.getProductBySlug(slug)
       .then((p) => {
+        console.log("[ProductDetail] effective_price (first variant):", p.variants?.[0]?.effective_price, "| retail_price:", p.variants?.[0]?.retail_price);
         setProduct(p);
         setExpandedColors(
           groupVariantsByColor(p.variants ?? []).slice(0, 3).map(g => g.color)
@@ -366,7 +370,7 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
       })
       .catch(() => { })
       .finally(() => setProductLoading(false));
-  }, [slug, isAuthenticated]);
+  }, [slug, isAuthenticated, authIsLoading]);
 
   const colorGroups = useMemo(() => groupVariantsByColor(product?.variants ?? []), [product?.variants]);
   const uniqueColors = colorGroups.map(g => g.color);
