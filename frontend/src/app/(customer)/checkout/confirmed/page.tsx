@@ -146,14 +146,16 @@ export default function CheckoutConfirmedPage() {
       {/* Actions */}
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         <Link
-          href="/account/orders"
+          href={(() => {
+            try { const d = JSON.parse(sessionStorage.getItem("af_confirmed_order") || "{}"); return d.isGuest ? "/track-order" : "/account/orders"; } catch { return "/account/orders"; }
+          })()}
           style={{
             display: "block", padding: "14px", background: "#E8242A", color: "#fff",
             borderRadius: "8px", textDecoration: "none", fontFamily: "var(--font-bebas)",
             fontSize: "17px", letterSpacing: ".08em", transition: "background .2s",
           }}
         >
-          View My Orders
+          {(() => { try { const d = JSON.parse(sessionStorage.getItem("af_confirmed_order") || "{}"); return d.isGuest ? "Track Your Order" : "View My Orders"; } catch { return "View My Orders"; } })()}
         </Link>
         <Link
           href="/products"

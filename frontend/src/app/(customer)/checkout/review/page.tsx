@@ -5,11 +5,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCheckoutStore } from "@/stores/checkout.store";
 import { useCartStore } from "@/stores/cart.store";
+import { useAuthStore } from "@/stores/auth.store";
 import { cartService } from "@/services/cart.service";
 import { ordersService } from "@/services/orders.service";
 import { apiClient } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/utils";
 import type { Cart } from "@/types/order.types";
+
+type GuestCartEntry = { variant_id: string; quantity: number; product_id: string; product_name: string; slug: string; color: string | null; size: string | null; unit_price: number };
 
 interface SavedCard {
   id: string;
@@ -49,8 +52,11 @@ export default function CheckoutReviewPage() {
     setConfirmedOrder,
   } = useCheckoutStore();
   const clearCart = useCartStore((s) => s.clearCart);
+  const { isAuthenticated, isLoading: authIsLoading } = useAuthStore();
+  const isGuest = !authIsLoading && !isAuthenticated();
 
   const [cart, setCart] = useState<Cart | null>(null);
+  const [guestEntries, setGuestEntries] = useState<GuestCartEntry[]>([]);
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [isPlacing, setIsPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,22 +72,31 @@ export default function CheckoutReviewPage() {
   }, [shippingAddress, savedCardId, qbToken, router]);
 
   useEffect(() => {
-    cartService.getCart().then(setCart).catch(() => {});
-  }, []);
+    if (!isGuest) {
+      cartService.getCart().then(setCart).catch(() => {});
+    } else {
+      try {
+        const entries: GuestCartEntry[] = JSON.parse(localStorage.getItem("af_guest_cart") || "[]");
+        setGuestEntries(entries);
+      } catch { /* ignore */ }
+    }
+  }, [isGuest]);
 
   useEffect(() => {
-    apiClient.get<SavedCard[]>("/api/v1/account/payment-methods").then(setSavedCards).catch(() => {});
-  }, []);
+    if (!isGuest) {
+      apiClient.get<SavedCard[]>("/api/v1/account/payment-methods").then(setSavedCards).catch(() => {});
+    }
+  }, [isGuest]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || isGuest) return;
     const saved = localStorage.getItem("af_coupon");
     if (!saved) return;
     try {
       const parsed = JSON.parse(saved);
       if (parsed?.code) setAppliedCoupon(parsed);
     } catch { /* ignore */ }
-  }, []);
+  }, [isGuest]);
 
   function buildColorSummary(c: Cart): string {
     const colorMap = new Map<string, number>();
@@ -99,19 +114,65 @@ export default function CheckoutReviewPage() {
     setIsPlacing(true);
     setError(null);
 
-    const fullAddress = {
-      label: companyName || "Shipping",
-      full_name: contactName || undefined,
-      line1: shippingAddress.line1,
-      line2: shippingAddress.line2,
-      city: shippingAddress.city,
-      state: shippingAddress.state,
-      postal_code: shippingAddress.postal_code,
-      country: shippingAddress.country || "US",
-      phone: shippingPhone || undefined,
-    };
-
     try {
+      if (isGuest) {
+        // ── Guest checkout ─────────────────────────────────────────────────
+        const guestData = JSON.parse(sessionStorage.getItem("af_guest_checkout") || "{}");
+        const order = await apiClient.post<{ order_id: string; order_number: string; total: number }>("/api/v1/guest/checkout", {
+          guest_name: guestData.name || contactName || "Guest",
+          guest_email: guestData.email || "",
+          guest_phone: guestData.phone || shippingPhone || undefined,
+          items: guestEntries.map(e => ({ variant_id: e.variant_id, quantity: e.quantity })),
+          shipping_address: {
+            label: "Shipping",
+            full_name: guestData.name,
+            line1: shippingAddress.line1,
+            line2: shippingAddress.line2,
+            city: shippingAddress.city,
+            state: shippingAddress.state,
+            postal_code: shippingAddress.postal_code,
+            country: shippingAddress.country || "US",
+          },
+          shipping_method: shippingMethod || "standard",
+          qb_token: qbToken,
+          order_notes: orderNotes || undefined,
+        });
+
+        const guestSubtotal = guestEntries.reduce((s, e) => s + e.unit_price * e.quantity, 0);
+        const productName = guestEntries[0]?.product_name ?? "Your Order";
+        const colorSummary = guestEntries.map(e => e.color ?? "").filter(Boolean).join(", ");
+
+        const confirmedData = {
+          id: order.order_id,
+          number: order.order_number,
+          total: order.total,
+          units: guestEntries.reduce((s, e) => s + e.quantity, 0),
+          colorSummary,
+          productName,
+          shippingMethod,
+          isGuest: true,
+        };
+        setConfirmedOrder(confirmedData);
+        sessionStorage.setItem("af_confirmed_order", JSON.stringify(confirmedData));
+        localStorage.removeItem("af_guest_cart");
+        sessionStorage.removeItem("af_guest_checkout");
+        router.push("/checkout/confirmed");
+        return;
+      }
+
+      // ── Wholesale checkout ───────────────────────────────────────────────
+      const fullAddress = {
+        label: companyName || "Shipping",
+        full_name: contactName || undefined,
+        line1: shippingAddress.line1,
+        line2: shippingAddress.line2,
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        postal_code: shippingAddress.postal_code,
+        country: shippingAddress.country || "US",
+        phone: shippingPhone || undefined,
+      };
+
       const order = await ordersService.confirmOrder({
         qb_token: qbToken ?? undefined,
         saved_card_id: savedCardId ?? undefined,
@@ -138,7 +199,6 @@ export default function CheckoutReviewPage() {
         shippingMethod,
       };
       setConfirmedOrder(confirmedData);
-      // Persist to sessionStorage so the confirmed page survives any navigation type
       sessionStorage.setItem("af_confirmed_order", JSON.stringify(confirmedData));
 
       if (typeof window !== "undefined") localStorage.removeItem("af_coupon");
@@ -157,10 +217,11 @@ export default function CheckoutReviewPage() {
     ? "New Card (tokenized)"
     : "Credit Card";
 
-  const subtotal = Number(cart?.subtotal ?? 0);
+  const guestSubtotalCalc = guestEntries.reduce((s, e) => s + e.unit_price * e.quantity, 0);
+  const subtotal = isGuest ? guestSubtotalCalc : Number(cart?.subtotal ?? 0);
   const shipping = shippingCost;
   const couponDiscount = appliedCoupon ? Number(appliedCoupon.discount_amount) : 0;
-  const total = subtotal + shipping - couponDiscount;
+  const total = subtotal + shipping - (isGuest ? 0 : couponDiscount);
   const shippingLabel = SHIPPING_LABELS[shippingMethod] ?? "Standard Ground";
 
   const sectionCard: React.CSSProperties = {
@@ -229,24 +290,40 @@ export default function CheckoutReviewPage() {
       </div>
 
       {/* ── Order Items ── */}
-      {cart && cart.items.length > 0 && (
+      {(isGuest ? guestEntries.length > 0 : cart && cart.items.length > 0) && (
         <div style={sectionCard}>
           <div style={sectionLabel as React.CSSProperties}>Items in Your Order</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {cart.items.map(item => (
-              <div key={item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
-                <div>
-                  <span style={{ fontWeight: 600, color: "#2A2830" }}>{item.product_name}</span>
-                  {(item.color || item.size) && (
-                    <span style={{ color: "#7A7880", marginLeft: "6px" }}>
-                      {[item.color, item.size].filter(Boolean).join(" / ")}
-                    </span>
-                  )}
-                  <span style={{ color: "#7A7880", marginLeft: "6px" }}>x{item.quantity}</span>
-                </div>
-                <span style={{ fontWeight: 600, color: "#2A2830", whiteSpace: "nowrap" }}>{formatCurrency(Number(item.line_total))}</span>
-              </div>
-            ))}
+            {isGuest
+              ? guestEntries.map((item, idx) => (
+                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#2A2830" }}>{item.product_name}</span>
+                      {(item.color || item.size) && (
+                        <span style={{ color: "#7A7880", marginLeft: "6px" }}>
+                          {[item.color, item.size].filter(Boolean).join(" / ")}
+                        </span>
+                      )}
+                      <span style={{ color: "#7A7880", marginLeft: "6px" }}>x{item.quantity}</span>
+                    </div>
+                    <span style={{ fontWeight: 600, color: "#2A2830", whiteSpace: "nowrap" }}>{formatCurrency(item.unit_price * item.quantity)}</span>
+                  </div>
+                ))
+              : cart!.items.map(item => (
+                  <div key={item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#2A2830" }}>{item.product_name}</span>
+                      {(item.color || item.size) && (
+                        <span style={{ color: "#7A7880", marginLeft: "6px" }}>
+                          {[item.color, item.size].filter(Boolean).join(" / ")}
+                        </span>
+                      )}
+                      <span style={{ color: "#7A7880", marginLeft: "6px" }}>x{item.quantity}</span>
+                    </div>
+                    <span style={{ fontWeight: 600, color: "#2A2830", whiteSpace: "nowrap" }}>{formatCurrency(Number(item.line_total))}</span>
+                  </div>
+                ))
+            }
           </div>
         </div>
       )}
@@ -286,7 +363,7 @@ export default function CheckoutReviewPage() {
       <div style={{ background: "#fff", border: "1.5px solid #E2E0DA", borderRadius: "12px", padding: "18px 24px", marginBottom: "16px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           <div style={row}>
-            <span style={{ color: "#7A7880" }}>Subtotal ({cart?.total_units ?? 0} units)</span>
+            <span style={{ color: "#7A7880" }}>Subtotal ({isGuest ? guestEntries.reduce((s, e) => s + e.quantity, 0) : (cart?.total_units ?? 0)} units)</span>
             <span style={{ fontWeight: 600, color: "#2A2830" }}>{formatCurrency(subtotal)}</span>
           </div>
           {Number(cart?.discount_percent ?? 0) > 0 && (

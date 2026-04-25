@@ -238,7 +238,7 @@ export const adminService = {
   },
 
   // Orders
-  async listOrders(params?: { q?: string; status?: string; page?: number; company_id?: string; page_size?: number; date_from?: string; date_to?: string }) {
+  async listOrders(params?: { q?: string; status?: string; page?: number | string; company_id?: string; page_size?: number; date_from?: string; date_to?: string; guest_only?: string }) {
     const query = new URLSearchParams();
     if (params?.q) query.set("q", params.q);
     if (params?.status) query.set("status", params.status);
@@ -247,6 +247,7 @@ export const adminService = {
     if (params?.page_size) query.set("page_size", String(params.page_size));
     if (params?.date_from) query.set("date_from", params.date_from);
     if (params?.date_to) query.set("date_to", params.date_to);
+    if (params?.guest_only) query.set("guest_only", params.guest_only);
     const qs = query.toString();
     return apiClient.get(`/api/v1/admin/orders${qs ? `?${qs}` : ""}`);
   },

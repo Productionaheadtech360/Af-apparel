@@ -7,13 +7,16 @@ import { adminService } from "@/services/admin.service";
 interface AdminOrder {
   id: string;
   order_number: string;
-  company_name: string;
+  company_name: string | null;
   status: string;
   payment_status: string;
   po_number: string | null;
   total: string;
   item_count: number;
   created_at: string;
+  is_guest_order?: boolean;
+  guest_email?: string | null;
+  guest_name?: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -30,6 +33,7 @@ export default function AdminOrdersPage() {
   const [total, setTotal] = useState(0);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [activeTab, setActiveTab] = useState<"all" | "guest">("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
@@ -40,19 +44,21 @@ export default function AdminOrdersPage() {
   async function load() {
     setIsLoading(true);
     try {
-      const data = await adminService.listOrders({
+      const params: Record<string, string | undefined> = {
         q: q || undefined,
         status: statusFilter || undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
-        page,
-      }) as { items: AdminOrder[]; total: number };
+        page: String(page),
+      };
+      if (activeTab === "guest") params.guest_only = "true";
+      const data = await adminService.listOrders(params) as { items: AdminOrder[]; total: number };
       setOrders(data.items ?? []);
       setTotal(data.total ?? 0);
     } finally { setIsLoading(false); }
   }
 
-  useEffect(() => { load(); }, [q, statusFilter, dateFrom, dateTo, page]);
+  useEffect(() => { load(); }, [q, statusFilter, activeTab, dateFrom, dateTo, page]);
 
   async function handleExport() {
     setExportLoading(true);
@@ -88,6 +94,19 @@ export default function AdminOrdersPage() {
             {exportLoading ? "Exporting…" : "Export CSV"}
           </button>
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 border-b border-gray-200">
+        {(["all", "guest"] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => { setActiveTab(tab); setPage(1); }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+          >
+            {tab === "all" ? "All Orders" : "Guest Orders"}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -155,8 +174,18 @@ export default function AdminOrdersPage() {
               <tr><td colSpan={7} className="py-8 text-center text-gray-400">No orders found</td></tr>
             ) : orders.map((o) => (
               <tr key={o.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                <td className="px-4 py-3 font-mono text-xs font-medium text-gray-800">{o.order_number}</td>
-                <td className="px-4 py-3 text-gray-700">{o.company_name}</td>
+                <td className="px-4 py-3 font-mono text-xs font-medium text-gray-800">
+                  {o.order_number}
+                  {o.is_guest_order && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">Guest</span>}
+                </td>
+                <td className="px-4 py-3 text-gray-700">
+                  {o.is_guest_order ? (
+                    <div>
+                      <div className="text-sm font-medium">{o.guest_name || "Guest"}</div>
+                      <div className="text-xs text-gray-400">{o.guest_email}</div>
+                    </div>
+                  ) : (o.company_name ?? "—")}
+                </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[o.status] ?? "bg-gray-100 text-gray-600"}`}>
                     {o.status}

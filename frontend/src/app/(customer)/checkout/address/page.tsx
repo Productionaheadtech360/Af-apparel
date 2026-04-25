@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
 import { useCheckoutStore, type ShippingMethod } from "@/stores/checkout.store";
+import { useAuthStore } from "@/stores/auth.store";
 import { cartService } from "@/services/cart.service";
 import { formatCurrency } from "@/lib/utils";
 
@@ -50,6 +51,10 @@ const EXPEDITED_SURCHARGE = 45;
 
 export default function CheckoutAddressPage() {
   const router = useRouter();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const authIsLoading = useAuthStore((s) => s.isLoading);
+  const isGuest = !authIsLoading && !isAuthenticated;
+
   const {
     companyName, setCompanyName,
     contactName, setContactName,
@@ -64,7 +69,7 @@ export default function CheckoutAddressPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [subtotal, setSubtotal] = useState(0);
-  const [tierShipping, setTierShipping] = useState<number | null>(null); // null = loading
+  const [tierShipping, setTierShipping] = useState<number | null>(null);
 
   const [form, setForm] = useState({
     company: companyName || "",
@@ -74,36 +79,69 @@ export default function CheckoutAddressPage() {
     state: shippingAddress?.state || "",
     zip: shippingAddress?.postal_code || "",
     phone: shippingPhone || "",
+    // Guest-specific fields
+    email: "",
   });
   const [errors, setErrors] = useState<Partial<typeof form>>({});
   const [couponDiscount, setCouponDiscount] = useState(0);
+
   // Load saved addresses + cart (subtotal + tier-based shipping)
   useEffect(() => {
+    if (authIsLoading) return;
     const saved = localStorage.getItem("af_coupon");
     if (saved) {
       try { setCouponDiscount(JSON.parse(saved).discount_amount ?? 0); } catch { }
     }
-    cartService.getCart().then(c => {
-      setSubtotal(Number(c.subtotal));
-      // Only set tierShipping if company has a tier assigned; null = unknown/not set
-      const hasTier = (c.validation as (typeof c.validation & { has_shipping_tier?: boolean }))?.has_shipping_tier ?? false;
-      setTierShipping(hasTier ? Number(c.validation?.estimated_shipping ?? 0) : null);
-    }).catch(() => {
-      setTierShipping(null);
-    });
-    apiClient.get<SavedAddress[]>("/api/v1/account/addresses").then(addrs => {
-      setSavedAddresses(addrs);
-      if (addrs.length > 0) {
-        const def = addrs.find(a => a.is_default) ?? addrs[0]!;
-        setSelectedAddressId(def.id);
-        setShowNewForm(false);
-      } else {
-        setShowNewForm(true);
-      }
-    }).catch(() => {
+
+    if (isGuest) {
+      // Calculate subtotal from guest cart localStorage
+      try {
+        const guestCart = JSON.parse(localStorage.getItem("af_guest_cart") || "[]") as Array<{ unit_price: number; quantity: number }>;
+        const guestSubtotal = guestCart.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+        setSubtotal(guestSubtotal);
+      } catch { /* ignore */ }
+      setTierShipping(9.99); // flat guest shipping
       setShowNewForm(true);
-    });
-  }, []);
+
+      // Restore from sessionStorage if returning to this step
+      try {
+        const stored = sessionStorage.getItem("af_guest_checkout");
+        if (stored) {
+          const data = JSON.parse(stored);
+          setForm(prev => ({
+            ...prev,
+            contact: data.name || prev.contact,
+            email: data.email || prev.email,
+            phone: data.phone || prev.phone,
+            street: data.line1 || prev.street,
+            city: data.city || prev.city,
+            state: data.state || prev.state,
+            zip: data.postal_code || prev.zip,
+          }));
+        }
+      } catch { /* ignore */ }
+    } else {
+      cartService.getCart().then(c => {
+        setSubtotal(Number(c.subtotal));
+        const hasTier = (c.validation as (typeof c.validation & { has_shipping_tier?: boolean }))?.has_shipping_tier ?? false;
+        setTierShipping(hasTier ? Number(c.validation?.estimated_shipping ?? 0) : null);
+      }).catch(() => {
+        setTierShipping(null);
+      });
+      apiClient.get<SavedAddress[]>("/api/v1/account/addresses").then(addrs => {
+        setSavedAddresses(addrs);
+        if (addrs.length > 0) {
+          const def = addrs.find(a => a.is_default) ?? addrs[0]!;
+          setSelectedAddressId(def.id);
+          setShowNewForm(false);
+        } else {
+          setShowNewForm(true);
+        }
+      }).catch(() => {
+        setShowNewForm(true);
+      });
+    }
+  }, [authIsLoading, isGuest]);
 
   // Compute the shipping cost for a given method
   function methodCost(method: ShippingMethod): number {
@@ -118,8 +156,14 @@ export default function CheckoutAddressPage() {
 
   function validate() {
     const e: Partial<typeof form> = {};
-    if (!form.company.trim()) e.company = "Required";
-    if (!form.contact.trim()) e.contact = "Required";
+    if (isGuest) {
+      if (!form.contact.trim()) e.contact = "Required";
+      if (!form.email.trim()) e.email = "Required";
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Invalid email";
+    } else {
+      if (!form.company.trim()) e.company = "Required";
+      if (!form.contact.trim()) e.contact = "Required";
+    }
     if (!form.street.trim()) e.street = "Required";
     if (!form.city.trim()) e.city = "Required";
     if (!form.state.trim()) e.state = "Required";
@@ -129,8 +173,29 @@ export default function CheckoutAddressPage() {
   }
 
   function handleContinue() {
-    // Save the chosen shipping cost before navigating
     setShippingCost(methodCost(shippingMethod));
+
+    if (isGuest) {
+      if (!validate()) return;
+      // Persist guest info to sessionStorage for review page
+      const guestData = {
+        name: form.contact,
+        email: form.email,
+        phone: form.phone,
+        line1: form.street,
+        city: form.city,
+        state: form.state,
+        postal_code: form.zip,
+        country: "US",
+      };
+      sessionStorage.setItem("af_guest_checkout", JSON.stringify(guestData));
+      setContactName(form.contact);
+      setShippingPhone(form.phone);
+      setShippingAddress({ line1: form.street, city: form.city, state: form.state, postal_code: form.zip, country: "US" });
+      setAddressId(null);
+      router.push("/checkout/payment");
+      return;
+    }
 
     if (!showNewForm && selectedAddressId) {
       const addr = savedAddresses.find(a => a.id === selectedAddressId);
@@ -272,30 +337,48 @@ export default function CheckoutAddressPage() {
           </div>
         )}
 
-        {/* Company name */}
-        <div style={{ marginBottom: "14px" }}>
-          <label style={lbl}>Company Name <span style={{ color: "#E8242A" }}>*</span></label>
-          <input
-            style={{ ...inp, borderColor: errors.company ? "#E8242A" : "#E2E0DA" }}
-            value={form.company}
-            onChange={e => setForm(p => ({ ...p, company: e.target.value }))}
-            placeholder="AF Apparels Inc."
-          />
-          {errors.company && <p style={{ fontSize: "11px", color: "#E8242A", marginTop: "3px" }}>{errors.company}</p>}
-        </div>
+        {/* Company name — wholesale only */}
+        {!isGuest && (
+          <div style={{ marginBottom: "14px" }}>
+            <label style={lbl}>Company Name <span style={{ color: "#E8242A" }}>*</span></label>
+            <input
+              style={{ ...inp, borderColor: errors.company ? "#E8242A" : "#E2E0DA" }}
+              value={form.company}
+              onChange={e => setForm(p => ({ ...p, company: e.target.value }))}
+              placeholder="AF Apparels Inc."
+            />
+            {errors.company && <p style={{ fontSize: "11px", color: "#E8242A", marginTop: "3px" }}>{errors.company}</p>}
+          </div>
+        )}
 
         {showNewForm && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={lbl}>Contact Name <span style={{ color: "#E8242A" }}>*</span></label>
+              <label style={lbl}>{isGuest ? "Full Name" : "Contact Name"} <span style={{ color: "#E8242A" }}>*</span></label>
               <input
                 style={{ ...inp, borderColor: errors.contact ? "#E8242A" : "#E2E0DA" }}
                 value={form.contact}
                 onChange={e => setForm(p => ({ ...p, contact: e.target.value }))}
-                placeholder="John Smith"
+                placeholder={isGuest ? "Jane Smith" : "John Smith"}
               />
               {errors.contact && <p style={{ fontSize: "11px", color: "#E8242A", marginTop: "3px" }}>{errors.contact}</p>}
             </div>
+
+            {/* Guest email field */}
+            {isGuest && (
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={lbl}>Email Address <span style={{ color: "#E8242A" }}>*</span></label>
+                <input
+                  type="email"
+                  style={{ ...inp, borderColor: errors.email ? "#E8242A" : "#E2E0DA" }}
+                  value={form.email}
+                  onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder="you@example.com"
+                />
+                {errors.email && <p style={{ fontSize: "11px", color: "#E8242A", marginTop: "3px" }}>{errors.email}</p>}
+                <p style={{ fontSize: "11px", color: "#7A7880", marginTop: "3px" }}>Order confirmation will be sent to this email.</p>
+              </div>
+            )}
 
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={lbl}>Street Address <span style={{ color: "#E8242A" }}>*</span></label>

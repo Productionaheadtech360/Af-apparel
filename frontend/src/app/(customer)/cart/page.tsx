@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 import { cartService } from "@/services/cart.service";
 import { apiClient } from "@/lib/api-client";
 import { MOQWarning } from "@/components/cart/MOQWarning";
+import { useAuthStore } from "@/stores/auth.store";
 import type { Cart, CartItem } from "@/types/order.types";
 
 // ── Color map (same as quick-order) ──────────────────────────────────────────
@@ -93,8 +94,53 @@ interface AppliedCoupon {
   message: string;
 }
 
+type GuestCartEntry = { variant_id: string; quantity: number; product_id: string; product_name: string; slug: string; color: string | null; size: string | null; unit_price: number };
+
+function buildGuestCart(entries: GuestCartEntry[]): Cart {
+  const items: CartItem[] = entries.map((e, i) => ({
+    id: `guest-${i}`,
+    variant_id: e.variant_id,
+    product_id: e.product_id,
+    product_name: e.product_name,
+    product_slug: e.slug,
+    product_image_url: null,
+    sku: "",
+    color: e.color,
+    size: e.size,
+    quantity: e.quantity,
+    retail_price: String(e.unit_price),
+    unit_price: String(e.unit_price),
+    line_total: String(e.unit_price * e.quantity),
+    moq: 1,
+    moq_satisfied: true,
+    stock_quantity: 999,
+  }));
+  const subtotal = items.reduce((s, i) => s + Number(i.line_total), 0);
+  const totalUnits = items.reduce((s, i) => s + i.quantity, 0);
+  return {
+    items,
+    subtotal: String(subtotal),
+    item_count: items.length,
+    total_units: totalUnits,
+    discount_percent: "0",
+    validation: {
+      is_valid: items.length > 0,
+      moq_violations: [],
+      mov_violation: false,
+      mov_required: "0",
+      mov_current: String(subtotal),
+      estimated_shipping: "9.99",
+      has_shipping_tier: true,
+    },
+  };
+}
+
 export default function CartPage() {
   const router = useRouter();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const authIsLoading = useAuthStore((s) => s.isLoading);
+  const [isGuest, setIsGuest] = useState(false);
+
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [removingProductId, setRemovingProductId] = useState<string | null>(null);
@@ -117,26 +163,44 @@ export default function CartPage() {
         setAppliedCoupon(parsed);
       }
     } catch {
-      // legacy plain-string entry
       setCouponInput(saved);
     }
   }, []);
 
   useEffect(() => {
-    cartService.getCart().then(setCart).catch(console.error).finally(() => setIsLoading(false));
-  }, []);
+    if (authIsLoading) return;
+    if (!isAuthenticated) {
+      // Guest: load from localStorage
+      setIsGuest(true);
+      if (typeof window !== "undefined") {
+        try {
+          const entries: GuestCartEntry[] = JSON.parse(localStorage.getItem("af_guest_cart") || "[]");
+          setCart(entries.length > 0 ? buildGuestCart(entries) : null);
+        } catch { setCart(null); }
+      }
+      setIsLoading(false);
+    } else {
+      setIsGuest(false);
+      cartService.getCart().then(setCart).catch(console.error).finally(() => setIsLoading(false));
+    }
+  }, [authIsLoading, isAuthenticated]);
 
   async function handleRemoveProduct(group: ProductGroup) {
     setRemovingProductId(group.productId);
     try {
-      let updated: Cart | null = null;
-      for (const item of group.items) {
-        updated = await cartService.removeItem(item.id);
-      }
-      if (updated) setCart(updated);
-      else {
-        const fresh = await cartService.getCart();
-        setCart(fresh);
+      if (isGuest) {
+        // Remove from localStorage guest cart
+        const entries: GuestCartEntry[] = JSON.parse(localStorage.getItem("af_guest_cart") || "[]");
+        const updated = entries.filter(e => e.product_id !== group.productId);
+        localStorage.setItem("af_guest_cart", JSON.stringify(updated));
+        setCart(updated.length > 0 ? buildGuestCart(updated) : null);
+      } else {
+        let updated: Cart | null = null;
+        for (const item of group.items) {
+          updated = await cartService.removeItem(item.id);
+        }
+        if (updated) setCart(updated);
+        else setCart(await cartService.getCart());
       }
     } catch (err) {
       console.error(err);
@@ -203,6 +267,7 @@ export default function CartPage() {
 
   function getCheckoutDisabledReason(): string | undefined {
     if (!cart || !cart.items || cart.items.length === 0) return "Cart is empty";
+    if (isGuest) return undefined; // no MOQ/MOV for guests
     if (!cart.validation) return undefined;
     const v = cart.validation;
     if (v.moq_violations?.length > 0) return `${v.moq_violations.length} item${v.moq_violations.length !== 1 ? "s" : ""} below minimum order quantity`;
@@ -396,30 +461,33 @@ export default function CartPage() {
                 );
               })}
 
-              {/* Save as template */}
-              <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: "4px" }}>
-                <button
-                  onClick={() => setShowTemplateDialog(true)}
-                  style={{ fontSize: "12px", fontWeight: 600, color: "#7A7880", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px" }}
-                >
-                  Save as Template
-                </button>
-              </div>
+              {/* Save as template — wholesale only */}
+              {!isGuest && (
+                <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: "4px" }}>
+                  <button
+                    onClick={() => setShowTemplateDialog(true)}
+                    style={{ fontSize: "12px", fontWeight: 600, color: "#7A7880", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px" }}
+                  >
+                    Save as Template
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ── Order Summary sidebar ── */}
             <div style={{ position: "sticky", top: "88px" }}>
               <OrderSummary
                 subtotal={subtotal}
-                estimatedShipping={Number(cart?.validation?.estimated_shipping ?? 0)}
-                hasShippingTier={hasShippingTier}
+                estimatedShipping={isGuest ? 9.99 : Number(cart?.validation?.estimated_shipping ?? 0)}
+                hasShippingTier={isGuest ? true : hasShippingTier}
                 discountPercent={discountPercent}
                 isValid={isCheckoutEnabled}
                 disabledReason={disabledReason}
+                isGuest={isGuest}
                 onCheckout={() => router.push("/checkout/address")}
                 couponInput={couponInput}
                 onCouponInputChange={setCouponInput}
-                appliedCoupon={appliedCoupon}
+                appliedCoupon={isGuest ? null : appliedCoupon}
                 couponError={couponError}
                 applyingCoupon={applyingCoupon}
                 onApplyCoupon={handleApplyCoupon}
@@ -466,7 +534,7 @@ export default function CartPage() {
 
 // ── Order Summary sidebar component ──────────────────────────────────────────
 function OrderSummary({
-  subtotal, estimatedShipping, hasShippingTier, discountPercent, isValid, disabledReason, onCheckout,
+  subtotal, estimatedShipping, hasShippingTier, discountPercent, isValid, disabledReason, isGuest, onCheckout,
   couponInput, onCouponInputChange, appliedCoupon, couponError, applyingCoupon, onApplyCoupon, onRemoveCoupon,
 }: {
   subtotal: number;
@@ -475,6 +543,7 @@ function OrderSummary({
   discountPercent: number;
   isValid: boolean;
   disabledReason?: string;
+  isGuest?: boolean;
   onCheckout: () => void;
   couponInput: string;
   onCouponInputChange: (v: string) => void;
@@ -549,8 +618,8 @@ function OrderSummary({
         </div>
       </div>
 
-      {/* Coupon input */}
-      <div style={{ padding: "0 20px 16px" }}>
+      {/* Coupon input — wholesale only */}
+      {!isGuest && <div style={{ padding: "0 20px 16px" }}>
         <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "8px" }}>Discount Code</div>
         {appliedCoupon ? (
           <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "9px 12px", background: "rgba(5,150,105,.06)", border: "1px solid rgba(5,150,105,.3)", borderRadius: "7px", fontSize: "13px" }}>
@@ -579,7 +648,7 @@ function OrderSummary({
             {couponError && <p style={{ fontSize: "11px", color: "#E8242A", marginTop: "5px" }}>{couponError}</p>}
           </>
         )}
-      </div>
+      </div>}
 
       {/* CTA */}
       <div style={{ padding: "0 20px 18px" }}>

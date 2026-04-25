@@ -11,6 +11,8 @@ import { cartService } from "@/services/cart.service";
 import { formatCurrency } from "@/lib/utils";
 import type { Cart } from "@/types/order.types";
 
+type GuestCartEntry = { unit_price: number; quantity: number; product_name?: string; color?: string | null; size?: string | null };
+
 interface SavedCard {
   id: string;
   brand: string;
@@ -41,6 +43,7 @@ export default function CheckoutPaymentPage() {
   const router = useRouter();
   const { shippingAddress, shippingMethod, shippingCost, setSavedCardId, setQbToken } = useCheckoutStore();
   const { isAuthenticated, isLoading } = useAuthStore();
+  const isGuest = !isLoading && !isAuthenticated();
   const [couponDiscount, setCouponDiscount] = useState(0);
 
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
@@ -48,6 +51,7 @@ export default function CheckoutPaymentPage() {
   const [showNewCardForm, setShowNewCardForm] = useState(false);
   const [loadingCards, setLoadingCards] = useState(true);
   const [cart, setCart] = useState<Cart | null>(null);
+  const [guestSubtotal, setGuestSubtotal] = useState(0);
 
   // Guard: must have shipping address
   useEffect(() => {
@@ -56,10 +60,20 @@ export default function CheckoutPaymentPage() {
     }
   }, [shippingAddress, router]);
 
-  // Load saved cards
+  // For guests: load guest cart total; for authenticated: load saved cards
   useEffect(() => {
     if (isLoading) return;
-    if (!isAuthenticated()) return;
+
+    if (isGuest) {
+      // Guests always use the new card form
+      setShowNewCardForm(true);
+      setLoadingCards(false);
+      try {
+        const entries: GuestCartEntry[] = JSON.parse(localStorage.getItem("af_guest_cart") || "[]");
+        setGuestSubtotal(entries.reduce((s, i) => s + i.unit_price * i.quantity, 0));
+      } catch { /* ignore */ }
+      return;
+    }
 
     apiClient
       .get<SavedCard[]>("/api/v1/account/payment-methods")
@@ -75,16 +89,18 @@ export default function CheckoutPaymentPage() {
       })
       .catch(() => setShowNewCardForm(true))
       .finally(() => setLoadingCards(false));
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isGuest, isAuthenticated]);
 
-  // Load cart for total display
+  // Load cart for total display (wholesale only)
   useEffect(() => {
-    cartService.getCart().then(setCart).catch(() => { });
+    if (!isGuest) {
+      cartService.getCart().then(setCart).catch(() => { });
+    }
     const saved = localStorage.getItem("af_coupon");
     if (saved) {
       try { setCouponDiscount(JSON.parse(saved).discount_amount ?? 0); } catch { }
     }
-  }, []);
+  }, [isGuest]);
 
 
   function handleContinueWithSavedCard() {
@@ -106,9 +122,9 @@ export default function CheckoutPaymentPage() {
     );
   }
 
-  const subtotal = Number(cart?.subtotal ?? 0);
+  const subtotal = isGuest ? guestSubtotal : Number(cart?.subtotal ?? 0);
   const shipping = shippingCost;
-  const total = subtotal + shipping - couponDiscount;
+  const total = subtotal + shipping - (isGuest ? 0 : couponDiscount);
 
   const SHIPPING_LABELS: Record<string, string> = {
     standard: "Standard Ground",
@@ -122,7 +138,7 @@ export default function CheckoutPaymentPage() {
       <div style={sectionCard}>
         <span style={sectionTitle}>Payment Method</span>
 
-        {savedCards.length > 0 && (
+        {savedCards.length > 0 && !isGuest && (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: showNewCardForm ? "16px" : "0" }}>
             {savedCards.map(card => {
               const isSelected = selectedCardId === card.id && !showNewCardForm;
