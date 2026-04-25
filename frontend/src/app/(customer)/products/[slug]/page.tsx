@@ -30,40 +30,41 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ProductDetailPage({ params }: PageProps) {
   const { slug } = await params;
 
-  let product;
-  try {
-    product = await productsService.getProductBySlug(slug);
-  } catch {
-    notFound();
-  }
+  // let product;
+  // try {
+  //   product = await productsService.getProductBySlug(slug);
+  // } catch {
+  //   notFound();
+  // }
 
   // Schema.org Product JSON-LD (T070, T136)
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    description: product.description,
-    image: product.images?.map((i) => i.url_large) ?? [],
-    sku: product.variants?.[0]?.sku,
-    offers: product.variants?.map((v) => ({
-      "@type": "Offer",
-      sku: v.sku,
-      price: v.effective_price ?? v.retail_price,
-      priceCurrency: "USD",
-      availability:
-        (v.stock_quantity ?? 0) > 0
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
-    })),
-  };
+  // const jsonLd = {
+  //   "@context": "https://schema.org",
+  //   "@type": "Product",
+  //   name: product.name,
+  //   description: product.description,
+  //   image: product.images?.map((i) => i.url_large) ?? [],
+  //   sku: product.variants?.[0]?.sku,
+  //   offers: product.variants?.map((v) => ({
+  //     "@type": "Offer",
+  //     sku: v.sku,
+  //     price: v.effective_price ?? v.retail_price,
+  //     priceCurrency: "USD",
+  //     availability:
+  //       (v.stock_quantity ?? 0) > 0
+  //         ? "https://schema.org/InStock"
+  //         : "https://schema.org/OutOfStock",
+  //   })),
+  // };
 
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <ProductDetailClient product={product} />
-    </>
-  );
+  // return (
+  //   <>
+  //     <script
+  //       type="application/ld+json"
+  //       dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+  //     />
+  //     <ProductDetailClient product={product} />
+  //   </>
+  // );
+  return <ProductDetailClient slug={slug} />;
 }

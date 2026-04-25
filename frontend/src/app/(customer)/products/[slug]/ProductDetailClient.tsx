@@ -10,9 +10,14 @@ import { useAuthStore } from "@/stores/auth.store";
 import { apiClient } from "@/lib/api-client";
 import { cartService } from "@/services/cart.service";
 import { FactoryIcon, ZapIcon, PackageIcon, PaletteIcon } from "@/components/ui/icons";
+import { productsService } from "@/services/products.service";
+
+// interface ProductDetailClientProps {
+//   product: ProductDetail;
+// }
 
 interface ProductDetailClientProps {
-  product: ProductDetail;
+  slug: string;
 }
 
 const COLOR_MAP: Record<string, string> = {
@@ -69,6 +74,7 @@ function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthe
   const [form, setForm] = useState({ rating: 5, title: "", body: "", reviewer_name: "", reviewer_company: "" });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
 
   async function fetchReviews() {
     setLoading(true);
@@ -226,7 +232,7 @@ function ReviewsTab({ productId, isAuthenticated }: { productId: string; isAuthe
           <div style={{ marginBottom: "16px" }}>
             <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", marginBottom: "4px" }}>Photo (optional)</div>
             <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 14px", border: "1.5px dashed #C9A84C", borderRadius: "7px", cursor: "pointer", fontSize: "13px", color: "#7A7880", fontWeight: 600 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
               {imageFile ? imageFile.name : "Upload a photo"}
               <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
             </label>
@@ -324,38 +330,61 @@ function thumbSrc(img: { url_thumbnail_webp?: string | null; url_thumbnail?: str
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export function ProductDetailClient({ product }: ProductDetailClientProps) {
+export function ProductDetailClient({ slug }: ProductDetailClientProps) {
   const router = useRouter();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+
+  const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [productLoading, setProductLoading] = useState(true);
+
   // ── Image gallery state ────────────────────────────────────────────────────
   const [activeImageIdx, setActiveImageIdx] = useState(0);
-  const images = product.images ?? [];
 
   // ── Order state ────────────────────────────────────────────────────────────
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [expandedColors, setExpandedColors] = useState<string[]>(() =>
-    groupVariantsByColor(product.variants ?? []).slice(0, 3).map(g => g.color)
-  );
+  const [expandedColors, setExpandedColors] = useState<string[]>([]);
   const [showAllColors, setShowAllColors] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cartMsg, setCartMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // ── Other state ───────────────────────────────────────────────────────────
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
   const [assetMsg, setAssetMsg] = useState<string | null>(null);
   const [emailingFlyer, setEmailingFlyer] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("Description");
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
 
+  useEffect(() => {
+    setProductLoading(true);
+    productsService.getProductBySlug(slug)
+      .then((p) => {
+        setProduct(p);
+        setExpandedColors(
+          groupVariantsByColor(p.variants ?? []).slice(0, 3).map(g => g.color)
+        );
+      })
+      .catch(() => { })
+      .finally(() => setProductLoading(false));
+  }, [slug, isAuthenticated]);
+
+  if (productLoading || !product) {
+    return (
+      <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#aaa" }}>
+        Loading…
+      </div>
+    );
+  }
+
+  const images = product.images ?? [];
   // ── Derived data ──────────────────────────────────────────────────────────
   const primaryVariant = product.variants?.[0];
   const hasFlyer = product.assets?.some((a: any) => a.asset_type === "flyer");
-  const colorGroups = useMemo(() => groupVariantsByColor(product.variants ?? []), [product.variants]);
+  const colorGroups = useMemo(() => groupVariantsByColor(product?.variants ?? []), [product?.variants]);
   const uniqueColors = colorGroups.map(g => g.color);
   const uniqueSizes = useMemo(
-    () => Array.from(new Set(product.variants?.map(v => v.size).filter(Boolean) ?? [])) as string[],
-    [product.variants]
+    () => Array.from(new Set(product?.variants?.map(v => v.size).filter(Boolean) ?? [])) as string[],
+    [product?.variants]
   );
 
   const displayColorGroups = showAllColors ? colorGroups : colorGroups.slice(0, 4);
@@ -406,10 +435,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     if (!isAuthenticated) {
       const guestCart = getGuestCart();
       for (const { variant_id, quantity } of items) {
-        const v = product.variants?.find(x => x.id === variant_id);
+        const v = product?.variants?.find(x => x.id === variant_id);
         if (!v) continue;
         const idx = guestCart.findIndex(i => i.variant_id === variant_id);
-        const entry = { variant_id, quantity, product_id: product.id, product_name: product.name, slug: product.slug, color: v.color, size: v.size, unit_price: Number(v.effective_price ?? v.retail_price) };
+        const entry = { variant_id, quantity, product_id: product!.id, product_name: product!.name, slug: product!.slug, color: v.color, size: v.size, unit_price: Number(v.effective_price ?? v.retail_price) };
         if (idx >= 0) guestCart[idx]!.quantity += quantity;
         else guestCart.push(entry);
       }
@@ -420,6 +449,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       router.push("/checkout/address");
       return;
     }
+
+    if (!product) return;
 
     setIsSubmitting(true);
     setCartMsg(null);
@@ -436,17 +467,17 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   }
 
   async function handleDownloadImages() {
-    window.open(`/api/v1/products/${product.id}/download-images`, "_blank");
+    window.open(`/api/v1/products/${product?.id}/download-images`, "_blank");
   }
 
   async function handleDownloadFlyer() {
-    window.open(`/api/v1/products/${product.id}/download-flyer`, "_blank");
+    window.open(`/api/v1/products/${product?.id}/download-flyer`, "_blank");
   }
 
   async function handleEmailFlyer() {
     setEmailingFlyer(true);
     try {
-      await apiClient.post(`/api/v1/products/${product.id}/email-flyer`, {});
+      await apiClient.post(`/api/v1/products/${product?.id}/email-flyer`, {});
       setAssetMsg("Flyer sent to your account email.");
     } catch {
       setAssetMsg("Failed to send flyer.");
@@ -553,7 +584,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   onClick={() => setShowImageLibrary(true)}
                   style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "10px", border: "1px solid #E2E0DA", borderRadius: "8px", fontSize: "12px", fontWeight: 600, color: "#2A2830", background: "#fff", cursor: "pointer" }}
                 >
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
                   Image Library
                 </button>
               )}
@@ -581,7 +612,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   <span style={{ background: "#E8242A", color: "#fff", fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Best Seller</span>
                 )}
                 <span style={{ background: "rgba(5,150,105,.1)", color: "#059669", fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="#059669"/></svg> In Stock
+                  <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="#059669" /></svg> In Stock
                 </span>
                 {(product.tags ?? []).filter(t => !t.toLowerCase().includes("best seller") && !t.toLowerCase().includes("bestseller")).map(tag => (
                   <span key={tag} style={{ background: "#F4F3EF", color: "#7A7880", fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px", textTransform: "uppercase", letterSpacing: ".06em", border: "1px solid #E2E0DA" }}>
