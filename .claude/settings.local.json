@@ -138,7 +138,8 @@
       "Bash(grep -h \"^revision\\\\|^revision:\\\\|^down_revision\\\\|^down_revision:\" \"C:/Users/RT/Desktop/AF Apparel/backend/migrations/versions/\"*.py)",
       "Bash(sort -t'\"' -k2)",
       "Bash(python \"C:/Users/RT/Desktop/AF Apparel/frontend/src/app/\\(customer\\)/checkout/payment/page.tsx\")",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(python -c ' *)"
     ]
   }
 }
