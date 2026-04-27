@@ -53,8 +53,8 @@ interface QuickOrderRow {
   productDetail: ProductDetail | null;
   showDropdown: boolean;
   searchResults: ProductListItem[];
-  selectedColor: string;
-  quantities: Record<string, number>;
+  expandedColors: string[];
+  quantities: Record<string, Record<string, number>>; // color → size → qty
   isSearching: boolean;
   isLoadingDetail: boolean;
   checked: boolean;
@@ -68,7 +68,7 @@ function makeRow(): QuickOrderRow {
     productDetail: null,
     showDropdown: false,
     searchResults: [],
-    selectedColor: "",
+    expandedColors: [],
     quantities: {},
     isSearching: false,
     isLoadingDetail: false,
@@ -93,37 +93,49 @@ export default function QuickOrderPage() {
     return Array.from(new Set(row.productDetail.variants.map((v) => v.color).filter(Boolean))) as string[];
   }
 
-  function getRowSizes(row: QuickOrderRow): string[] {
-    if (!row.productDetail || !row.selectedColor) return [];
+  function getSizesForColor(row: QuickOrderRow, color: string): string[] {
+    if (!row.productDetail) return [];
     return sortSizes(
       Array.from(new Set(
         row.productDetail.variants
-          .filter((v) => v.color === row.selectedColor && v.size)
+          .filter((v) => v.color === color && v.size)
           .map((v) => v.size!)
       ))
     );
   }
 
-  function getVariant(row: QuickOrderRow, size: string): ProductVariant | undefined {
-    return row.productDetail?.variants.find((v) => v.color === row.selectedColor && v.size === size);
+  function getVariantForColor(row: QuickOrderRow, color: string, size: string): ProductVariant | undefined {
+    return row.productDetail?.variants.find((v) => v.color === color && v.size === size);
   }
 
   function getRowTotals(row: QuickOrderRow): { units: number; price: number } {
     let units = 0, price = 0;
-    for (const size of getRowSizes(row)) {
-      const qty = row.quantities[size] ?? 0;
-      if (qty > 0) {
-        const v = getVariant(row, size);
-        units += qty;
-        price += qty * parseFloat(v?.effective_price ?? v?.retail_price ?? "0");
+    for (const color of row.expandedColors) {
+      for (const size of getSizesForColor(row, color)) {
+        const qty = row.quantities[color]?.[size] ?? 0;
+        if (qty > 0) {
+          const v = getVariantForColor(row, color, size);
+          units += qty;
+          price += qty * parseFloat(v?.effective_price ?? v?.retail_price ?? "0");
+        }
       }
     }
     return { units, price };
   }
 
+  function toggleColor(rowId: string, color: string) {
+    setRows((prev) => prev.map((r) => {
+      if (r.id !== rowId) return r;
+      const expanded = r.expandedColors.includes(color)
+        ? r.expandedColors.filter((c) => c !== color)
+        : [...r.expandedColors, color];
+      return { ...r, expandedColors: expanded };
+    }));
+  }
+
   // ── Search ─────────────────────────────────────────────────────────────
   function handleSearchChange(rowId: string, value: string) {
-    updateRow(rowId, { searchQuery: value, selectedProduct: null, productDetail: null, selectedColor: "", quantities: {}, showDropdown: false });
+    updateRow(rowId, { searchQuery: value, selectedProduct: null, productDetail: null, expandedColors: [], quantities: {}, showDropdown: false });
     if (searchTimers.current[rowId]) clearTimeout(searchTimers.current[rowId]);
     if (value.length < 2) { updateRow(rowId, { searchResults: [] }); return; }
     updateRow(rowId, { isSearching: true });
@@ -140,23 +152,25 @@ export default function QuickOrderPage() {
   }
 
   async function handleSelectProduct(rowId: string, product: ProductListItem) {
-    updateRow(rowId, { selectedProduct: product, searchQuery: product.name, showDropdown: false, searchResults: [], isLoadingDetail: true, selectedColor: "", quantities: {} });
+    updateRow(rowId, { selectedProduct: product, searchQuery: product.name, showDropdown: false, searchResults: [], isLoadingDetail: true, expandedColors: [], quantities: {} });
     try {
       const detail = await productsService.getProductBySlug(product.slug);
       const colors = Array.from(new Set(detail.variants.map((v) => v.color).filter(Boolean))) as string[];
       setRows((prev) => prev.map((r) =>
-        r.id === rowId ? { ...r, productDetail: detail, selectedColor: colors[0] ?? "", isLoadingDetail: false } : r
+        r.id === rowId ? { ...r, productDetail: detail, expandedColors: colors.slice(0, 1), isLoadingDetail: false } : r
       ));
     } catch {
       setRows((prev) => prev.map((r) => r.id === rowId ? { ...r, isLoadingDetail: false } : r));
     }
   }
 
-  function handleQtyChange(rowId: string, size: string, value: string) {
+  function handleQtyChange(rowId: string, color: string, size: string, value: string) {
     const qty = parseInt(value, 10);
-    setRows((prev) => prev.map((r) =>
-      r.id === rowId ? { ...r, quantities: { ...r.quantities, [size]: isNaN(qty) || qty < 0 ? 0 : qty } } : r
-    ));
+    setRows((prev) => prev.map((r) => {
+      if (r.id !== rowId) return r;
+      const colorQtys = { ...(r.quantities[color] ?? {}), [size]: isNaN(qty) || qty < 0 ? 0 : qty };
+      return { ...r, quantities: { ...r.quantities, [color]: colorQtys } };
+    }));
   }
 
   // ── Add to cart ─────────────────────────────────────────────────────────
@@ -171,14 +185,16 @@ export default function QuickOrderPage() {
     setCartMsg(null);
     let added = 0, errors = 0;
     for (const row of activeRows) {
-      const items = getRowSizes(row)
-        .filter((size) => (row.quantities[size] ?? 0) > 0)
-        .flatMap((size) => {
-          const v = getVariant(row, size);
-          const qty = row.quantities[size];
-          if (!v || !qty) return [];
-          return [{ variant_id: v.id, quantity: qty }];
-        });
+      const items = row.expandedColors.flatMap((color) =>
+        getSizesForColor(row, color)
+          .filter((size) => (row.quantities[color]?.[size] ?? 0) > 0)
+          .flatMap((size) => {
+            const v = getVariantForColor(row, color, size);
+            const qty = row.quantities[color]?.[size];
+            if (!v || !qty) return [];
+            return [{ variant_id: v.id, quantity: qty }];
+          })
+      );
       if (items.length > 0) {
         try { await cartService.addMatrix(row.productDetail!.id, items); added++; }
         catch { errors++; }
@@ -209,7 +225,8 @@ export default function QuickOrderPage() {
         showDropdown: false,
         isSearching: false,
         isLoadingDetail: false,
-        quantities: { ...src.quantities },
+        expandedColors: [...src.expandedColors],
+        quantities: Object.fromEntries(Object.entries(src.quantities).map(([c, q]) => [c, { ...q }])),
         checked: false,
       };
       return [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)];
@@ -341,10 +358,9 @@ export default function QuickOrderPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {rows.map((row, rowIdx) => {
             const colors = getRowColors(row);
-            const sizes = getRowSizes(row);
             const { units, price } = getRowTotals(row);
             const hasProduct = !!row.selectedProduct;
-            const hasColor = !!row.selectedColor;
+            const hasColor = row.expandedColors.length > 0;
             const hasQty = units > 0;
 
             return (
@@ -463,12 +479,12 @@ export default function QuickOrderPage() {
                         {colors.slice(0, 8).map((c) => {
                           const hex = getColorHex(c);
                           const light = isLight(hex);
-                          const active = row.selectedColor === c;
+                          const active = row.expandedColors.includes(c);
                           return (
                             <button
                               key={c}
                               title={c}
-                              onClick={() => updateRow(row.id, { selectedColor: c, quantities: {} })}
+                              onClick={() => toggleColor(row.id, c)}
                               style={{
                                 width: "22px", height: "22px", borderRadius: "50%",
                                 background: hex,
@@ -484,11 +500,12 @@ export default function QuickOrderPage() {
                         })}
                         {colors.length > 8 && (
                           <select
-                            value={row.selectedColor}
-                            onChange={(e) => updateRow(row.id, { selectedColor: e.target.value, quantities: {} })}
+                            value=""
+                            onChange={(e) => { if (e.target.value) toggleColor(row.id, e.target.value); }}
                             style={{ fontSize: "11px", border: "1px solid #E2E0DA", borderRadius: "4px", padding: "2px 4px", background: "#fff", color: "#2A2830", cursor: "pointer", fontFamily: "var(--font-jakarta)" }}
                           >
-                            {colors.map((c) => <option key={c} value={c}>{c}</option>)}
+                            <option value="">More…</option>
+                            {colors.slice(8).map((c) => <option key={c} value={c}>{c}</option>)}
                           </select>
                         )}
                       </div>
@@ -523,7 +540,7 @@ export default function QuickOrderPage() {
                     ) : (
                       <>
                         {/* Product summary bar */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: hasColor && sizes.length > 0 ? "16px" : "0" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
                           <div style={{ width: "36px", height: "36px", flexShrink: 0, borderRadius: "6px", overflow: "hidden", background: "#F4F3EF", border: "1px solid #E2E0DA" }}>
                             {row.selectedProduct?.primary_image ? (
                               <Image
@@ -549,15 +566,8 @@ export default function QuickOrderPage() {
                                   Min {row.selectedProduct.moq} units
                                 </span>
                               )}
-                              {row.selectedColor && (
-                                <span style={{ fontSize: "11px", color: "#7A7880", display: "flex", alignItems: "center", gap: "4px" }}>
-                                  <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: getColorHex(row.selectedColor), border: isLight(getColorHex(row.selectedColor)) ? "1px solid #ddd" : "none", display: "inline-block", flexShrink: 0 }} />
-                                  {row.selectedColor}
-                                </span>
-                              )}
                             </div>
                           </div>
-                          {/* Row subtotal */}
                           {hasQty && (
                             <div style={{ flexShrink: 0, textAlign: "right" }}>
                               <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#1A5CFF", lineHeight: 1 }}>{formatCurrency(price)}</div>
@@ -566,84 +576,117 @@ export default function QuickOrderPage() {
                           )}
                         </div>
 
-                        {/* Step 2 prompt: no color yet */}
+                        {/* Step 2 prompt: no color selected yet */}
                         {!hasColor && colors.length > 0 && (
                           <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", background: "#F4F3EF", borderRadius: "8px", fontSize: "13px", color: "#7A7880" }}>
                             <span style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#E8242A", color: "#fff", fontSize: "10px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</span>
-                            Pick a color above to see sizes
+                            Click a color above to see sizes — multiple colors can be open at once
                           </div>
                         )}
 
-                        {/* Size / quantity grid */}
-                        {hasColor && sizes.length > 0 && (
-                          <div style={{ overflowX: "auto" }}>
-                            <table style={{ borderCollapse: "separate", borderSpacing: "5px 0", fontSize: "13px" }}>
-                              <thead>
-                                <tr>
-                                  {sizes.map((size) => {
-                                    const v = getVariant(row, size);
-                                    const unitPrice = v?.effective_price ?? v?.retail_price;
-                                    return (
-                                      <th key={size} style={{ padding: "0 0 8px", textAlign: "center", minWidth: "60px" }}>
-                                        <div style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", letterSpacing: ".06em", color: "#2A2830" }}>{size}</div>
-                                        {unitPrice && (
-                                          <div style={{ fontSize: "10px", color: "#7A7880", fontWeight: 400, fontFamily: "var(--font-jakarta)" }}>
-                                            {formatCurrency(parseFloat(unitPrice))}
-                                          </div>
-                                        )}
-                                      </th>
-                                    );
-                                  })}
-                                  <th style={{ padding: "0 0 8px 14px", textAlign: "right", minWidth: "80px", borderLeft: "1px solid #E2E0DA" }}>
-                                    <div style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", color: "#2A2830" }}>Total</div>
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  {sizes.map((size) => {
-                                    const qty = row.quantities[size] ?? 0;
-                                    return (
-                                      <td key={size} style={{ padding: 0, textAlign: "center" }}>
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          value={qty === 0 ? "" : qty}
-                                          onChange={(e) => handleQtyChange(row.id, size, e.target.value)}
-                                          placeholder="0"
-                                          style={{
-                                            width: "60px", height: "42px",
-                                            textAlign: "center", fontSize: "15px", fontWeight: 700,
-                                            border: qty > 0 ? "2px solid #1A5CFF" : "1.5px solid #E2E0DA",
-                                            borderRadius: "6px", outline: "none",
-                                            background: qty > 0 ? "rgba(26,92,255,.04)" : "#fff",
-                                            color: "#2A2830", transition: "border-color .12s, background .12s",
-                                            fontFamily: "var(--font-jakarta)",
-                                            MozAppearance: "textfield",
-                                          }}
-                                          onFocus={(e) => { if (!e.currentTarget.value) e.currentTarget.placeholder = ""; }}
-                                          onBlur={(e) => { e.currentTarget.placeholder = "0"; }}
-                                        />
-                                      </td>
-                                    );
-                                  })}
-                                  <td style={{ padding: "0 0 0 14px", textAlign: "right", verticalAlign: "middle", borderLeft: "1px solid #E2E0DA" }}>
-                                    {units > 0 ? (
-                                      <div>
-                                        <div style={{ fontSize: "11px", color: "#7A7880", marginBottom: "1px" }}>{units} units</div>
-                                        <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#1A5CFF", lineHeight: 1 }}>
-                                          {formatCurrency(price)}
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <span style={{ fontSize: "13px", color: "#ddd" }}>—</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
+                        {/* Size / quantity grids — one per expanded color */}
+                        {row.expandedColors.map((color) => {
+                          const sizes = getSizesForColor(row, color);
+                          const colorHex = getColorHex(color);
+                          const colorUnits = sizes.reduce((s, sz) => s + (row.quantities[color]?.[sz] ?? 0), 0);
+                          const colorPrice = sizes.reduce((s, sz) => {
+                            const qty = row.quantities[color]?.[sz] ?? 0;
+                            const v = getVariantForColor(row, color, sz);
+                            return s + qty * parseFloat(v?.effective_price ?? v?.retail_price ?? "0");
+                          }, 0);
+                          return (
+                            <div key={color} style={{ marginBottom: "12px" }}>
+                              {/* Color header */}
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: colorHex, border: isLight(colorHex) ? "1px solid #ddd" : "none", flexShrink: 0 }} />
+                                <span style={{ fontSize: "12px", fontWeight: 700, color: "#2A2830" }}>{color}</span>
+                                {colorUnits > 0 && (
+                                  <span style={{ fontSize: "11px", color: "#1A5CFF", fontWeight: 600, marginLeft: "4px" }}>
+                                    {colorUnits} unit{colorUnits !== 1 ? "s" : ""} · {formatCurrency(colorPrice)}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => toggleColor(row.id, color)}
+                                  style={{ marginLeft: "auto", fontSize: "11px", color: "#aaa", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}
+                                  title="Collapse color"
+                                >
+                                  ▲ collapse
+                                </button>
+                              </div>
+                              {sizes.length > 0 ? (
+                                <div style={{ overflowX: "auto" }}>
+                                  <table style={{ borderCollapse: "separate", borderSpacing: "5px 0", fontSize: "13px" }}>
+                                    <thead>
+                                      <tr>
+                                        {sizes.map((size) => {
+                                          const v = getVariantForColor(row, color, size);
+                                          const unitPrice = v?.effective_price ?? v?.retail_price;
+                                          return (
+                                            <th key={size} style={{ padding: "0 0 8px", textAlign: "center", minWidth: "60px" }}>
+                                              <div style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", letterSpacing: ".06em", color: "#2A2830" }}>{size}</div>
+                                              {unitPrice && (
+                                                <div style={{ fontSize: "10px", color: "#7A7880", fontWeight: 400, fontFamily: "var(--font-jakarta)" }}>
+                                                  {formatCurrency(parseFloat(unitPrice))}
+                                                </div>
+                                              )}
+                                            </th>
+                                          );
+                                        })}
+                                        <th style={{ padding: "0 0 8px 14px", textAlign: "right", minWidth: "80px", borderLeft: "1px solid #E2E0DA" }}>
+                                          <div style={{ fontFamily: "var(--font-bebas)", fontSize: "15px", color: "#2A2830" }}>Total</div>
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr>
+                                        {sizes.map((size) => {
+                                          const qty = row.quantities[color]?.[size] ?? 0;
+                                          return (
+                                            <td key={size} style={{ padding: 0, textAlign: "center" }}>
+                                              <input
+                                                type="number"
+                                                min={0}
+                                                value={qty === 0 ? "" : qty}
+                                                onChange={(e) => handleQtyChange(row.id, color, size, e.target.value)}
+                                                placeholder="0"
+                                                style={{
+                                                  width: "60px", height: "42px",
+                                                  textAlign: "center", fontSize: "15px", fontWeight: 700,
+                                                  border: qty > 0 ? "2px solid #1A5CFF" : "1.5px solid #E2E0DA",
+                                                  borderRadius: "6px", outline: "none",
+                                                  background: qty > 0 ? "rgba(26,92,255,.04)" : "#fff",
+                                                  color: "#2A2830", transition: "border-color .12s, background .12s",
+                                                  fontFamily: "var(--font-jakarta)",
+                                                  MozAppearance: "textfield",
+                                                }}
+                                                onFocus={(e) => { if (!e.currentTarget.value) e.currentTarget.placeholder = ""; }}
+                                                onBlur={(e) => { e.currentTarget.placeholder = "0"; }}
+                                              />
+                                            </td>
+                                          );
+                                        })}
+                                        <td style={{ padding: "0 0 0 14px", textAlign: "right", verticalAlign: "middle", borderLeft: "1px solid #E2E0DA" }}>
+                                          {colorUnits > 0 ? (
+                                            <div>
+                                              <div style={{ fontSize: "11px", color: "#7A7880", marginBottom: "1px" }}>{colorUnits} units</div>
+                                              <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#1A5CFF", lineHeight: 1 }}>
+                                                {formatCurrency(colorPrice)}
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <span style={{ fontSize: "13px", color: "#ddd" }}>—</span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: "12px", color: "#bbb", padding: "4px 0" }}>No sizes available</div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </>
                     )}
                   </div>

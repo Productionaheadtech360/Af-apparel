@@ -3,7 +3,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 
 interface Collection {
@@ -37,6 +37,8 @@ export default function CollectionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", slug: "", description: "", image_url: "" });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadCollections() {
     setIsLoading(true);
@@ -68,6 +70,20 @@ export default function CollectionsPage() {
     setShowModal(false);
     setEditingId(null);
     setForm({ name: "", slug: "", description: "", image_url: "" });
+  }
+
+  async function handleImageFile(file: File) {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await apiClient.postForm<{ url: string }>("/api/v1/admin/products/upload-image", fd);
+      setForm(f => ({ ...f, image_url: res.url }));
+    } catch {
+      alert("Image upload failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSave() {
@@ -264,19 +280,44 @@ export default function CollectionsPage() {
             </div>
 
             <div style={{ marginBottom: "22px" }}>
-              <label style={labelStyle}>Image URL</label>
+              <label style={labelStyle}>Collection Image</label>
               <input
-                value={form.image_url}
-                onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))}
-                placeholder="https://example.com/collection-image.jpg"
-                style={inputStyle}
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }}
               />
-              {form.image_url && (
-                <div style={{ marginTop: "8px", width: "80px", height: "80px", borderRadius: "6px", overflow: "hidden", border: "1px solid #E2E0DA" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={form.image_url} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                </div>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                {form.image_url && (
+                  <div style={{ width: "64px", height: "64px", borderRadius: "6px", overflow: "hidden", border: "1px solid #E2E0DA", flexShrink: 0 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={form.image_url} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  style={{
+                    padding: "9px 18px", border: "1.5px dashed #E2E0DA", borderRadius: "8px",
+                    background: uploading ? "#f9fafb" : "#fff", cursor: uploading ? "not-allowed" : "pointer",
+                    fontSize: "13px", fontWeight: 600, color: uploading ? "#aaa" : "#1A5CFF",
+                    fontFamily: "var(--font-jakarta)",
+                  }}
+                >
+                  {uploading ? "Uploading…" : form.image_url ? "Replace Image" : "Upload Image"}
+                </button>
+                {form.image_url && (
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, image_url: "" }))}
+                    style={{ padding: "9px 14px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", color: "#7A7880", fontFamily: "var(--font-jakarta)" }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
 
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>

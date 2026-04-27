@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useAuthStore } from "@/stores/auth.store";
 import { productsService } from "@/services/products.service";
-import { LockIcon } from "@/components/ui/icons";
 
 interface ProductVariant {
   color?: string | null;
@@ -57,7 +55,6 @@ const BADGES: Record<number, { label: string; bg: string }> = {
 
 export function BestSellers() {
   const [products, setProducts] = useState<ProductItem[]>([]);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
 
   useEffect(() => {
     productsService
@@ -172,16 +169,11 @@ export function BestSellers() {
 
                   {/* Price */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    {isAuthenticated && price ? (
-                      <div style={{ fontFamily: "var(--font-bebas)", fontSize: "20px", color: "#2A2830", lineHeight: 1 }}>
-                        ${Number(price).toFixed(2)}
-                        <span style={{ fontSize: "13px", color: "#aaa", marginLeft: "4px", fontFamily: "var(--font-jakarta)", fontWeight: 500 }}>/ unit</span>
+                    {price ? (
+                      <div style={{ fontSize: "13px", color: "#2A2830", fontWeight: 700, lineHeight: 1 }}>
+                        From ${Number(price).toFixed(2)}
                       </div>
-                    ) : (
-                      <div style={{ fontSize: "13px", color: "#1A5CFF", fontWeight: 700, display: "flex", alignItems: "center", gap: "5px" }}>
-                        <LockIcon size={12} color="#1A5CFF" /> Login for pricing
-                      </div>
-                    )}
+                    ) : null}
                     <div style={{ fontSize: "11px", color: "#7A7880", fontWeight: 600 }}>
                       MOQ: {product.moq ?? 6}
                     </div>

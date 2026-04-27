@@ -19,6 +19,7 @@ interface AdminAbandonedCart {
   id: string;
   company_name: string;
   company_id: string;
+  customer_email: string | null;
   abandoned_at: string;
   total: number;
   item_count: number;
@@ -49,6 +50,8 @@ export default function AdminAbandonedCartsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterMode>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [reminding, setReminding] = useState<string | null>(null);
+  const [reminderMsg, setReminderMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (hasLoaded.current) return;
@@ -63,6 +66,20 @@ export default function AdminAbandonedCartsPage() {
       setCarts(data);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function sendReminder(companyId: string) {
+    setReminding(companyId);
+    setReminderMsg(null);
+    try {
+      await apiClient.post(`/api/v1/admin/abandoned-carts/${companyId}/remind`, {});
+      setReminderMsg({ id: companyId, ok: true, text: "Reminder sent" });
+    } catch {
+      setReminderMsg({ id: companyId, ok: false, text: "Failed to send" });
+    } finally {
+      setReminding(null);
+      setTimeout(() => setReminderMsg(null), 4000);
     }
   }
 
@@ -176,12 +193,31 @@ export default function AdminAbandonedCartsPage() {
                   </div>
                 </button>
 
-                <button
-                  onClick={() => setExpandedId(expandedId === cart.id ? null : cart.id)}
-                  className="text-sm text-gray-500 hover:text-gray-700 ml-4"
-                >
-                  {expandedId === cart.id ? "Hide ▲" : "View items ▼"}
-                </button>
+                <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+                  {!cart.is_recovered && (
+                    <button
+                      onClick={() => sendReminder(cart.company_id)}
+                      disabled={reminding === cart.company_id}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-md border transition-colors"
+                      style={{
+                        background: reminding === cart.company_id ? "#f3f4f6" : "#1A5CFF",
+                        color: reminding === cart.company_id ? "#9ca3af" : "#fff",
+                        borderColor: reminding === cart.company_id ? "#e5e7eb" : "#1A5CFF",
+                        cursor: reminding === cart.company_id ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {reminding === cart.company_id ? "Sending…" :
+                        reminderMsg?.id === cart.company_id ? (reminderMsg.ok ? "✓ Sent" : "✕ Failed") :
+                        "Send Reminder"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setExpandedId(expandedId === cart.id ? null : cart.id)}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    {expandedId === cart.id ? "Hide ▲" : "View items ▼"}
+                  </button>
+                </div>
               </div>
 
               {/* Expandable items */}
