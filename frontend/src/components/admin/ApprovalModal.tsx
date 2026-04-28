@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { adminService } from "@/services/admin.service";
 
 interface PricingTier { id: string; name: string; discount_percent?: number; discount_percentage?: number; }
-interface ShippingTier { id: string; name: string; }
+interface DiscountGroup { id: string; title: string; customer_tag?: string | null; }
 
 interface ApprovalModalProps {
   applicationId: string;
@@ -15,41 +15,37 @@ interface ApprovalModalProps {
 
 export function ApprovalModal({ applicationId, companyName, onClose, onSuccess }: ApprovalModalProps) {
   const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
-  const [shippingTiers, setShippingTiers] = useState<ShippingTier[]>([]);
+  const [discountGroups, setDiscountGroups] = useState<DiscountGroup[]>([]);
   const [pricingTierId, setPricingTierId] = useState("");
-  const [shippingTierId, setShippingTierId] = useState("");
+  const [discountGroupId, setDiscountGroupId] = useState("");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      // Fetch independently so one failure doesn't block the other
-      const [ptResult, stResult] = await Promise.allSettled([
+      const [ptResult, dgResult] = await Promise.allSettled([
         adminService.listPricingTiers() as Promise<PricingTier[]>,
-        adminService.listShippingTiers() as Promise<ShippingTier[]>,
+        adminService.listDiscountGroups() as Promise<DiscountGroup[]>,
       ]);
-      const pt = ptResult.status === "fulfilled" && Array.isArray(ptResult.value)
-        ? ptResult.value : [];
-      const st = stResult.status === "fulfilled" && Array.isArray(stResult.value)
-        ? stResult.value : [];
+      const pt = ptResult.status === "fulfilled" && Array.isArray(ptResult.value) ? ptResult.value : [];
+      const dg = dgResult.status === "fulfilled" && Array.isArray(dgResult.value) ? dgResult.value : [];
       setPricingTiers(pt);
-      setShippingTiers(st);
+      setDiscountGroups(dg);
       if (pt.length > 0) setPricingTierId(pt[0]?.id ?? "");
-      if (st.length > 0) setShippingTierId(st[0]?.id ?? "");
     }
     load();
   }, []);
 
   async function handleApprove(e: React.FormEvent) {
     e.preventDefault();
-    if (!pricingTierId || !shippingTierId) return;
+    if (!pricingTierId) return;
     setIsSaving(true);
     setError(null);
     try {
       await adminService.approveApplication(applicationId, {
         pricing_tier_id: pricingTierId,
-        shipping_tier_id: shippingTierId,
+        discount_group_id: discountGroupId || undefined,
         notes: notes || undefined,
       });
       onSuccess();
@@ -88,16 +84,17 @@ export function ApprovalModal({ applicationId, companyName, onClose, onSuccess }
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Tier *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Discount Group</label>
             <select
-              required
-              value={shippingTierId}
-              onChange={(e) => setShippingTierId(e.target.value)}
+              value={discountGroupId}
+              onChange={(e) => setDiscountGroupId(e.target.value)}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              <option value="">Select tier…</option>
-              {shippingTiers.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
+              <option value="">None</option>
+              {discountGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.title}{g.customer_tag ? ` (${g.customer_tag})` : ""}
+                </option>
               ))}
             </select>
           </div>
@@ -121,7 +118,7 @@ export function ApprovalModal({ applicationId, companyName, onClose, onSuccess }
             </button>
             <button
               type="submit"
-              disabled={isSaving || !pricingTierId || !shippingTierId}
+              disabled={isSaving || !pricingTierId}
               className="flex-1 bg-green-600 text-white rounded-md py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50"
             >
               {isSaving ? "Approving…" : "Approve"}

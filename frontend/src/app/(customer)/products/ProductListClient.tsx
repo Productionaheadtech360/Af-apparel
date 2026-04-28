@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -61,6 +61,28 @@ export function ProductListClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+
+  // Client-side product state — initialized from SSR data (guest prices),
+  // re-fetched with auth token once logged-in so wholesale prices appear.
+  const [products, setProducts] = useState<ProductListItem[]>(initialProducts);
+  const authedFetchDone = useRef(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || authedFetchDone.current) return;
+    authedFetchDone.current = true;
+    const params: Record<string, string> = {};
+    if (currentCategory) params.category = currentCategory;
+    if (currentSize) params.size = currentSize;
+    if (currentColor) params.color = currentColor;
+    if (currentGender) params.gender = currentGender;
+    if (currentInStock) params.in_stock = currentInStock;
+    if (currentPriceMin) params.price_min = currentPriceMin;
+    if (currentPriceMax) params.price_max = currentPriceMax;
+    const qs = new URLSearchParams({ ...params, page_size: "24" }).toString();
+    apiClient.get<{ items: ProductListItem[] }>(`/api/v1/products?${qs}`)
+      .then((res) => { if (res?.items?.length) setProducts(res.items); })
+      .catch(() => {});
+  }, [isAuthenticated]); // eslint-disable-line
 
   // Filter drawer state (mobile)
   const [filterOpen, setFilterOpen] = useState(false);
@@ -421,11 +443,11 @@ export function ProductListClient({
   );
 
   const filteredByStock = localMinStock > 0
-    ? initialProducts.filter(p => {
+    ? products.filter(p => {
         const total = (p.variants ?? []).reduce((sum: number, v: any) => sum + (v.stock_quantity ?? 100), 0);
         return total >= localMinStock;
       })
-    : initialProducts;
+    : products;
 
   const displayedProducts = [...filteredByStock].sort((a, b) => {
     if (sortBy === "price_asc") {

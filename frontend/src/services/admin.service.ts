@@ -149,6 +149,10 @@ export const adminService = {
     return apiClient.get("/api/v1/admin/shipping-tiers");
   },
 
+  async listDiscountGroups() {
+    return apiClient.get("/api/v1/admin/discount-groups");
+  },
+
   async createShippingTier(data: object) {
     return apiClient.post("/api/v1/admin/shipping-tiers", data);
   },
@@ -200,7 +204,7 @@ export const adminService = {
 
   async approveApplication(
     id: string,
-    data: { pricing_tier_id: string; shipping_tier_id: string; notes?: string }
+    data: { pricing_tier_id: string; discount_group_id?: string; notes?: string }
   ) {
     return apiClient.post(`/api/v1/admin/wholesale-applications/${id}/approve`, data);
   },

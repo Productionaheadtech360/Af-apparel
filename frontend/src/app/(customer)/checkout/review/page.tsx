@@ -203,6 +203,7 @@ export default function CheckoutReviewPage() {
 
       if (typeof window !== "undefined") localStorage.removeItem("af_coupon");
       clearCart();
+      window.dispatchEvent(new Event("cart_updated"));
       router.push("/checkout/confirmed");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to place order. Please try again.");

@@ -400,6 +400,14 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
   const pricePerUnit = Number(primaryVariant?.effective_price ?? primaryVariant?.retail_price ?? 0);
   const orderTotal = totalUnits * pricePerUnit;
 
+  const lastExpandedColor = expandedColors.length > 0 ? expandedColors[expandedColors.length - 1] : null;
+  const orderedImages = lastExpandedColor
+    ? [
+        ...images.filter(img => img.alt_text?.toLowerCase().includes(lastExpandedColor.toLowerCase())),
+        ...images.filter(img => !img.alt_text?.toLowerCase().includes(lastExpandedColor.toLowerCase())),
+      ]
+    : images;
+
   function toggleColor(color: string) {
     const isCurrentlyExpanded = expandedColors.includes(color);
     if (!isCurrentlyExpanded) {
@@ -407,12 +415,8 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
       if (!visibleInAccordion) {
         setShowAllColors(true);
       }
-      // Switch main image to the one matching this color
-      const colorLower = color.toLowerCase();
-      const matchIdx = images.findIndex(img =>
-        img.alt_text?.toLowerCase().includes(colorLower)
-      );
-      if (matchIdx >= 0) setActiveImageIdx(matchIdx);
+      // After reordering, matching images will be at index 0
+      setActiveImageIdx(0);
     }
     setExpandedColors(prev =>
       prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
@@ -523,11 +527,11 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
           <div className="pd-image-col" style={{ width: "100%", minWidth: 0 }}>
             {/* Main image */}
             <div style={{ aspectRatio: "1", borderRadius: "12px", overflow: "hidden", background: "#F4F3EF", marginBottom: "12px", border: "1px solid #E2E0DA", position: "relative" }}>
-              {images[activeImageIdx] ? (
+              {orderedImages[activeImageIdx] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={imgSrc(images[activeImageIdx]!)}
-                  alt={images[activeImageIdx]!.alt_text ?? product.name}
+                  src={imgSrc(orderedImages[activeImageIdx]!)}
+                  alt={orderedImages[activeImageIdx]!.alt_text ?? product.name}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               ) : (
@@ -546,13 +550,13 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
             </div>
 
             {/* Thumbnail slider */}
-            {images.length > 1 && (
+            {orderedImages.length > 1 && (
               <div style={{ position: "relative" }}>
                 <div
                   id="thumb-slider"
                   style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px", scrollbarWidth: "thin", scrollbarColor: "#E2E0DA transparent", scrollBehavior: "smooth" }}
                 >
-                  {images.map((img, i) => (
+                  {orderedImages.map((img, i) => (
                     <button
                       key={img.id}
                       onClick={() => setActiveImageIdx(i)}
@@ -567,7 +571,7 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
                     </button>
                   ))}
                 </div>
-                {images.length > 5 && (
+                {orderedImages.length > 5 && (
                   <>
                     <button
                       onClick={() => { const el = document.getElementById("thumb-slider"); if (el) el.scrollLeft -= 200; }}
