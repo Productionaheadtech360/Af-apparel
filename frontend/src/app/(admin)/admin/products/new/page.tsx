@@ -212,7 +212,7 @@ export default function NewProductPage() {
   function updateSizeChartRow(i: number, field: keyof SizeChartRow, value: string) {
     setForm(p => {
       const rows = [...p.size_chart_data];
-      rows[i] = { ...rows[i], [field]: value };
+      rows[i] = { ...rows[i], [field]: value } as SizeChartRow;
       return { ...p, size_chart_data: rows };
     });
   }
