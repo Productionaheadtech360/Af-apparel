@@ -5,7 +5,20 @@ import { useRouter } from "next/navigation";
 import { adminService } from "@/services/admin.service";
 import { productsService } from "@/services/products.service";
 import { apiClient } from "@/lib/api-client";
+import dynamic from "next/dynamic";
 import type { Category } from "@/types/product.types";
+
+const RichTextEditor = dynamic(
+  () => import("@/components/admin/RichTextEditor").then(m => m.RichTextEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{ border: "1.5px solid #E2E0DA", borderRadius: "8px", padding: "14px 16px", minHeight: "160px", color: "#aaa", fontSize: "14px" }}>
+        Loading editor…
+      </div>
+    ),
+  }
+);
 
 const labelStyle: React.CSSProperties = {
   fontSize: "11px", fontWeight: 700, textTransform: "uppercase",
@@ -23,33 +36,65 @@ const sectionTitle: React.CSSProperties = {
   fontFamily: "var(--font-bebas)", fontSize: "16px", letterSpacing: ".08em",
   color: "#2A2830", marginBottom: "16px", display: "block",
 };
+const thStyle: React.CSSProperties = {
+  padding: "10px 12px", textAlign: "left", fontSize: "11px", textTransform: "uppercase",
+  letterSpacing: ".06em", color: "#7A7880", fontWeight: 700,
+};
 
 const COLOR_MAP: Record<string, string> = {
   White: "#FFFFFF", Black: "#111111", Grey: "#9CA3AF", "Sport Grey": "#9CA3AF",
-  Navy: "#1e3a5f", Red: "#E8242A", Blue: "#1A5CFF", "Light Blue": "#7DD3FC",
-  Forest: "#1B4332", Green: "#16a34a", Yellow: "#EAB308", Orange: "#F97316",
-  Purple: "#9333EA", Pink: "#EC4899", Brown: "#92400E",
+  Charcoal: "#555555", Navy: "#1e3a5f", Red: "#E8242A", Blue: "#1A5CFF",
+  "Royal Blue": "#1A5CFF", "Light Blue": "#7DD3FC", "Stonewash Blue": "#5b8fa8",
+  Forest: "#1B4332", Burgundy: "#722F37", Green: "#16a34a", Yellow: "#EAB308",
+  Orange: "#F97316", Purple: "#9333EA", Pink: "#EC4899", Brown: "#92400E",
 };
 
-interface VariantRow {
+const ALL_SIZES = ["XS", "S", "S/M", "M", "M/L", "L", "XL", "2XL", "3XL", "4XL", "5XL", "One Size"];
+
+interface PendingVariant {
   id: string;
   color: string;
   size: string;
+  price: string;
   sku: string;
-  retail_price: string;
-  msrp: string;
+}
+
+interface SizeChartRow {
+  size: string;
+  chest: string;
+  length: string;
+  sleeve: string;
 }
 
 export default function NewProductPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const flyerInputRef = useRef<HTMLInputElement>(null);
+
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+
+  // Media
   const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+
+  // Flyer
+  const [pendingFlyer, setPendingFlyer] = useState<File | null>(null);
+
+  // Tags
   const [tagInput, setTagInput] = useState("");
+
+  // SEO toggle
+  const [editSEO, setEditSEO] = useState(false);
+
+  // Variant modal
+  const [showAddVariant, setShowAddVariant] = useState(false);
+  const [bulkColors, setBulkColors] = useState("");
+  const [bulkSizes, setBulkSizes] = useState<string[]>([]);
+  const [bulkPrice, setBulkPrice] = useState("");
+  const [pendingVariants, setPendingVariants] = useState<PendingVariant[]>([]);
 
   const [form, setForm] = useState({
     name: "",
@@ -65,30 +110,35 @@ export default function NewProductPage() {
     weight: "",
     category_id: "",
     tags: [] as string[],
+    meta_title: "",
+    meta_description: "",
+    care_instructions: "",
+    print_guide_methods: [] as string[],
+    size_chart_data: [] as SizeChartRow[],
   });
-
-  const [variants, setVariants] = useState<VariantRow[]>([
-    { id: crypto.randomUUID(), color: "", size: "", sku: "", retail_price: "", msrp: "" },
-  ]);
 
   useEffect(() => {
     productsService.getCategories().then(cats => setCategories(cats ?? [])).catch(() => {});
   }, []);
 
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) {
-    const { name, value } = e.target;
+  function setField(name: string, value: unknown) {
     setForm(prev => {
-      const updated = {
-        ...prev,
-        [name]: name === "moq" ? Math.max(1, parseInt(value) || 1) : value,
-      };
-      if (name === "name" && prev.slug === prev.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")) {
-        updated.slug = value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      const updated = { ...prev, [name]: value } as typeof prev;
+      if (name === "name") {
+        const autoSlug = (value as string).toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+        if (prev.slug === prev.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")) {
+          updated.slug = autoSlug;
+        }
+      }
+      if (name === "moq") {
+        updated.moq = Math.max(1, parseInt(value as string) || 1);
       }
       return updated;
     });
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    setField(e.target.name, e.target.value);
   }
 
   function addTag() {
@@ -102,26 +152,12 @@ export default function NewProductPage() {
     setForm(p => ({ ...p, tags: p.tags.filter(t => t !== tag) }));
   }
 
-  function updateVariant(id: string, field: keyof VariantRow, value: string) {
-    setVariants(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r));
-  }
-
-  function addVariantRow() {
-    setVariants(rows => [...rows, { id: crypto.randomUUID(), color: "", size: "", sku: "", retail_price: "", msrp: "" }]);
-  }
-
-  function removeVariantRow(id: string) {
-    setVariants(rows => rows.filter(r => r.id !== id));
-  }
-
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     setPendingImages(prev => [...prev, ...files]);
     files.forEach(file => {
       const reader = new FileReader();
-      reader.onload = ev => {
-        setImagePreviewUrls(prev => [...prev, ev.target?.result as string]);
-      };
+      reader.onload = ev => setImagePreviewUrls(prev => [...prev, ev.target?.result as string]);
       reader.readAsDataURL(file);
     });
     e.target.value = "";
@@ -130,6 +166,63 @@ export default function NewProductPage() {
   function removePendingImage(index: number) {
     setPendingImages(prev => prev.filter((_, i) => i !== index));
     setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
+  }
+
+  function handleFlyerSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setPendingFlyer(file);
+    e.target.value = "";
+  }
+
+  function handleAddVariants() {
+    const colors = bulkColors.split(",").map(c => c.trim()).filter(Boolean);
+    if (!colors.length || !bulkSizes.length) return;
+    const productCode = form.name.split(" ").map(w => w[0] ?? "").join("").toUpperCase() || "SKU";
+    const newRows: PendingVariant[] = [];
+    for (const color of colors) {
+      for (const size of bulkSizes) {
+        const colorCode = color.slice(0, 3).toUpperCase();
+        const sizeCode = size.toUpperCase().replace(/\//g, "");
+        newRows.push({
+          id: crypto.randomUUID(),
+          color,
+          size,
+          price: bulkPrice,
+          sku: `${productCode}-${colorCode}-${sizeCode}-${Date.now().toString(36).toUpperCase()}`,
+        });
+      }
+    }
+    setPendingVariants(prev => [...prev, ...newRows]);
+    setBulkColors(""); setBulkSizes([]); setBulkPrice("");
+    setShowAddVariant(false);
+  }
+
+  function removePendingVariant(id: string) {
+    setPendingVariants(prev => prev.filter(v => v.id !== id));
+  }
+
+  function addSizeChartRow() {
+    setForm(p => ({ ...p, size_chart_data: [...p.size_chart_data, { size: "", chest: "", length: "", sleeve: "" }] }));
+  }
+
+  function removeSizeChartRow(i: number) {
+    setForm(p => ({ ...p, size_chart_data: p.size_chart_data.filter((_, idx) => idx !== i) }));
+  }
+
+  function updateSizeChartRow(i: number, field: keyof SizeChartRow, value: string) {
+    setForm(p => {
+      const rows = [...p.size_chart_data];
+      rows[i] = { ...rows[i], [field]: value };
+      return { ...p, size_chart_data: rows };
+    });
+  }
+
+  function togglePrintMethod(method: string) {
+    setForm(p => {
+      const cur = p.print_guide_methods;
+      const next = cur.includes(method) ? cur.filter(m => m !== method) : [...cur, method];
+      return { ...p, print_guide_methods: next };
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -153,6 +246,11 @@ export default function NewProductPage() {
         weight: form.weight || null,
         tags: form.tags.length ? form.tags : null,
         category_ids: form.category_id ? [form.category_id] : [],
+        meta_title: form.meta_title || null,
+        meta_description: form.meta_description || null,
+        care_instructions: form.care_instructions || null,
+        print_guide: form.print_guide_methods.length ? { methods: form.print_guide_methods } : null,
+        size_chart_data: form.size_chart_data.length ? form.size_chart_data : null,
       };
 
       const product = await adminService.createProduct(payload) as { id: string; slug: string };
@@ -162,21 +260,22 @@ export default function NewProductPage() {
         await adminService.uploadImage(product.id, file).catch(() => {});
       }
 
-      // Create filled variant rows
-      const filledVariants = variants.filter(v => v.color.trim() && v.size.trim());
-      for (const v of filledVariants) {
-        const colorCode = v.color.slice(0, 3).toUpperCase();
-        const sizeCode = v.size.toUpperCase();
-        const productCode = form.name.split(" ").map(w => w[0] ?? "").join("").toUpperCase();
-        const sku = v.sku.trim() || `${productCode}-${colorCode}-${sizeCode}-${Date.now().toString(36).toUpperCase()}`;
+      // Create variants
+      for (const v of pendingVariants) {
         await apiClient.post(`/api/v1/admin/products/${product.id}/variants`, {
-          sku,
-          color: v.color.trim(),
-          size: v.size.trim(),
-          retail_price: parseFloat(v.retail_price) || 0,
-          ...(v.msrp.trim() ? { msrp: parseFloat(v.msrp) } : {}),
+          sku: v.sku,
+          color: v.color,
+          size: v.size,
+          retail_price: parseFloat(v.price) || 0,
           status: "active",
         }).catch(() => {});
+      }
+
+      // Upload flyer
+      if (pendingFlyer) {
+        const fd = new FormData();
+        fd.append("file", pendingFlyer);
+        await apiClient.postForm(`/api/v1/admin/products/${product.id}/upload-flyer`, fd).catch(() => {});
       }
 
       setSuccess(true);
@@ -186,6 +285,16 @@ export default function NewProductPage() {
       setSaving(false);
     }
   }
+
+  // Group pending variants by color for display
+  const variantsByColor: Record<string, PendingVariant[]> = {};
+  pendingVariants.forEach(v => {
+    if (!variantsByColor[v.color]) variantsByColor[v.color] = [];
+    variantsByColor[v.color].push(v);
+  });
+
+  const parsedBulkColors = bulkColors.split(",").map(c => c.trim()).filter(Boolean);
+  const willCreate = parsedBulkColors.length * bulkSizes.length;
 
   return (
     <div style={{ fontFamily: "var(--font-jakarta)" }}>
@@ -202,7 +311,7 @@ export default function NewProductPage() {
             ADD PRODUCT
           </h1>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <button
             type="button"
             onClick={() => router.push("/admin/products")}
@@ -214,7 +323,7 @@ export default function NewProductPage() {
             form="new-product-form"
             type="submit"
             disabled={saving || success || !form.name.trim() || !form.slug.trim()}
-            style={{ padding: "10px 24px", background: success ? "#059669" : "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", opacity: (saving || success || !form.name.trim() || !form.slug.trim()) ? 0.6 : 1, fontSize: "14px" }}
+            style={{ padding: "10px 24px", background: success ? "#059669" : "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: (saving || success || !form.name.trim() || !form.slug.trim()) ? "not-allowed" : "pointer", opacity: (saving || success || !form.name.trim() || !form.slug.trim()) ? 0.6 : 1, fontSize: "14px" }}
           >
             {saving ? "Creating…" : success ? "Created!" : "Create Product"}
           </button>
@@ -226,7 +335,6 @@ export default function NewProductPage() {
           ✓ Product created successfully! Redirecting to product list…
         </div>
       )}
-
       {error && (
         <div style={{ background: "rgba(232,36,42,.06)", border: "1px solid #FECACA", borderRadius: "8px", padding: "12px 16px", marginBottom: "16px", fontSize: "13px", color: "#E8242A" }}>
           {error}
@@ -236,7 +344,7 @@ export default function NewProductPage() {
       <form id="new-product-form" onSubmit={handleSubmit}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "16px", alignItems: "start" }}>
 
-          {/* LEFT COLUMN */}
+          {/* ── LEFT COLUMN ── */}
           <div>
 
             {/* Title & Description */}
@@ -266,13 +374,10 @@ export default function NewProductPage() {
               </div>
               <div>
                 <label style={labelStyle}>Description</label>
-                <textarea
-                  name="description"
+                <RichTextEditor
                   value={form.description}
-                  onChange={handleChange}
-                  rows={5}
+                  onChange={val => setForm(p => ({ ...p, description: val }))}
                   placeholder="Describe this product — fabric details, print compatibility, sizing notes…"
-                  style={{ ...inputStyle, resize: "vertical" }}
                 />
               </div>
             </div>
@@ -280,149 +385,126 @@ export default function NewProductPage() {
             {/* Media */}
             <div style={sectionCard}>
               <span style={sectionTitle}>MEDIA</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "8px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
                 {imagePreviewUrls.map((url, i) => (
-                  <div key={i} style={{ aspectRatio: "1", borderRadius: "8px", overflow: "hidden", border: "1px solid #E2E0DA", position: "relative", background: "#f5f5f5" }}>
-                    <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <div key={i} style={{ display: "flex", gap: "12px", alignItems: "center", padding: "10px 12px", border: "1px solid #E2E0DA", borderRadius: "8px", background: i === 0 ? "rgba(26,92,255,.03)" : "#fff" }}>
+                    <div style={{ width: "64px", height: "64px", borderRadius: "6px", overflow: "hidden", flexShrink: 0, border: "1px solid #E2E0DA", background: "#f5f5f5" }}>
+                      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ background: i === 0 ? "#1A5CFF" : "#F4F3EF", color: i === 0 ? "#fff" : "#7A7880", fontSize: "9px", fontWeight: 700, padding: "2px 8px", borderRadius: "3px" }}>
+                        {i === 0 ? "★ PRIMARY" : `Image ${i + 1}`}
+                      </span>
+                      <div style={{ fontSize: "11px", color: "#aaa", marginTop: "4px" }}>{pendingImages[i]?.name}</div>
+                    </div>
                     <button
                       type="button"
                       onClick={() => removePendingImage(i)}
-                      style={{ position: "absolute", top: "4px", right: "4px", background: "rgba(0,0,0,.6)", color: "#fff", border: "none", borderRadius: "50%", width: "22px", height: "22px", cursor: "pointer", fontSize: "11px", display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >✕</button>
-                    {i === 0 && (
-                      <div style={{ position: "absolute", bottom: "4px", left: "4px", background: "#1A5CFF", color: "#fff", fontSize: "9px", fontWeight: 700, padding: "2px 6px", borderRadius: "3px" }}>PRIMARY</div>
-                    )}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "18px", lineHeight: 1, padding: "0 4px", flexShrink: 0 }}
+                    >×</button>
                   </div>
                 ))}
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{ aspectRatio: "1", borderRadius: "8px", border: "2px dashed #E2E0DA", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "#FAFAFA", transition: "border-color .2s" }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = "#1A5CFF")}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = "#E2E0DA")}
-                >
-                  <span style={{ fontSize: "24px", marginBottom: "4px", color: "#aaa" }}>+</span>
-                  <span style={{ fontSize: "11px", color: "#7A7880" }}>Add media</span>
-                </div>
-                <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleImageSelect} />
               </div>
-              <p style={{ fontSize: "11px", color: "#aaa" }}>Images will be uploaded after the product is created. First image becomes primary.</p>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                style={{ borderRadius: "8px", border: "2px dashed #E2E0DA", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer", background: "#FAFAFA", padding: "16px", transition: "border-color .2s" }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = "#1A5CFF")}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = "#E2E0DA")}
+              >
+                <span style={{ fontSize: "20px", color: "#aaa" }}>+</span>
+                <span style={{ fontSize: "13px", color: "#7A7880" }}>Add media</span>
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleImageSelect} />
+              <p style={{ fontSize: "11px", color: "#aaa", marginTop: "8px" }}>Images are uploaded after creation. First image becomes primary.</p>
             </div>
 
             {/* Variants */}
             <div style={sectionCard}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                 <span style={{ ...sectionTitle, marginBottom: 0 }}>VARIANTS</span>
                 <button
                   type="button"
-                  onClick={addVariantRow}
+                  onClick={() => setShowAddVariant(true)}
                   style={{ padding: "6px 14px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                 >
-                  + Add Row
+                  + Add Variants
                 </button>
               </div>
-              <p style={{ fontSize: "12px", color: "#7A7880", marginBottom: "12px", marginTop: "-8px" }}>
-                Add color/size combinations. You can also add more variants after creation.
+              <p style={{ fontSize: "12px", color: "#7A7880", marginTop: "-4px", marginBottom: "14px" }}>
+                Generate color/size combinations. You can add more variants after creation.
               </p>
 
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                  <thead>
-                    <tr style={{ background: "#F4F3EF", borderBottom: "1px solid #E2E0DA" }}>
-                      {["Color *", "Size *", "SKU (optional)", "Price ($)", "MSRP ($)"].map(h => (
-                        <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: "11px", textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", fontWeight: 700 }}>{h}</th>
-                      ))}
-                      <th style={{ width: "40px" }} />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {variants.map((row, i) => (
-                      <tr key={row.id} style={{ borderBottom: "1px solid #F4F3EF" }}>
-                        <td style={{ padding: "8px 10px" }}>
-                          <input
-                            value={row.color}
-                            onChange={e => updateVariant(row.id, "color", e.target.value)}
-                            list="color-list"
-                            placeholder="e.g. Navy"
-                            style={{ padding: "6px 10px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", width: "130px" }}
-                          />
-                          <datalist id="color-list">
-                            {Object.keys(COLOR_MAP).map(c => <option key={c} value={c} />)}
-                          </datalist>
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          <select
-                            value={row.size}
-                            onChange={e => updateVariant(row.id, "size", e.target.value)}
-                            style={{ padding: "6px 10px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", background: "#fff" }}
-                          >
-                            <option value="">Select…</option>
-                            {["XXS", "XS", "S", "S/M", "M", "M/L", "L", "XL", "2XL", "3XL", "4XL", "5XL", "6XL", "One Size"].map(s => (
-                              <option key={s} value={s}>{s}</option>
+              {pendingVariants.length === 0 ? (
+                <div style={{ padding: "24px", textAlign: "center", border: "1.5px dashed #E2E0DA", borderRadius: "8px", color: "#aaa", fontSize: "13px" }}>
+                  No variants added yet. Click <strong>+ Add Variants</strong> to generate color/size combinations.
+                </div>
+              ) : (
+                <div>
+                  {Object.entries(variantsByColor).map(([color, rows]) => (
+                    <div key={color} style={{ border: "1px solid #E2E0DA", borderRadius: "8px", marginBottom: "10px", overflow: "hidden" }}>
+                      {/* Color header */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "#F4F3EF" }}>
+                        <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: COLOR_MAP[color] ?? "#888", border: "1.5px solid rgba(0,0,0,.1)", flexShrink: 0 }} />
+                        <span style={{ fontWeight: 700, fontSize: "13px", color: "#2A2830" }}>{color}</span>
+                        <span style={{ fontSize: "12px", color: "#7A7880" }}>({rows.length} size{rows.length !== 1 ? "s" : ""})</span>
+                      </div>
+                      {/* Size rows */}
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                        <thead>
+                          <tr style={{ background: "#FAFAFA", borderBottom: "1px solid #E2E0DA" }}>
+                            {["Size", "SKU", "Price", ""].map(h => (
+                              <th key={h} style={thStyle}>{h}</th>
                             ))}
-                          </select>
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          <input
-                            value={row.sku}
-                            onChange={e => updateVariant(row.id, "sku", e.target.value)}
-                            placeholder="Auto-generated"
-                            style={{ padding: "6px 10px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", width: "140px" }}
-                          />
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          <input
-                            type="number"
-                            value={row.retail_price}
-                            onChange={e => updateVariant(row.id, "retail_price", e.target.value)}
-                            placeholder="0.00"
-                            style={{ padding: "6px 10px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", width: "80px" }}
-                          />
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          <input
-                            type="number"
-                            value={row.msrp}
-                            onChange={e => updateVariant(row.id, "msrp", e.target.value)}
-                            placeholder="0.00"
-                            style={{ padding: "6px 10px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", width: "80px" }}
-                          />
-                        </td>
-                        <td style={{ padding: "8px 6px", textAlign: "center" }}>
-                          {variants.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeVariantRow(row.id)}
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "16px", lineHeight: 1 }}
-                            >×</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p style={{ fontSize: "11px", color: "#aaa", marginTop: "10px" }}>
-                Rows with empty Color or Size will be skipped. Leave all empty to skip variants entirely.
-              </p>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map(v => (
+                            <tr key={v.id} style={{ borderBottom: "1px solid #F4F3EF" }}>
+                              <td style={{ padding: "8px 12px", fontWeight: 700 }}>{v.size}</td>
+                              <td style={{ padding: "8px 12px", color: "#7A7880", fontSize: "12px" }}>{v.sku}</td>
+                              <td style={{ padding: "8px 12px" }}>{v.price ? `$${v.price}` : "—"}</td>
+                              <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => removePendingVariant(v.id)}
+                                  style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "16px", lineHeight: 1, padding: "0 4px" }}
+                                >×</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: "11px", color: "#aaa", marginTop: "8px" }}>
+                    {pendingVariants.length} variant{pendingVariants.length !== 1 ? "s" : ""} will be created after saving.
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>
 
-          {/* RIGHT SIDEBAR */}
+          {/* ── RIGHT SIDEBAR ── */}
           <div>
 
             {/* Status */}
             <div style={sectionCard}>
               <span style={sectionTitle}>STATUS</span>
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                style={{ ...inputStyle, background: "#fff" }}
-              >
+              <select name="status" value={form.status} onChange={handleChange} style={{ ...inputStyle, background: "#fff" }}>
                 <option value="draft">○ Draft</option>
                 <option value="active">● Active</option>
               </select>
+              <div style={{ marginTop: "12px" }}>
+                <button
+                  form="new-product-form"
+                  type="submit"
+                  disabled={saving || success || !form.name.trim() || !form.slug.trim()}
+                  style={{ width: "100%", padding: "10px", background: success ? "#059669" : "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: (saving || success || !form.name.trim() || !form.slug.trim()) ? "not-allowed" : "pointer", fontSize: "14px", opacity: (saving || success || !form.name.trim() || !form.slug.trim()) ? 0.6 : 1 }}
+                >
+                  {saving ? "Creating…" : success ? "Created!" : "Create Product"}
+                </button>
+              </div>
             </div>
 
             {/* Product Organization */}
@@ -433,12 +515,10 @@ export default function NewProductPage() {
                 <label style={labelStyle}>Product Type</label>
                 <input name="product_type" value={form.product_type} onChange={handleChange} placeholder="e.g. T-Shirt, Hoodie" style={inputStyle} />
               </div>
-
               <div style={{ marginBottom: "14px" }}>
                 <label style={labelStyle}>Vendor</label>
                 <input name="vendor" value={form.vendor} onChange={handleChange} placeholder="e.g. AF Apparels" style={inputStyle} />
               </div>
-
               <div style={{ marginBottom: "14px" }}>
                 <label style={labelStyle}>Gender</label>
                 <select name="gender" value={form.gender} onChange={handleChange} style={{ ...inputStyle, background: "#fff" }}>
@@ -449,22 +529,18 @@ export default function NewProductPage() {
                   <option value="unisex">Unisex</option>
                 </select>
               </div>
-
               <div style={{ marginBottom: "14px" }}>
                 <label style={labelStyle}>Fabric</label>
-                <input name="fabric" value={form.fabric} onChange={handleChange} placeholder="e.g. 100% Cotton" style={inputStyle} />
+                <input name="fabric" value={form.fabric} onChange={handleChange} placeholder="e.g. 100% Cotton, 50/50 Cotton-Poly" style={inputStyle} />
               </div>
-
               <div style={{ marginBottom: "14px" }}>
                 <label style={labelStyle}>Product Code</label>
                 <input name="product_code" value={form.product_code} onChange={handleChange} placeholder="e.g. G5000, PC61" style={inputStyle} />
               </div>
-
               <div style={{ marginBottom: "14px" }}>
                 <label style={labelStyle}>Weight</label>
-                <input name="weight" value={form.weight} onChange={handleChange} placeholder="e.g. 5.3 oz" style={inputStyle} />
+                <input name="weight" value={form.weight} onChange={handleChange} placeholder="e.g. 5.3 oz, 6.1 oz" style={inputStyle} />
               </div>
-
               <div style={{ marginBottom: "14px" }}>
                 <label style={labelStyle}>Category</label>
                 <select name="category_id" value={form.category_id} onChange={handleChange} style={{ ...inputStyle, background: "#fff" }}>
@@ -474,12 +550,10 @@ export default function NewProductPage() {
                   ))}
                 </select>
               </div>
-
               <div style={{ marginBottom: "14px" }}>
                 <label style={labelStyle}>MOQ (Min. Order Qty)</label>
                 <input type="number" name="moq" min={1} value={form.moq} onChange={handleChange} style={{ ...inputStyle, width: "100px" }} />
               </div>
-
               <div>
                 <label style={labelStyle}>Tags</label>
                 <div
@@ -495,9 +569,7 @@ export default function NewProductPage() {
                   <input
                     value={tagInput}
                     onChange={e => setTagInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(); }
-                    }}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(); } }}
                     onBlur={addTag}
                     placeholder={form.tags.length ? "" : "Add tag…"}
                     style={{ border: "none", outline: "none", fontSize: "13px", minWidth: "100px", fontFamily: "var(--font-jakarta)", flexGrow: 1 }}
@@ -507,15 +579,283 @@ export default function NewProductPage() {
               </div>
             </div>
 
-            <div style={{ background: "#F4F3EF", border: "1px solid #E2E0DA", borderRadius: "10px", padding: "16px" }}>
-              <p style={{ fontSize: "12px", color: "#7A7880", margin: 0, lineHeight: 1.6 }}>
-                <strong style={{ color: "#2A2830" }}>After creation</strong> you can add care instructions, print guide, size chart, and SEO fields in the edit view.
+            {/* Product Tabs Content */}
+            <div style={sectionCard}>
+              <span style={sectionTitle}>PRODUCT TABS CONTENT</span>
+              <p style={{ fontSize: "12px", color: "#7A7880", marginBottom: "20px", marginTop: "-8px" }}>
+                Appears in the Description, Print Guide, and Size Chart tabs on the product page.
               </p>
+
+              {/* Care Instructions */}
+              <div style={{ marginBottom: "20px" }}>
+                <label style={labelStyle}>Care Instructions</label>
+                <textarea
+                  rows={4}
+                  name="care_instructions"
+                  value={form.care_instructions}
+                  onChange={handleChange}
+                  placeholder="e.g. Machine wash cold, tumble dry low, do not bleach…"
+                  style={{ ...inputStyle, resize: "vertical" }}
+                />
+                <div style={{ fontSize: "11px", color: "#aaa", marginTop: "3px" }}>Appears in the Specifications tab.</div>
+              </div>
+
+              {/* Print Guide */}
+              <div style={{ marginBottom: "20px" }}>
+                <label style={labelStyle}>Print Guide — Supported Methods</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                  {["DTF (Direct to Film)", "Screen Printing", "Embroidery", "DTG (Direct to Garment)", "Heat Transfer", "Sublimation", "Vinyl / HTV", "Laser Engraving"].map(method => {
+                    const checked = form.print_guide_methods.includes(method);
+                    return (
+                      <label key={method} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#2A2830", cursor: "pointer", padding: "6px 10px", border: `1.5px solid ${checked ? "#1A5CFF" : "#E2E0DA"}`, borderRadius: "7px", background: checked ? "rgba(26,92,255,.05)" : "#fff", transition: "all .15s" }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePrintMethod(method)}
+                          style={{ accentColor: "#1A5CFF" }}
+                        />
+                        {method}
+                      </label>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: "11px", color: "#aaa", marginTop: "6px" }}>Checked methods appear as green ticks in the Print Guide tab.</div>
+              </div>
+
+              {/* Size Chart */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Size Chart</label>
+                  <button
+                    type="button"
+                    onClick={addSizeChartRow}
+                    style={{ fontSize: "12px", color: "#1A5CFF", fontWeight: 700, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    + Add Row
+                  </button>
+                </div>
+                {form.size_chart_data.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "20px", border: "1.5px dashed #E2E0DA", borderRadius: "8px", color: "#aaa", fontSize: "13px" }}>
+                    No size chart rows yet. Click + Add Row to build one.
+                  </div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                      <thead>
+                        <tr style={{ background: "#F4F3EF" }}>
+                          {["Size", "Chest (in)", "Length (in)", "Sleeve (in)", ""].map(h => (
+                            <th key={h} style={{ padding: "8px 10px", textAlign: "left", fontSize: "10px", textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7880", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {form.size_chart_data.map((row, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #F4F3EF" }}>
+                            {(["size", "chest", "length", "sleeve"] as const).map(field => (
+                              <td key={field} style={{ padding: "4px 6px" }}>
+                                <input
+                                  value={row[field]}
+                                  onChange={e => updateSizeChartRow(i, field, e.target.value)}
+                                  placeholder={field === "size" ? "XL" : "—"}
+                                  style={{ width: "100%", padding: "5px 8px", border: "1px solid #E2E0DA", borderRadius: "5px", fontSize: "12px", fontFamily: "var(--font-jakarta)", outline: "none" }}
+                                />
+                              </td>
+                            ))}
+                            <td style={{ padding: "4px 6px" }}>
+                              <button
+                                type="button"
+                                onClick={() => removeSizeChartRow(i)}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "16px", lineHeight: 1, padding: "0 4px" }}
+                              >×</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div style={{ fontSize: "11px", color: "#aaa", marginTop: "6px" }}>Appears in the Size Chart tab on the product page.</div>
+              </div>
+            </div>
+
+            {/* SEO */}
+            <div style={sectionCard}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                <span style={{ ...sectionTitle, marginBottom: 0 }}>SEARCH ENGINE LISTING</span>
+                <button
+                  type="button"
+                  onClick={() => setEditSEO(v => !v)}
+                  style={{ fontSize: "12px", color: "#1A5CFF", fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}
+                >
+                  {editSEO ? "Preview" : "Edit"}
+                </button>
+              </div>
+              {editSEO ? (
+                <div>
+                  <div style={{ marginBottom: "12px" }}>
+                    <label style={labelStyle}>SEO Title</label>
+                    <input
+                      name="meta_title"
+                      value={form.meta_title}
+                      onChange={handleChange}
+                      placeholder={form.name || "Product title"}
+                      style={inputStyle}
+                    />
+                    <div style={{ fontSize: "11px", marginTop: "3px", color: (form.meta_title || form.name).length > 60 ? "#E8242A" : "#aaa" }}>
+                      {(form.meta_title || form.name).length}/60 characters
+                    </div>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Meta Description</label>
+                    <textarea
+                      name="meta_description"
+                      value={form.meta_description}
+                      onChange={handleChange}
+                      rows={3}
+                      style={{ ...inputStyle, resize: "vertical" }}
+                    />
+                    <div style={{ fontSize: "11px", marginTop: "3px", color: form.meta_description.length > 160 ? "#E8242A" : "#aaa" }}>
+                      {form.meta_description.length}/160 characters
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ border: "1px solid #E2E0DA", borderRadius: "8px", padding: "14px 16px", background: "#FAFAFA" }}>
+                  <div style={{ fontSize: "11px", color: "#059669", marginBottom: "3px" }}>
+                    af-apparel.com/products/{form.slug || "product-slug"}
+                  </div>
+                  <div style={{ fontSize: "16px", color: "#1a0dab", marginBottom: "4px", fontWeight: 400 }}>
+                    {form.meta_title || form.name || "Product Title"}
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#545454", lineHeight: 1.5 }}>
+                    {form.meta_description || form.description?.replace(/<[^>]+>/g, "").slice(0, 160) || "No description"}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Marketing Flyer */}
+            <div style={sectionCard}>
+              <span style={sectionTitle}>MARKETING FLYER</span>
+              {pendingFlyer && (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#FAFAFA", marginBottom: "12px" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8242A" strokeWidth={2}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "13px", fontWeight: 600, color: "#2A2830", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pendingFlyer.name}</div>
+                    <div style={{ fontSize: "11px", color: "#7A7880" }}>PDF Flyer — will upload after creation</div>
+                  </div>
+                  <button type="button" onClick={() => setPendingFlyer(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#E8242A", fontSize: "16px", lineHeight: 1, padding: "2px 4px" }}>×</button>
+                </div>
+              )}
+              <input ref={flyerInputRef} type="file" accept=".pdf,application/pdf" style={{ display: "none" }} onChange={handleFlyerSelect} />
+              <button
+                type="button"
+                onClick={() => flyerInputRef.current?.click()}
+                style={{ width: "100%", padding: "10px", border: "1.5px dashed #E2E0DA", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: 600, color: "#1A5CFF", fontFamily: "var(--font-jakarta)" }}
+              >
+                {pendingFlyer ? "Replace Flyer (PDF)" : "Upload Flyer (PDF)"}
+              </button>
             </div>
 
           </div>
         </div>
       </form>
+
+      {/* ── Add Variants Modal ── */}
+      {showAddVariant && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ background: "#fff", borderRadius: "12px", width: "540px", maxHeight: "90vh", overflowY: "auto", padding: "28px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ fontFamily: "var(--font-bebas)", fontSize: "22px", color: "#2A2830", letterSpacing: ".04em" }}>ADD VARIANTS</h3>
+              <button type="button" onClick={() => { setShowAddVariant(false); setBulkColors(""); setBulkSizes([]); setBulkPrice(""); }} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#aaa" }}>✕</button>
+            </div>
+
+            {/* Colors */}
+            <div style={{ marginBottom: "18px" }}>
+              <label style={labelStyle}>Colors <span style={{ color: "#E8242A" }}>*</span></label>
+              <input
+                value={bulkColors}
+                onChange={e => setBulkColors(e.target.value)}
+                placeholder="Navy, Black, White, Red, Forest…"
+                style={inputStyle}
+              />
+              <p style={{ fontSize: "11px", color: "#7A7880", marginTop: "4px" }}>Separate multiple colors with commas</p>
+              {parsedBulkColors.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
+                  {parsedBulkColors.map(c => (
+                    <span key={c} style={{ display: "flex", alignItems: "center", gap: "5px", background: "#F4F3EF", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
+                      <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: COLOR_MAP[c] ?? "#888", border: "1px solid rgba(0,0,0,.1)", display: "inline-block", flexShrink: 0 }} />
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sizes */}
+            <div style={{ marginBottom: "18px" }}>
+              <label style={{ ...labelStyle, marginBottom: "10px" }}>Sizes <span style={{ color: "#E8242A" }}>*</span></label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {ALL_SIZES.map(s => {
+                  const checked = bulkSizes.includes(s);
+                  return (
+                    <label key={s} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "6px 12px", border: `1.5px solid ${checked ? "#1A5CFF" : "#E2E0DA"}`, borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: checked ? 700 : 500, background: checked ? "rgba(26,92,255,.06)" : "#fff", color: checked ? "#1A5CFF" : "#2A2830", userSelect: "none" }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={e => setBulkSizes(prev => e.target.checked ? [...prev, s] : prev.filter(x => x !== s))}
+                        style={{ display: "none" }}
+                      />
+                      {s}
+                    </label>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: "8px", display: "flex", gap: "8px" }}>
+                <button type="button" onClick={() => setBulkSizes(ALL_SIZES)} style={{ fontSize: "11px", color: "#1A5CFF", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 600 }}>Select All</button>
+                <button type="button" onClick={() => setBulkSizes([])} style={{ fontSize: "11px", color: "#7A7880", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Clear</button>
+              </div>
+            </div>
+
+            {/* Price */}
+            <div style={{ marginBottom: "18px" }}>
+              <label style={labelStyle}>Price ($)</label>
+              <input
+                type="number"
+                value={bulkPrice}
+                onChange={e => setBulkPrice(e.target.value)}
+                placeholder="0.00"
+                style={{ ...inputStyle, width: "140px" }}
+              />
+            </div>
+
+            {/* Preview */}
+            {willCreate > 0 && (
+              <div style={{ padding: "10px 14px", background: "rgba(5,150,105,.06)", border: "1px solid rgba(5,150,105,.2)", borderRadius: "6px", fontSize: "13px", color: "#059669", fontWeight: 600, marginBottom: "16px" }}>
+                Will create {willCreate} variant{willCreate !== 1 ? "s" : ""} ({parsedBulkColors.length} color{parsedBulkColors.length !== 1 ? "s" : ""} × {bulkSizes.length} size{bulkSizes.length !== 1 ? "s" : ""})
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => { setShowAddVariant(false); setBulkColors(""); setBulkSizes([]); setBulkPrice(""); }}
+                style={{ padding: "10px 20px", border: "1px solid #E2E0DA", borderRadius: "8px", background: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "13px" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddVariants}
+                disabled={!parsedBulkColors.length || !bulkSizes.length}
+                style={{ padding: "10px 20px", background: "#1A5CFF", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "13px", opacity: (!parsedBulkColors.length || !bulkSizes.length) ? 0.6 : 1 }}
+              >
+                {willCreate > 0 ? `Add ${willCreate} Variant${willCreate !== 1 ? "s" : ""}` : "Add Variants"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
