@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -63,13 +63,22 @@ export function ProductListClient({
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
 
   // Client-side product state — initialized from SSR data (guest prices),
-  // re-fetched with auth token once logged-in so wholesale prices appear.
+  // re-fetched with auth token on every navigation so wholesale prices appear.
   const [products, setProducts] = useState<ProductListItem[]>(initialProducts);
-  const authedFetchDone = useRef(false);
 
+  // Sync SSR products into state on every client-side navigation.
+  // initialProducts is a new array reference each time the server re-renders
+  // (i.e. whenever the URL changes), so this effect fires on every navigation.
   useEffect(() => {
-    if (!isAuthenticated || authedFetchDone.current) return;
-    authedFetchDone.current = true;
+    setProducts(initialProducts);
+  }, [initialProducts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch with auth token for wholesale prices.
+  // Includes all filter params as deps so it re-runs on every navigation.
+  // Cancellation flag prevents stale responses from overwriting newer results.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
     const params: Record<string, string> = {};
     if (currentCategory) params.category = currentCategory;
     if (currentSize) params.size = currentSize;
@@ -80,9 +89,10 @@ export function ProductListClient({
     if (currentPriceMax) params.price_max = currentPriceMax;
     const qs = new URLSearchParams({ ...params, page_size: "24" }).toString();
     apiClient.get<{ items: ProductListItem[] }>(`/api/v1/products?${qs}`)
-      .then((res) => { if (res?.items?.length) setProducts(res.items); })
+      .then((res) => { if (!cancelled && res?.items?.length) setProducts(res.items); })
       .catch(() => {});
-  }, [isAuthenticated]); // eslint-disable-line
+    return () => { cancelled = true; };
+  }, [isAuthenticated, currentCategory, currentSize, currentColor, currentGender, currentInStock, currentPriceMin, currentPriceMax]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter drawer state (mobile)
   const [filterOpen, setFilterOpen] = useState(false);
