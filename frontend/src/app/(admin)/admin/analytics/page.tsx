@@ -130,6 +130,7 @@ export default function AnalyticsPage() {
     let i = 0;
     while (i < daily.length) {
       const chunk = daily.slice(i, i + 7);
+      if (!chunk[0]) { i += 7; continue; }
       weeks.push({
         date: chunk[0].date,
         revenue: chunk.reduce((s, d) => s + d.revenue, 0),
