@@ -290,7 +290,7 @@ export default function NewProductPage() {
   const variantsByColor: Record<string, PendingVariant[]> = {};
   pendingVariants.forEach(v => {
     if (!variantsByColor[v.color]) variantsByColor[v.color] = [];
-    variantsByColor[v.color].push(v);
+    variantsByColor[v.color]!.push(v);
   });
 
   const parsedBulkColors = bulkColors.split(",").map(c => c.trim()).filter(Boolean);
