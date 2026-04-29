@@ -62,6 +62,16 @@ export function ProductListClient({
   const searchParams = useSearchParams();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
 
+  // URL param values — declared before effects so they can be used as deps
+  const currentCategory = searchParams.get("category") ?? "";
+  const currentSize = searchParams.get("size") ?? "";
+  const currentColor = searchParams.get("color") ?? "";
+  const currentGender = searchParams.get("gender") ?? "";
+  const currentInStock = searchParams.get("in_stock") ?? "";
+  const currentPriceMin = searchParams.get("price_min") ?? "";
+  const currentPriceMax = searchParams.get("price_max") ?? "";
+  const currentProductCode = searchParams.get("product_code") ?? "";
+
   // Client-side product state — initialized from SSR data (guest prices),
   // re-fetched with auth token on every navigation so wholesale prices appear.
   const [products, setProducts] = useState<ProductListItem[]>(initialProducts);
@@ -104,15 +114,6 @@ export function ProductListClient({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
-
-  const currentCategory = searchParams.get("category") ?? "";
-  const currentSize = searchParams.get("size") ?? "";
-  const currentColor = searchParams.get("color") ?? "";
-  const currentGender = searchParams.get("gender") ?? "";
-  const currentInStock = searchParams.get("in_stock") ?? "";
-  const currentPriceMin = searchParams.get("price_min") ?? "";
-  const currentPriceMax = searchParams.get("price_max") ?? "";
-  const currentProductCode = searchParams.get("product_code") ?? "";
 
   // Local slider/input state — applied on "Apply" click
   const [localPriceMin, setLocalPriceMin] = useState(Number(currentPriceMin) || 0);
